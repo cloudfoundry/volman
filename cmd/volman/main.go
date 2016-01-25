@@ -7,6 +7,7 @@ import (
 
 	// cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	// cf_lager "github.com/cloudfoundry-incubator/cf-lager"
+	// "github.com/pivotal-golang/lager"
 )
 
 // var communicationTimeout = flag.Duration(
@@ -14,14 +15,30 @@ import (
 // 	10*time.Second,
 // 	"Timeout applied to all HTTP requests.",
 // )
+var listenAddr = flag.String(
+	"listenAddr",
+	"0.0.0.0:8750",
+	"host:port to serve volume management functions",
+)
+var dropsondePort = flag.Int(
+	"dropsondePort",
+	3457,
+	"port the local metron agent is listening on",
+)
 
 func main() {
 	// cf_debug_server.AddFlags(flag.CommandLine)
 	// cf_lager.AddFlags(flag.CommandLine)
+
 	flag.Parse()
+	//logger, reconfigurableSink := cf_lager.New("volman")
+	//initializeDropsonde(logger)
+
 	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
+	go http.ListenAndServe(fmt.Sprintf("%s", *listenAddr), nil)
+	//http.ListenAndServe("0.0.0.0:8750", nil)
 	//cf_http.Initialize(*communicationTimeout)
+	fmt.Println("volman.started")
 }
 
 // func initializeVolmanServer(runner volmantypes.Runner) ifrit.Runner {
@@ -30,4 +47,13 @@ func main() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
+
 }
+
+// func initializeDropsonde(logger lager.Logger) {
+// 	dropsondeDestination := fmt.Sprint("localhost:", *dropsondePort)
+// 	err := dropsonde.Initialize(dropsondeDestination, dropsondeOrigin)
+// 	if err != nil {
+// 		logger.Error("failed to initialize dropsonde: %v", err)
+// 	}
+// }
