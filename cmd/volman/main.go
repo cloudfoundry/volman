@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"sync"
+	"time"
 
 	// cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	// cf_lager "github.com/cloudfoundry-incubator/cf-lager"
@@ -35,10 +37,17 @@ func main() {
 	//initializeDropsonde(logger)
 
 	http.HandleFunc("/", handler)
-	go http.ListenAndServe(fmt.Sprintf("%s", *listenAddr), nil)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		time.Sleep(time.Millisecond * 10000)
+		http.ListenAndServe(fmt.Sprintf("%s", *listenAddr), nil)
+	}()
 	//http.ListenAndServe("0.0.0.0:8750", nil)
 	//cf_http.Initialize(*communicationTimeout)
 	fmt.Println("volman.started")
+	wg.Wait()
 }
 
 // func initializeVolmanServer(runner volmantypes.Runner) ifrit.Runner {

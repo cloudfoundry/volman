@@ -41,7 +41,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 })
 
 var _ = BeforeEach(func() {
-	volmanServerPort = 8750 //default
+	volmanServerPort = 8750 + GinkgoParallelNode()
 	runner = ginkgomon.New(ginkgomon.Config{
 		Name: "volman",
 		Command: exec.Command(

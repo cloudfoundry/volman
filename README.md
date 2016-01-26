@@ -21,12 +21,12 @@ cd -
 gocyclo -top 10 .
 ```
 ## Duplication
-Note good number is 20 for duplicate symbols (somewhere around 5-lines)
+Note good number is 5 for duplicate symbols (somewhere around 5-lines)
 ```
 cd ~
 brew instal pmd
 cd -
-pmd cpd --minimum-tokens 20 --files <file path> --language go --exclude <file path> --format xml
+pmd cpd --minimum-tokens 5 --files . --language go --exclude <file path> --format xml
 
 ```
 ## Unit Tests
@@ -40,7 +40,14 @@ ginkgo -r
 ```
 ## Coverage
 ```
+# install
+cd ~ 
+go get golang.org/x/tools/cmd/cover
+cd -
+
+# run
 ginkgo -r -cover
+
 # to see coverage reports in html
 cd id # or any src directory
 go tool cover -html=id.coverprofile
