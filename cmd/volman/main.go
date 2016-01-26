@@ -36,7 +36,7 @@ func main() {
 	//logger, reconfigurableSink := cf_lager.New("volman")
 	//initializeDropsonde(logger)
 
-	http.HandleFunc("/", handler)
+	http.HandleFunc("/v1", handler)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -44,7 +44,6 @@ func main() {
 		time.Sleep(time.Millisecond * 10000)
 		http.ListenAndServe(fmt.Sprintf("%s", *listenAddr), nil)
 	}()
-	//http.ListenAndServe("0.0.0.0:8750", nil)
 	//cf_http.Initialize(*communicationTimeout)
 	fmt.Println("volman.started")
 	wg.Wait()
@@ -55,7 +54,7 @@ func main() {
 // }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
+	//fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
 
 }
 
