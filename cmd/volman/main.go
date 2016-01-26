@@ -36,7 +36,7 @@ func main() {
 	//logger, reconfigurableSink := cf_lager.New("volman")
 	//initializeDropsonde(logger)
 
-	http.HandleFunc("/v1", handler)
+	http.HandleFunc("/v1/drivers", handler)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -54,8 +54,7 @@ func main() {
 // }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
-
+	fmt.Fprintf(w, "none")
 }
 
 // func initializeDropsonde(logger lager.Logger) {
