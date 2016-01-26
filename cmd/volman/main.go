@@ -11,11 +11,32 @@ import (
 	"github.com/tedsuo/rata"
 )
 
-var listenAddr = flag.String(
+var atAddress = flag.String(
 	"listenAddr",
 	"0.0.0.0:8750",
 	"host:port to serve volume management functions",
 )
+
+func main() {
+	flag.Parse()
+	server := server(*atAddress)
+	serverProcess := ifrit.Invoke(server)
+	run(serverProcess)
+}
+
+func run(process ifrit.Process) {
+	fmt.Println("volman.started")
+	err := <-process.Wait()
+	if err != nil {
+		os.Exit(1)
+	}
+	fmt.Println("volman.exited")
+}
+
+func server(atAddress string) ifrit.Runner {
+	handler, _ := volmanHandlers()
+	return http_server.New(atAddress, handler)
+}
 
 func volmanHandlers() (http.Handler, error) {
 	var routes = rata.Routes{
@@ -28,21 +49,4 @@ func volmanHandlers() (http.Handler, error) {
 		}),
 	}
 	return rata.NewRouter(routes, handlers)
-}
-
-func main() {
-	flag.Parse()
-	handler, _ := volmanHandlers()
-	volmanServer := http_server.New(*listenAddr, handler)
-
-	process := ifrit.Invoke(volmanServer)
-
-	fmt.Println("volman.started")
-
-	err := <-process.Wait()
-	if err != nil {
-		os.Exit(1)
-	}
-
-	fmt.Println("volman.exited")
 }
