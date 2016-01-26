@@ -40,6 +40,10 @@ var _ = Describe("Volman", func() {
 			Ω(status).Should(ContainSubstring("200"))
 			Ω(body).Should(ContainSubstring("none"))
 		})
+		It("should have a debug server endpoint", func() {
+			_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", debugServerAddress))
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 })
 

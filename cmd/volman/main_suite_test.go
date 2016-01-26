@@ -20,6 +20,8 @@ var runner *ginkgomon.Runner
 var volmanServerPort int
 var volmanProcess ifrit.Process
 
+var debugServerAddress string
+
 func TestVolman(t *testing.T) {
 	// these integration tests can take a bit, especially under load;
 	// 1 second is too harsh
@@ -42,11 +44,13 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 var _ = BeforeEach(func() {
 	volmanServerPort = 8750 + GinkgoParallelNode()
+	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 8850+GinkgoParallelNode())
 	runner = ginkgomon.New(ginkgomon.Config{
 		Name: "volman",
 		Command: exec.Command(
 			volmanPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", volmanServerPort),
+			"-debugAddr", debugServerAddress,
 		),
 		StartCheck: "volman.started",
 	})
