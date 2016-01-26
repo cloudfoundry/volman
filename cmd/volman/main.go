@@ -4,63 +4,45 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"sync"
-	"time"
+	"os"
 
-	// cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
-	// cf_lager "github.com/cloudfoundry-incubator/cf-lager"
-	// "github.com/pivotal-golang/lager"
+	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/http_server"
+	"github.com/tedsuo/rata"
 )
 
-// var communicationTimeout = flag.Duration(
-// 	"communicationTimeout",
-// 	10*time.Second,
-// 	"Timeout applied to all HTTP requests.",
-// )
 var listenAddr = flag.String(
 	"listenAddr",
 	"0.0.0.0:8750",
 	"host:port to serve volume management functions",
 )
-var dropsondePort = flag.Int(
-	"dropsondePort",
-	3457,
-	"port the local metron agent is listening on",
-)
+
+func volmanHandlers() (http.Handler, error) {
+	var routes = rata.Routes{
+		{Path: "/v1/drivers", Method: "GET", Name: "drivers"},
+	}
+
+	var handlers = rata.Handlers{
+		"drivers": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			fmt.Fprintf(w, "none")
+		}),
+	}
+	return rata.NewRouter(routes, handlers)
+}
 
 func main() {
-	// cf_debug_server.AddFlags(flag.CommandLine)
-	// cf_lager.AddFlags(flag.CommandLine)
-
 	flag.Parse()
-	//logger, reconfigurableSink := cf_lager.New("volman")
-	//initializeDropsonde(logger)
+	handler, _ := volmanHandlers()
+	volmanServer := http_server.New(*listenAddr, handler)
 
-	http.HandleFunc("/v1/drivers", handler)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		time.Sleep(time.Millisecond * 10000)
-		http.ListenAndServe(fmt.Sprintf("%s", *listenAddr), nil)
-	}()
-	//cf_http.Initialize(*communicationTimeout)
+	process := ifrit.Invoke(volmanServer)
+
 	fmt.Println("volman.started")
-	wg.Wait()
+
+	err := <-process.Wait()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	fmt.Println("volman.exited")
 }
-
-// func initializeVolmanServer(runner volmantypes.Runner) ifrit.Runner {
-// 	return http_server.New(*listenAddr, handlers.New(runner))
-// }
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "none")
-}
-
-// func initializeDropsonde(logger lager.Logger) {
-// 	dropsondeDestination := fmt.Sprint("localhost:", *dropsondePort)
-// 	err := dropsonde.Initialize(dropsondeDestination, dropsondeOrigin)
-// 	if err != nil {
-// 		logger.Error("failed to initialize dropsonde: %v", err)
-// 	}
-// }

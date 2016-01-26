@@ -33,7 +33,7 @@ var _ = Describe("Volman", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(status).Should(ContainSubstring("404"))
 		})
-		It("should return empty list for '/v1/drivers/' (200 status)", func() {
+		It("should return empty list for '/v1/drivers' (200 status)", func() {
 			body, status, err := get("/v1/drivers")
 			fmt.Printf("%s", body)
 			Ω(err).ShouldNot(HaveOccurred())
@@ -44,7 +44,7 @@ var _ = Describe("Volman", func() {
 })
 
 func get(path string) (body string, status string, err error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("http://0.0.0.0:%d/%s", volmanServerPort, path), nil)
+	req, _ := http.NewRequest("GET", fmt.Sprintf("http://0.0.0.0:%d%s", volmanServerPort, path), nil)
 	response, _ := (&http.Client{}).Do(req)
 	defer response.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(response.Body)
