@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/tedsuo/ifrit"
+	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
+	"github.com/pivotal-golang/lager"
+	. "github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/http_server"
 	"github.com/tedsuo/rata"
 )
@@ -19,21 +21,19 @@ var atAddress = flag.String(
 
 func main() {
 	flag.Parse()
-	server := server(*atAddress)
-	serverProcess := ifrit.Invoke(server)
-	run(serverProcess)
+	run(Invoke(server(*atAddress)), withLogger())
 }
 
-func run(process ifrit.Process) {
-	fmt.Println("volman.started")
+func run(process Process, logger lager.Logger) {
+	logger.Info("volman.started")
 	err := <-process.Wait()
 	if err != nil {
 		os.Exit(1)
 	}
-	fmt.Println("volman.exited")
+	logger.Info("volman.exited")
 }
 
-func server(atAddress string) ifrit.Runner {
+func server(atAddress string) Runner {
 	handler, _ := volmanHandlers()
 	return http_server.New(atAddress, handler)
 }
@@ -49,4 +49,10 @@ func volmanHandlers() (http.Handler, error) {
 		}),
 	}
 	return rata.NewRouter(routes, handlers)
+}
+
+func withLogger() lager.Logger {
+	cf_lager.AddFlags(flag.CommandLine)
+	logger, _ := cf_lager.New("volman")
+	return logger
 }
