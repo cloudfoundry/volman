@@ -2,19 +2,17 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"os"
 
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
-	"github.com/cloudfoundry-incubator/cf_http"
 	. "github.com/cloudfoundry-incubator/volman/delegate"
+	"github.com/cloudfoundry-incubator/volman/handlers"
 	"github.com/pivotal-golang/lager"
 	. "github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
 	"github.com/tedsuo/ifrit/sigmon"
-	"github.com/tedsuo/rata"
 )
 
 var atAddress = flag.String(
@@ -60,28 +58,12 @@ func createAndAppendDebugServer(atDebugAddress string, logTap *lager.Reconfigura
 }
 
 func createAndAppendServer(atAddress string, servers grouper.Members) grouper.Members {
-	handler, err := volmanHandlers()
+	handler, err := handlers.Generate()
 	exitOnFailure(err)
 	server := http_server.New(atAddress, handler)
 	return append(grouper.Members{
 		{"volman-server", server},
 	}, servers...)
-}
-
-func volmanHandlers() (http.Handler, error) {
-	var routes = rata.Routes{
-		{Path: "/v1/drivers", Method: "GET", Name: "drivers"},
-	}
-
-	var handlers = rata.Handlers{
-		"drivers": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			client := NewLocalClient()
-			drivers, _ := client.ListDrivers()
-			cf_http.WriteJSONResponse(w, http.StatusOK, drivers)
-		}),
-	}
-
-	return rata.NewRouter(routes, handlers)
 }
 
 func logger() (lager.Logger, *lager.ReconfigurableSink) {

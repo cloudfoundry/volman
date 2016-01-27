@@ -30,6 +30,8 @@ pmd cpd --minimum-tokens 5 --files . --language go --exclude <file path> --forma
 
 ```
 ## Unit Tests
+Note: to run tests, you'll need to be in a containing project (eg. diego_release).
+This will set the correct go environment.
 ```
 # one time setup
 cd ~
