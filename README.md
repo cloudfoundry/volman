@@ -36,6 +36,11 @@ cd ~
 go get github.com/onsi/ginkgo/ginkgo
 go get github.com/onsi/gomega
 cd -
+
+# generate fakes
+go generate ./...
+
+# run tests
 ginkgo -r
 ```
 ## Coverage

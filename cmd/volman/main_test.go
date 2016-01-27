@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cloudfoundry-incubator/volman"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -34,11 +35,10 @@ var _ = Describe("Volman", func() {
 			Ω(status).Should(ContainSubstring("404"))
 		})
 		It("should return empty list for '/v1/drivers' (200 status)", func() {
-			body, status, err := get("/v1/drivers")
-			fmt.Printf("%s", body)
+			client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+			drivers, err := client.ListDrivers()
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(status).Should(ContainSubstring("200"))
-			Ω(body).Should(ContainSubstring("none"))
+			Ω(len(drivers.Drivers)).To(Equal(0))
 		})
 		It("should have a debug server endpoint", func() {
 			_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", debugServerAddress))

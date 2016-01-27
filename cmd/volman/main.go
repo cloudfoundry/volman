@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
+	"github.com/cloudfoundry-incubator/cf_http"
+	. "github.com/cloudfoundry-incubator/volman/delegate"
 	"github.com/pivotal-golang/lager"
 	. "github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
@@ -74,9 +75,12 @@ func volmanHandlers() (http.Handler, error) {
 
 	var handlers = rata.Handlers{
 		"drivers": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			fmt.Fprintf(w, "none")
+			client := NewLocalClient()
+			drivers, _ := client.ListDrivers()
+			cf_http.WriteJSONResponse(w, http.StatusOK, drivers)
 		}),
 	}
+
 	return rata.NewRouter(routes, handlers)
 }
 
