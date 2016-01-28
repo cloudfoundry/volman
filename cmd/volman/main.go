@@ -6,8 +6,7 @@ import (
 
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
-	. "github.com/cloudfoundry-incubator/volman/delegate"
-	"github.com/cloudfoundry-incubator/volman/handlers"
+	handlers "github.com/cloudfoundry-incubator/volman/handlers"
 	"github.com/pivotal-golang/lager"
 	. "github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
