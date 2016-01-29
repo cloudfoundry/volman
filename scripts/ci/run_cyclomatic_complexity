@@ -8,8 +8,10 @@ cd volman/
 export GOROOT=/usr/local/go
 export PATH=$GOROOT/bin:$PATH
 
-
 go get github.com/fzipp/gocyclo
 go install github.com/fzipp/gocyclo
+
+export GOPATH=$PWD
+export PATH=$PWD/bin:$PATH
 
 gocyclo -top 10 .
