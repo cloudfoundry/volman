@@ -1,0 +1,11 @@
+#!/bin/bash
+# vim: set ft=sh
+
+set -e
+
+cd volman/
+
+go get github.com/fzipp/gocyclo
+go install github.com/fzipp/gocyclo
+
+gocyclo -top 10 .
