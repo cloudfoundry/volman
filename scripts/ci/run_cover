@@ -1,0 +1,26 @@
+#!/bin/bash
+# vim: set ft=sh
+
+set -e
+
+cd volman/
+
+export GOROOT=/usr/local/go
+export GOPATH=/tmp
+export PATH=$GOROOT/bin:$PATH
+
+go get golang.org/x/tools/cmd/cover
+go install golang.org/x/tools/cmd/cover
+go get github.com/onsi/ginkgo/ginkgo
+go install github.com/onsi/ginkgo/ginkgo
+
+export GOPATH=$PWD:$GOPATH
+export PATH=$GOPATH/bin:$PATH
+
+ginkgo -cover -r 
+
+profiles=$(find . -name '*.coverprofile' | grep -v fake)
+
+echo mode: set > all.coverprofile
+cat $profiles | grep -v mode: >> all.coverprofile
+
