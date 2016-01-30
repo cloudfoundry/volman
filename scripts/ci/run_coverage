@@ -3,6 +3,6 @@
 
 set -e
 
-chown -R diego volman/
+chown -R diego diego-release/
 
-su diego -c ./volman/scripts/ci/run_cover
+su diego -c .diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover

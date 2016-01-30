@@ -3,10 +3,9 @@
 
 set -e
 
-cd volman/
+cd diego-release/
 
 export GOROOT=/usr/local/go
-export GOPATH=/tmp
 export PATH=$GOROOT/bin:$PATH
 
 go get golang.org/x/tools/cmd/cover
@@ -14,8 +13,10 @@ go install golang.org/x/tools/cmd/cover
 go get github.com/onsi/ginkgo/ginkgo
 go install github.com/onsi/ginkgo/ginkgo
 
-export GOPATH=$PWD:$GOPATH
+export GOPATH=$PWD
 export PATH=$GOPATH/bin:$PATH
+
+cd src/github.com/cloudfoundry-incubator/volman
 
 ginkgo -cover -r 
 
@@ -24,3 +25,4 @@ profiles=$(find . -name '*.coverprofile' | grep -v fake)
 echo mode: set > all.coverprofile
 cat $profiles | grep -v mode: >> all.coverprofile
 
+cat all.coverprofile
