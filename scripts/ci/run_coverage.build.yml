@@ -5,10 +5,10 @@ image: docker:///cloudfoundry/inigo-ci
 
 inputs:
   - name: volman
+  - name: diego-release
 
 params:
   PACKAGE:
 
 run:
   path: volman/scripts/ci/run_coverage
-
