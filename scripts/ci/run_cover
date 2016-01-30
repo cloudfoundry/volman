@@ -8,17 +8,18 @@ cd diego-release/
 export GOROOT=/usr/local/go
 export PATH=$GOROOT/bin:$PATH
 
-go get golang.org/x/tools/cmd/cover
-go install golang.org/x/tools/cmd/cover
-go get github.com/onsi/ginkgo/ginkgo
-go install github.com/onsi/ginkgo/ginkgo
-
 export GOPATH=$PWD
 export PATH=$GOPATH/bin:$PATH
 
+go install github.com/apcera/gnatsd
+go install github.com/coreos/etcd
+go get golang.org/x/tools/cmd/cover
+go install golang.org/x/tools/cmd/cover
+go install github.com/onsi/ginkgo/ginkgo
+
 cd src/github.com/cloudfoundry-incubator/volman
 
-ginkgo -cover -r 
+ginkgo -cover -r
 
 profiles=$(find . -name '*.coverprofile' | grep -v fake)
 
