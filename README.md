@@ -14,7 +14,7 @@ go install <TBD>
 ## Cyclomatic Complexity
 Note good number for Cyclomatic Complexity is under 9
 ```
-
+cd volman
 cd ~
 go get github.com/fzipp/gocyclo
 cd -
