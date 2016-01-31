@@ -11,11 +11,11 @@ export PATH=$GOROOT/bin:$PATH
 export GOPATH=$PWD
 export PATH=$GOPATH/bin:$PATH
 
-go install github.com/apcera/gnatsd
-go install github.com/coreos/etcd
+go get github.com/apcera/gnatsd
+go get github.com/coreos/etcd
 go get golang.org/x/tools/cmd/cover
-go install golang.org/x/tools/cmd/cover
-go install github.com/onsi/ginkgo/ginkgo
+go get golang.org/x/tools/cmd/cover
+go get github.com/onsi/ginkgo/ginkgo
 
 cd src/github.com/cloudfoundry-incubator/volman
 
