@@ -8,6 +8,6 @@ chown -R diego volman/
 
 rm -rf diego-release/src/github.com/cloudfoundry-incubator/volman/
 mkdir diego-release/src/github.com/cloudfoundry-incubator/volman/
-cp volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
+cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
 
 su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
