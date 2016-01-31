@@ -3,11 +3,12 @@
 
 set -e
 
-chown -R diego diego-release/
-chown -R diego volman/
+#chown -R diego diego-release/
+#chown -R diego volman/
 
 rm -rf diego-release/src/github.com/cloudfoundry-incubator/volman/
 mkdir diego-release/src/github.com/cloudfoundry-incubator/volman/
 cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
 
-su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
+#su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
+diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
