@@ -18,7 +18,7 @@ cd src/github.com/cloudfoundry-incubator/volman
 
 ginkgo -cover -r
 
-profiles=$(find . -name '*.coverprofile' | grep -v fake)
+profiles=$(su diego -c "find . -name '*.coverprofile' | grep -v fake")
 
 echo mode: set > all.coverprofile
 cat $profiles | grep -v mode: >> all.coverprofile
