@@ -23,4 +23,4 @@ diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 cd diego-release
 git add src/github.com/cloudfoundry-incubator/volman
 git commit -m "Concourse automatic bump to latest volman"
-git push origin cf_persistence
+#git push origin cf_persistence
