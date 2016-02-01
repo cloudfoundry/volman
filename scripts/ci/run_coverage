@@ -6,9 +6,15 @@ set -e
 #chown -R diego diego-release/
 #chown -R diego volman/
 
-rm -rf diego-release/src/github.com/cloudfoundry-incubator/volman/
-mkdir diego-release/src/github.com/cloudfoundry-incubator/volman/
-cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
+#rm -rf diego-release/src/github.com/cloudfoundry-incubator/volman/
+#mkdir diego-release/src/github.com/cloudfoundry-incubator/volman/
+#cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
+
+cd diego-release/src/github.com/cloudfoundry-incubator/volman/
+git pull origin master
+cd diego-release
+git add src/github.com/cloudfoundry-incubator/volman
+git commit -m "Concourse automatic bump to latest volman"
 
 #su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
