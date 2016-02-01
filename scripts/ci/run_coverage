@@ -18,4 +18,5 @@ git submodule update --remote --merge volman
 #git commit -m "Concourse automatic bump to latest volman"
 
 #su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
+cd ../../../..
 diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
