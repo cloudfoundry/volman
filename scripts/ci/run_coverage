@@ -11,7 +11,8 @@ set -e
 #cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
 
 cd diego-release/src/github.com/cloudfoundry-incubator
-git submodule sync volman
+git submodule update --remote --merge
+#git submodule sync volman
 #cd diego-release
 #git add src/github.com/cloudfoundry-incubator/volman
 #git commit -m "Concourse automatic bump to latest volman"
