@@ -28,4 +28,4 @@ export GIT_SSL_NO_VERIFY=true
 
 git add src/github.com/cloudfoundry-incubator/volman
 git commit -m "Concourse automatic bump to latest volman"
-git push origin cf_persistence
+#git push origin cf_persistence
