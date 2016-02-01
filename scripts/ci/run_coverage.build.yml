@@ -7,7 +7,7 @@ inputs:
   - name: volman
   - name: diego-release
 
-  params:
+params:
   PACKAGE:
 
 run:
