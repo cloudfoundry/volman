@@ -24,6 +24,7 @@ cd diego-release
 
 git config --global user.name "Paul Warren"
 git config --global user.email paul.warren@emc.com
+export GIT_SSL_NO_VERIFY=true
 
 git add src/github.com/cloudfoundry-incubator/volman
 git commit -m "Concourse automatic bump to latest volman"
