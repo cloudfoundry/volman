@@ -7,10 +7,6 @@ inputs:
   - name: volman
   - name: diego-release
 
-outputs:
-  - name: bumped-deigo-release
-    path: diego-release
-
 params:
   PACKAGE:
 
