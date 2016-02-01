@@ -21,6 +21,10 @@ git submodule update --remote --merge volman
 cd ../../../..
 diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 cd diego-release
+
+git config --global user.name "Paul Warren"
+git config --global user.email paul.warren@emc.com
+
 git add src/github.com/cloudfoundry-incubator/volman
-#git commit -m "Concourse automatic bump to latest volman"
+git commit -m "Concourse automatic bump to latest volman"
 #git push origin cf_persistence
