@@ -9,10 +9,13 @@ set -e
 #rm -rf diego-release/src/github.com/cloudfoundry-incubator/volman/
 #mkdir diego-release/src/github.com/cloudfoundry-incubator/volman/
 #cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
+echo "diego-release (branch: cf_persistence): rebasing onto master"
 pushd diego-release
+git fetch origin master
 git rebase origin/master
 popd
 
+echo "diego-release (branch: cf_persistence): submodule update volman"
 pushd diego-release/src/github.com/cloudfoundry-incubator
 git submodule update --remote --merge volman
 popd
@@ -22,8 +25,10 @@ popd
 #git commit -m "Concourse automatic bump to latest volman"
 
 #su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
+echo "volman (branch: master): run unit tests and gather coverage stats"
 diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 
+echo "diego-release (branch: cf_persistence): add changes and commit"
 cd diego-release
 git config --global user.name "Paul Warren"
 git config --global user.email paul.warren@emc.com
