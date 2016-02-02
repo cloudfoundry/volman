@@ -14,11 +14,11 @@ export GIT_SSL_NO_VERIFY=true
 git config --global user.name "Paul Warren"
 git config --global user.email paul.warren@emc.com
 
-echo "diego-release (branch: cf_persistence): rebasing onto master"
+echo "diego-release (branch: cf_persistence): rebasing onto develop"
 pushd diego-release
-git remote add local ../diego-release-master
-git fetch local master
-git rebase local/master
+git remote add local ../diego-release-mergeback
+git fetch local develop
+git rebase local/develop
 popd
 
 echo "diego-release (branch: cf_persistence): submodule update volman"
