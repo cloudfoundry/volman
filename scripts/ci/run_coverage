@@ -11,6 +11,8 @@ set -e
 #cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
 
 export GIT_SSL_NO_VERIFY=true
+git config --global user.name "Paul Warren"
+git config --global user.email paul.warren@emc.com
 
 echo "diego-release (branch: cf_persistence): rebasing onto master"
 pushd diego-release
@@ -33,8 +35,6 @@ diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 
 echo "diego-release (branch: cf_persistence): add changes and commit"
 cd diego-release
-git config --global user.name "Paul Warren"
-git config --global user.email paul.warren@emc.com
 git add src/github.com/cloudfoundry-incubator/volman
 git commit -m "Concourse automatic bump to latest volman"
 #git push origin cf_persistence
