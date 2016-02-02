@@ -16,8 +16,9 @@ git config --global user.email paul.warren@emc.com
 
 echo "diego-release (branch: cf_persistence): rebasing onto master"
 pushd diego-release
-git fetch origin master
-git rebase origin/master
+git remote add local ../diego-release-master
+git fetch local master
+git rebase local/master
 popd
 
 echo "diego-release (branch: cf_persistence): submodule update volman"
