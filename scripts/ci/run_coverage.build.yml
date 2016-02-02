@@ -6,6 +6,7 @@ image: docker:///cloudfoundry/inigo-ci
 inputs:
   - name: volman
   - name: diego-release
+  - name: diego-release-master
 
 params:
   PACKAGE:
