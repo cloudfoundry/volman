@@ -25,17 +25,17 @@ echo ""
 echo "diego-release (branch: cf_persistence): submodule update volman"
 echo "---------------------------------------------------------------"
 #./scripts/update
-#git submodule update --remote --merge src/github.com/cloudfoundry-incubator/volman
+git submodule sync --recursive && git submodule foreach --recursive git submodule sync  && git submodule update --init --recursive
+git submodule update --remote --merge src/github.com/cloudfoundry-incubator/volman
 
 echo ""
 echo "volman (branch: master): run unit tests and gather coverage stats"
 echo "-----------------------------------------------------------------"
-#./src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
+./src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 
 echo ""
 echo "diego-release (branch: cf_persistence): add changes and commit"
 echo "--------------------------------------------------------------"
-echo $PWD
-#git stash save "throw away"
-#git add src/github.com/cloudfoundry-incubator/volman
-#git commit -m "Concourse automatic bump to latest volman"
+git add src/github.com/cloudfoundry-incubator/volman
+git commit -m "Concourse automatic bump to latest volman"
+popd
