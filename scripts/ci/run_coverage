@@ -19,7 +19,7 @@ echo "-------------------------------------------------------------"
 pushd diego-release
 git remote add local ../diego-release-mergeback
 git fetch local develop
-git merge --ff --commit -m "Automatic merge of diego-release/develop"
+git merge --ff --commit -m "Automatic merge of diego-release/develop" local/develop
 
 echo ""
 echo "diego-release (branch: cf_persistence): submodule update volman"
