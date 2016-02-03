@@ -32,10 +32,12 @@ popd
 
 #su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 echo "volman (branch: master): run unit tests and gather coverage stats"
-diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
+pushd diego-release
+./scripts/update
+./src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 
 echo "diego-release (branch: cf_persistence): add changes and commit"
-cd diego-release
 git add src/github.com/cloudfoundry-incubator/volman
 git commit -m "Concourse automatic bump to latest volman"
+popd
 #git push origin cf_persistence
