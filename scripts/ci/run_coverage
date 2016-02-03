@@ -15,12 +15,15 @@ git config --global user.name "Paul Warren"
 git config --global user.email paul.warren@emc.com
 
 echo "diego-release (branch: cf_persistence): rebasing onto develop"
+echo "-------------------------------------------------------------"
 pushd diego-release
 git remote add local ../diego-release-mergeback
 git fetch local develop
 git rebase local/develop
 
+echo ""
 echo "diego-release (branch: cf_persistence): submodule update volman"
+echo "---------------------------------------------------------------"
 ./scripts/update
 git submodule update --remote --merge src/github.com/cloudfoundry-incubator/volman
 #git submodule sync volman
@@ -29,10 +32,14 @@ git submodule update --remote --merge src/github.com/cloudfoundry-incubator/volm
 #git commit -m "Concourse automatic bump to latest volman"
 
 #su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
+echo ""
 echo "volman (branch: master): run unit tests and gather coverage stats"
+echo "-----------------------------------------------------------------"
 ./src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 
+echo ""
 echo "diego-release (branch: cf_persistence): add changes and commit"
+echo "--------------------------------------------------------------"
 git add src/github.com/cloudfoundry-incubator/volman
 git commit -m "Concourse automatic bump to latest volman"
 popd
