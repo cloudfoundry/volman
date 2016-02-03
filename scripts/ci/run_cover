@@ -3,7 +3,7 @@
 
 set -e
 
-# script should be run from diego-release directory
+# script assumes $PWD is diego-release-persi/
 
 export GOROOT=/usr/local/go
 export PATH=$GOROOT/bin:$PATH

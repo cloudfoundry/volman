@@ -9,8 +9,8 @@ git config --global user.email paul.warren@emc.com
 
 echo "diego-release (branch: cf_persistence): rebasing onto develop"
 echo "-------------------------------------------------------------"
-pushd diego-release
-git remote add local ../diego-release-mergeback
+pushd diego-release-persi
+git remote add local ../diego-release-develop
 git fetch local develop
 git merge --ff --commit -m "Concourse merge onto diego-release/develop" local/develop
 
