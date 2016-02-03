@@ -3,13 +3,6 @@
 
 set -e
 
-#chown -R diego diego-release/
-#chown -R diego volman/
-
-#rm -rf diego-release/src/github.com/cloudfoundry-incubator/volman/
-#mkdir diego-release/src/github.com/cloudfoundry-incubator/volman/
-#cp -R volman/* diego-release/src/github.com/cloudfoundry-incubator/volman/
-
 export GIT_SSL_NO_VERIFY=true
 git config --global user.name "Paul Warren"
 git config --global user.email paul.warren@emc.com

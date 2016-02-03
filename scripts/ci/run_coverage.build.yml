@@ -5,8 +5,8 @@ image: docker:///cloudfoundry/inigo-ci
 
 inputs:
   - name: volman
-  - name: diego-release
-  - name: diego-release-mergeback
+  - name: diego-release-persi
+  - name: diego-release-develop
 
 params:
   PACKAGE:
