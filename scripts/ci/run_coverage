@@ -19,7 +19,7 @@ echo "-------------------------------------------------------------"
 pushd diego-release
 git remote add local ../diego-release-mergeback
 git fetch local develop
-git merge --ff --commit -m "Automatic merge of diego-release/develop" local/develop
+git merge --ff --commit -m "Concourse merge onto diego-release/develop" local/develop
 
 echo ""
 echo "diego-release (branch: cf_persistence): submodule update volman"
@@ -37,5 +37,5 @@ echo ""
 echo "diego-release (branch: cf_persistence): add changes and commit"
 echo "--------------------------------------------------------------"
 git add src/github.com/cloudfoundry-incubator/volman
-git commit -m "Concourse automatic bump to latest volman"
+git commit -m "Concourse bump onto latest volman"
 popd
