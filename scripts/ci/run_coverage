@@ -40,7 +40,7 @@ echo "-----------------------------------------------------------------"
 echo ""
 echo "diego-release (branch: cf_persistence): add changes and commit"
 echo "--------------------------------------------------------------"
-git stash 
+git stash save "throw away"
 git add src/github.com/cloudfoundry-incubator/volman
 git commit -m "Concourse automatic bump to latest volman"
 popd
