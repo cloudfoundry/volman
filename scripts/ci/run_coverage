@@ -30,7 +30,6 @@ git submodule update --remote --merge src/github.com/cloudfoundry-incubator/volm
 
 #su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 echo "volman (branch: master): run unit tests and gather coverage stats"
-./scripts/update
 ./src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 
 echo "diego-release (branch: cf_persistence): add changes and commit"
