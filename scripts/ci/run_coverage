@@ -19,12 +19,10 @@ pushd diego-release
 git remote add local ../diego-release-mergeback
 git fetch local develop
 git rebase local/develop
-popd
 
 echo "diego-release (branch: cf_persistence): submodule update volman"
-pushd diego-release/src/github.com/cloudfoundry-incubator
-git submodule update --remote --merge volman
-popd
+./scripts/update
+git submodule update --remote --merge src/github.com/cloudfoundry-incubator/volman
 #git submodule sync volman
 #cd diego-release
 #git add src/github.com/cloudfoundry-incubator/volman
@@ -32,7 +30,6 @@ popd
 
 #su diego -c diego-release/src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 echo "volman (branch: master): run unit tests and gather coverage stats"
-pushd diego-release
 ./scripts/update
 ./src/github.com/cloudfoundry-incubator/volman/scripts/ci/run_cover
 
