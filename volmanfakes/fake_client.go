@@ -8,16 +8,16 @@ import (
 )
 
 type FakeClient struct {
-	ListDriversStub        func() (volman.Drivers, error)
+	ListDriversStub        func() (volman.ListDriversResponse, error)
 	listDriversMutex       sync.RWMutex
 	listDriversArgsForCall []struct{}
 	listDriversReturns     struct {
-		result1 volman.Drivers
+		result1 volman.ListDriversResponse
 		result2 error
 	}
 }
 
-func (fake *FakeClient) ListDrivers() (volman.Drivers, error) {
+func (fake *FakeClient) ListDrivers() (volman.ListDriversResponse, error) {
 	fake.listDriversMutex.Lock()
 	fake.listDriversArgsForCall = append(fake.listDriversArgsForCall, struct{}{})
 	fake.listDriversMutex.Unlock()
@@ -34,10 +34,10 @@ func (fake *FakeClient) ListDriversCallCount() int {
 	return len(fake.listDriversArgsForCall)
 }
 
-func (fake *FakeClient) ListDriversReturns(result1 volman.Drivers, result2 error) {
+func (fake *FakeClient) ListDriversReturns(result1 volman.ListDriversResponse, result2 error) {
 	fake.ListDriversStub = nil
 	fake.listDriversReturns = struct {
-		result1 volman.Drivers
+		result1 volman.ListDriversResponse
 		result2 error
 	}{result1, result2}
 }

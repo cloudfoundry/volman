@@ -1,14 +1,14 @@
-package volman_test
+package delegate_test
 
 import (
-	. "github.com/cloudfoundry-incubator/volman"
+	"github.com/cloudfoundry-incubator/volman"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"testing"
 )
 
-var client Client
+var client volman.Client
 
 func TestLocalClient(t *testing.T) {
 	RegisterFailHandler(Fail)

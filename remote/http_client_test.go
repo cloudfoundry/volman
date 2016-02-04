@@ -25,21 +25,21 @@ var _ = Describe("RequestReturn", func() {
 		It("should report an error", func() {
 			req := RequestReturn{nil, fmt.Errorf("any")}
 			err := req.AndReturnJsonIn(nil)
-			Ω(err).Should(HaveOccurred())
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("Wrapped response without body", func() {
 		It("should report an error", func() {
 			req := RequestReturn{&http.Response{Body: errCloser{bytes.NewBufferString("")}}, nil}
 			err := req.AndReturnJsonIn(nil)
-			Ω(err).Should(HaveOccurred())
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("Wrapped response with body that is not correct JSON", func() {
 		It("should report an error", func() {
 			req := RequestReturn{&http.Response{Body: stringCloser{bytes.NewBufferString("")}}, nil}
 			err := req.AndReturnJsonIn(nil)
-			Ω(err).Should(HaveOccurred())
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("Wrapped response with body that is correct JSON", func() {
@@ -49,8 +49,8 @@ var _ = Describe("RequestReturn", func() {
 				String string `json:"string"`
 			}{}
 			err := req.AndReturnJsonIn(&structure)
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(structure.String).Should(Equal("value"))
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(structure.String).Should(Equal("value"))
 		})
 	})
 })
@@ -60,7 +60,7 @@ type MockClient struct{}
 var MyClient func() (resp *http.Response, err error)
 
 func (c *MockClient) Do(req *http.Request) (resp *http.Response, err error) {
-	Ω(req.URL.Path).Should(Equal("/"))
+	Expect(req.URL.Path).Should(Equal("/"))
 	resp, err = MyClient()
 	return
 }
@@ -69,9 +69,9 @@ var _ = Describe("Volman Http Client", func() {
 	Context("Getting request", func() {
 		It("should get a response", func() {
 			MyClient = func() (resp *http.Response, err error) { return nil, nil }
-			v := RemoteHttpClient{HttpClient_: &MockClient{}}
+			v := RemoteHttpClient{HttpClient: &MockClient{}}
 			response := v.Get("/")
-			Ω(response).ShouldNot(BeNil())
+			Expect(response).ShouldNot(BeNil())
 		})
 	})
 })

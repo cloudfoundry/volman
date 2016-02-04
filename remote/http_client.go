@@ -22,18 +22,18 @@ var (
 )
 
 type RemoteHttpClient struct {
-	HttpClient_ HttpClient
-	URL_        string
+	HttpClient HttpClient
+	url        string
 }
 
 func NewClient(url string) RemoteHttpClientInterface {
 	return &RemoteHttpClient{
-		HttpClient_: cf_http.NewClient(),
-		URL_:        url,
+		HttpClient: cf_http.NewClient(),
+		url:        url,
 	}
 }
 
-func (withAPI *RemoteHttpClient) URL() string { return withAPI.URL_ }
+func (withAPI *RemoteHttpClient) URL() string { return withAPI.url }
 
 func (withAPI *RemoteHttpClient) request(operation operationType, path string, body io.Reader) RequestReturnInterface {
 	req, err := http.NewRequest(operation.Method, withAPI.URL()+path, body)
@@ -45,10 +45,10 @@ func (withAPI *RemoteHttpClient) request(operation operationType, path string, b
 		req.Header.Add(header, value)
 	}
 	var toReturn RequestReturn
-	if withAPI.HttpClient_ == nil {
-		withAPI.HttpClient_ = http.DefaultClient
+	if withAPI.HttpClient == nil {
+		withAPI.HttpClient = http.DefaultClient
 	}
-	toReturn.Response, toReturn.Err = withAPI.HttpClient_.Do(req)
+	toReturn.Response, toReturn.Err = withAPI.HttpClient.Do(req)
 	return &toReturn
 }
 

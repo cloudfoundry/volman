@@ -8,7 +8,7 @@ import (
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 	handlers "github.com/cloudfoundry-incubator/volman/handlers"
 	"github.com/pivotal-golang/lager"
-	. "github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
 	"github.com/tedsuo/ifrit/sigmon"
@@ -20,49 +20,47 @@ var atAddress = flag.String(
 	"host:port to serve volume management functions",
 )
 
-func main() {
+func init() {
 	parseCommandLine()
-	withLogger, logTap := logger()
-	servers := grouper.Members{}
-	servers = createAndAppendServer(*atAddress, servers)
-	servers = createAndAppendDebugServer(cf_debug_server.DebugAddress(flag.CommandLine), logTap, servers)
-	untilTerminated(Invoke(processRunnerFor(servers)), withLogger)
 }
 
-func exitOnFailure(err error) {
+func main() {
+	withLogger, logTap := logger()
+
+	volmanServer := createVolmanServer(withLogger, *atAddress)
+	servers := grouper.Members{
+		{"volman-server", volmanServer},
+	}
+	if dbgAddr := cf_debug_server.DebugAddress(flag.CommandLine); dbgAddr != "" {
+		servers = append(grouper.Members{
+			{"debug-server", cf_debug_server.Runner(dbgAddr, logTap)},
+		}, servers...)
+	}
+	process := ifrit.Invoke(processRunnerFor(servers))
+	untilTerminated(withLogger, process)
+}
+
+func exitOnFailure(logger lager.Logger, err error) {
 	if err != nil {
-		os.Exit(1)
+		logger.Fatal("Fatal err.. aborting", err)
 	}
 }
 
-func untilTerminated(process Process, logger lager.Logger) {
+func untilTerminated(logger lager.Logger, process ifrit.Process) {
 	logger.Info("started")
 	err := <-process.Wait()
-	exitOnFailure(err)
+	exitOnFailure(logger, err)
 	logger.Info("exited")
 }
 
-func processRunnerFor(servers grouper.Members) Runner {
+func processRunnerFor(servers grouper.Members) ifrit.Runner {
 	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
 }
 
-func createAndAppendDebugServer(atDebugAddress string, logTap *lager.ReconfigurableSink, servers grouper.Members) grouper.Members {
-	if atDebugAddress == "" {
-		return servers
-	}
-
-	return append(grouper.Members{
-		{"debug-server", cf_debug_server.Runner(atDebugAddress, logTap)},
-	}, servers...)
-}
-
-func createAndAppendServer(atAddress string, servers grouper.Members) grouper.Members {
-	handler, err := handlers.Generate()
-	exitOnFailure(err)
-	server := http_server.New(atAddress, handler)
-	return append(grouper.Members{
-		{"volman-server", server},
-	}, servers...)
+func createVolmanServer(logger lager.Logger, atAddress string) ifrit.Runner {
+	handler, err := handlers.New()
+	exitOnFailure(logger, err)
+	return http_server.New(atAddress, handler)
 }
 
 func logger() (lager.Logger, *lager.ReconfigurableSink) {

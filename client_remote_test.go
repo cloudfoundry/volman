@@ -18,7 +18,7 @@ var _ = Describe("ListDrivers", func() {
 		remoteHttpClient = new(FakeRemoteHttpClientInterface)
 		requestReturns = new(FakeRequestReturnInterface)
 		remoteHttpClient.GetReturns(requestReturns)
-		client = &RemoteClient{RemoteHttpClient_: remoteHttpClient}
+		client = &RemoteClient{RemoteHttpClient: remoteHttpClient}
 	})
 
 	Context("When error on Volman server", func() {
@@ -26,7 +26,7 @@ var _ = Describe("ListDrivers", func() {
 
 			requestReturns.AndReturnJsonInReturns(fmt.Errorf("any"))
 			_, err := client.ListDrivers()
-			Ω(err).Should(HaveOccurred())
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 
@@ -34,7 +34,7 @@ var _ = Describe("ListDrivers", func() {
 		It("should report empty list of drivers", func() {
 
 			requestReturns.AndReturnJsonInStub = func(jsonResponse interface{}) error {
-				_, ok := jsonResponse.(*Drivers)
+				_, ok := jsonResponse.(*ListDriversResponse)
 				if !ok {
 					return fmt.Errorf("Structure to hold JSON is wrong type")
 				}
@@ -42,8 +42,8 @@ var _ = Describe("ListDrivers", func() {
 			}
 
 			drivers, err := client.ListDrivers()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(len(drivers.Drivers)).To(Equal(0))
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(drivers.Drivers)).To(Equal(0))
 		})
 	})
 })

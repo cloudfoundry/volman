@@ -1,26 +1,22 @@
 package volman
 
 import (
-	"github.com/cloudfoundry-incubator/cf_http"
-	. "github.com/cloudfoundry-incubator/volman/remote"
+	"github.com/cloudfoundry-incubator/volman/remote"
 )
 
 type RemoteClient struct {
-	RemoteHttpClient_ RemoteHttpClientInterface
+	RemoteHttpClient remote.RemoteHttpClientInterface
 }
 
 func NewRemoteClient(volmanURL string) *RemoteClient {
 	return &RemoteClient{
-		RemoteHttpClient_: &RemoteHttpClient{
-			HttpClient_: cf_http.NewClient(),
-			URL_:        volmanURL,
-		},
+		RemoteHttpClient: remote.NewClient(volmanURL),
 	}
 }
 
-func (client *RemoteClient) ListDrivers() (Drivers, error) {
-	var drivers Drivers
+func (client *RemoteClient) ListDrivers() (ListDriversResponse, error) {
+	var drivers ListDriversResponse
 	request := "/v1/drivers"
-	err := client.RemoteHttpClient_.Get(request).AndReturnJsonIn(&drivers)
+	err := client.RemoteHttpClient.Get(request).AndReturnJsonIn(&drivers)
 	return drivers, err
 }

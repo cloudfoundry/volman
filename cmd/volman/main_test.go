@@ -31,14 +31,14 @@ var _ = Describe("Volman", func() {
 
 		It("should get a 404 for root", func() {
 			_, status, err := get("/")
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(status).Should(ContainSubstring("404"))
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(status).Should(ContainSubstring("404"))
 		})
 		It("should return empty list for '/v1/drivers' (200 status)", func() {
 			client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 			drivers, err := client.ListDrivers()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(len(drivers.Drivers)).To(Equal(0))
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(drivers.Drivers)).To(Equal(0))
 		})
 		It("should have a debug server endpoint", func() {
 			_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", debugServerAddress))
