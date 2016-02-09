@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
+	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
@@ -36,7 +37,8 @@ var _ = Describe("Volman", func() {
 		})
 		It("should return empty list for '/v1/drivers' (200 status)", func() {
 			client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-			drivers, err := client.ListDrivers()
+			testLogger := lagertest.NewTestLogger("MainTest")
+			drivers, err := client.ListDrivers(testLogger)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(drivers.Drivers)).To(Equal(0))
 		})

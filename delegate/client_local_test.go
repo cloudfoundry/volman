@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry-incubator/volman/delegate"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("ListDrivers", func() {
@@ -13,7 +14,8 @@ var _ = Describe("ListDrivers", func() {
 
 	Context("volman has no drivers", func() {
 		It("should report empty list of drivers", func() {
-			drivers, err := client.ListDrivers()
+			testLogger := lagertest.NewTestLogger("ClientTest")
+			drivers, err := client.ListDrivers(testLogger)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(drivers.Drivers)).To(Equal(0))
 		})

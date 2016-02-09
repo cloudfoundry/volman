@@ -58,7 +58,7 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 }
 
 func createVolmanServer(logger lager.Logger, atAddress string) ifrit.Runner {
-	handler, err := handlers.New()
+	handler, err := handlers.New(logger)
 	exitOnFailure(logger, err)
 	return http_server.New(atAddress, handler)
 }
