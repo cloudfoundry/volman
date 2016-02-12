@@ -33,7 +33,7 @@ type remoteClient struct {
 	URL        string
 }
 
-func NewRemoteClient(volmanURL string) *remoteClient {
+func NewRemoteClient(volmanURL string) Client {
 	return &remoteClient{
 		HttpClient: cf_http.NewClient(),
 		URL:        volmanURL,
@@ -50,7 +50,7 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (ListDriversResponse, er
 		logger.Fatal("Error in Listing Drivers", err)
 	}
 	var drivers ListDriversResponse
-	err = AndReturnJsonIn(logger, response, &drivers)
+	err = umarshallJSON(logger, response.Body, &drivers)
 
 	if err != nil {
 		logger.Fatal("Error in Parsing JSON Response of List Drivers", err)
@@ -77,9 +77,9 @@ func (r *remoteClient) Get(logger lager.Logger, fromPath string) (*http.Response
 	return r.request(logger, usingGet, fromPath, nil)
 }
 
-func AndReturnJsonIn(logger lager.Logger, response *http.Response, jsonResponse interface{}) error {
+func umarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse interface{}) error {
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := ioutil.ReadAll(reader)
 	if err != nil {
 		logger.Fatal("Error in Reading HTTP Response body", err)
 	}
