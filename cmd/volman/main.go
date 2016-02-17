@@ -20,6 +20,12 @@ var atAddress = flag.String(
 	"host:port to serve volume management functions",
 )
 
+var driversPath = flag.String(
+	"driversPath",
+	"",
+	"Path to directory where drivers are installed",
+)
+
 func init() {
 	parseCommandLine()
 }
@@ -27,7 +33,7 @@ func init() {
 func main() {
 	withLogger, logTap := logger()
 
-	volmanServer := createVolmanServer(withLogger, *atAddress)
+	volmanServer := createVolmanServer(withLogger, *atAddress, *driversPath)
 	servers := grouper.Members{
 		{"volman-server", volmanServer},
 	}
@@ -57,8 +63,11 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
 }
 
-func createVolmanServer(logger lager.Logger, atAddress string) ifrit.Runner {
-	handler, err := handlers.New(logger)
+func createVolmanServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
+	if driversPath == "" {
+		panic("'-driversPath' must be provide")
+	}
+	handler, err := handlers.New(logger, driversPath)
 	exitOnFailure(logger, err)
 	return http_server.New(atAddress, handler)
 }

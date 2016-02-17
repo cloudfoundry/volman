@@ -8,16 +8,30 @@ import (
 )
 
 var _ = Describe("ListDrivers", func() {
-	BeforeEach(func() {
-		client = &delegate.LocalClient{}
-	})
 
 	Context("volman has no drivers", func() {
+		BeforeEach(func() {
+			client = &delegate.LocalClient{}
+		})
+
 		It("should report empty list of drivers", func() {
 			testLogger := lagertest.NewTestLogger("ClientTest")
 			drivers, err := client.ListDrivers(testLogger)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(drivers.Drivers)).To(Equal(0))
+		})
+	})
+
+	Context("volman has drivers", func() {
+		BeforeEach(func() {
+			client = &delegate.LocalClient{fakeDriverPath}
+		})
+
+		It("should report list of drivers", func() {
+			testLogger := lagertest.NewTestLogger("ClientTest")
+			drivers, err := client.ListDrivers(testLogger)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(drivers.Drivers)).To(Equal(1))
 		})
 	})
 })

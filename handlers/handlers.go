@@ -10,11 +10,11 @@ import (
 	"github.com/tedsuo/rata"
 )
 
-func New(logger lager.Logger) (http.Handler, error) {
+func New(logger lager.Logger, driversPath string) (http.Handler, error) {
 
 	var handlers = rata.Handlers{
 		"drivers": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			client := delegate.NewLocalClient()
+			client := delegate.NewLocalClient(driversPath)
 			drivers, _ := client.ListDrivers(logger)
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, drivers)
 		}),

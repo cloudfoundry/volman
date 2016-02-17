@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"strings"
 	"testing"
@@ -15,6 +16,8 @@ import (
 )
 
 var volmanPath string
+var fakeDriverPath string
+var tmpDriversPath string
 
 var runner *ginkgomon.Runner
 var volmanServerPort int
@@ -36,13 +39,20 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	volmanPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/cmd/volman", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
-	return []byte(strings.Join([]string{volmanPath}, ","))
+	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/volmanfakes", "-race")
+	Expect(err).NotTo(HaveOccurred())
+	return []byte(strings.Join([]string{volmanPath, fakeDriverPath}, ","))
 }, func(pathsByte []byte) {
 	path := string(pathsByte)
 	volmanPath = strings.Split(path, ",")[0]
+	fakeDriverPath = strings.Split(path, ",")[1]
 })
 
 var _ = BeforeEach(func() {
+	var err error
+	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
+	Expect(err).NotTo(HaveOccurred())
+
 	volmanServerPort = 8750 + GinkgoParallelNode()
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 8850+GinkgoParallelNode())
 	runner = ginkgomon.New(ginkgomon.Config{
@@ -51,6 +61,7 @@ var _ = BeforeEach(func() {
 			volmanPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", volmanServerPort),
 			"-debugAddr", debugServerAddress,
+			"-driversPath", tmpDriversPath,
 		),
 		StartCheck: "volman.started",
 	})
