@@ -43,7 +43,7 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (ListDriversResponse, er
 		logger.Fatal("Error in Listing Drivers", err)
 	}
 	var drivers ListDriversResponse
-	err = umarshallJSON(logger, response.Body, &drivers)
+	err = unmarshallJSON(logger, response.Body, &drivers)
 
 	if err != nil {
 		logger.Fatal("Error in Parsing JSON Response of List Drivers", err)
@@ -52,25 +52,18 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (ListDriversResponse, er
 	return drivers, err
 }
 
-func (r *remoteClient) request(logger lager.Logger, operation operationType, path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(operation.Method, r.URL+path, body)
-	if err != nil {
-		logger.Fatal("Error in creating HTTP Request", err)
-	}
-	for header, value := range operation.Headers {
-		req.Header.Add(header, value)
-	}
+func (r *remoteClient) request(logger lager.Logger, request *http.Request, body io.Reader) (*http.Response, error) {
 
-	response, err := r.HttpClient.Do(req)
+	response, err := r.HttpClient.Do(request)
 	return response, err
 
 }
 
-func (r *remoteClient) Get(logger lager.Logger, fromPath string) (*http.Response, error) {
-	return r.request(logger, usingGet, fromPath, nil)
+func (r *remoteClient) Get(logger lager.Logger, request *http.Request) (*http.Response, error) {
+	return r.request(logger, request, nil)
 }
 
-func umarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse interface{}) error {
+func unmarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse interface{}) error {
 
 	body, err := ioutil.ReadAll(reader)
 	if err != nil {

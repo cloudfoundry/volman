@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	cf_http_handlers "github.com/cloudfoundry-incubator/cf_http/handlers"
+	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/delegate"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
@@ -19,5 +20,5 @@ func New(logger lager.Logger) (http.Handler, error) {
 		}),
 	}
 
-	return rata.NewRouter(cf_http_handlers.Routes, handlers)
+	return rata.NewRouter(volman.Routes, handlers)
 }
