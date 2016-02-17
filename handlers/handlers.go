@@ -9,10 +9,6 @@ import (
 	"github.com/tedsuo/rata"
 )
 
-var Routes = rata.Routes{
-	{Path: "/v1/drivers", Method: "GET", Name: "drivers"},
-}
-
 func New(logger lager.Logger) (http.Handler, error) {
 
 	var handlers = rata.Handlers{
@@ -23,5 +19,5 @@ func New(logger lager.Logger) (http.Handler, error) {
 		}),
 	}
 
-	return rata.NewRouter(Routes, handlers)
+	return rata.NewRouter(cf_http_handlers.Routes, handlers)
 }

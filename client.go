@@ -8,21 +8,13 @@ import (
 
 	"github.com/cloudfoundry-incubator/cf_http"
 	"github.com/pivotal-golang/lager"
+	"github.com/tedsuo/rata"
 )
-
-type ListDriversResponse struct {
-	Drivers []string `json:"drivers"`
-}
 
 type operationType struct {
 	Method  string
 	Headers map[string]string
 }
-
-var (
-	usingGet = operationType{"GET", map[string]string{"Accept": "application/json"}}
-	usingPos = operationType{"POST", map[string]string{"Accept": "application/json", "Content-Type": "application/json"}}
-)
 
 type Client interface {
 	ListDrivers(logger lager.Logger) (ListDriversResponse, error)
@@ -30,13 +22,13 @@ type Client interface {
 
 type remoteClient struct {
 	HttpClient *http.Client
-	URL        string
+	reqGen     *rata.RequestGenerator
 }
 
 func NewRemoteClient(volmanURL string) Client {
 	return &remoteClient{
 		HttpClient: cf_http.NewClient(),
-		URL:        volmanURL,
+		reqGen:     rata.NewRequestGenerator(volmanURL, Routes),
 	}
 }
 
@@ -44,7 +36,8 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (ListDriversResponse, er
 	logger.Session("list-drivers")
 	logger.Info("start")
 
-	request := "/v1/drivers"
+	request, err := r.reqGen.CreateRequest(ListDriversRoute, nil, nil)
+
 	response, err := r.Get(logger, request)
 	if err != nil {
 		logger.Fatal("Error in Listing Drivers", err)
