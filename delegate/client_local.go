@@ -3,7 +3,6 @@ package delegate
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/volman"
@@ -21,21 +20,23 @@ func NewLocalClient(driversPath string) *LocalClient {
 }
 
 func (client *LocalClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
-	logger.Info("listing-drivers")
+	logger = logger.Session("list-drivers")
+	logger.Info("start")
 	driversBinaries, _ := filepath.Glob(client.DriversPath + "/*")
 
 	if client.noDrivers(driversBinaries, client.DriversPath) {
 		return volman.ListDriversResponse{}, nil
 	}
 
-	return client.listDrivers(driversBinaries)
+	defer logger.Info("end")
+	return client.listDrivers(logger, driversBinaries)
 }
 
 func (client *LocalClient) noDrivers(driversBinaries []string, path string) bool {
 	return len(driversBinaries) < 1 || path == ""
 }
 
-func (client *LocalClient) listDrivers(driversBinaries []string) (volman.ListDriversResponse, error) {
+func (client *LocalClient) listDrivers(logger lager.Logger, driversBinaries []string) (volman.ListDriversResponse, error) {
 	var response volman.ListDriversResponse
 
 	for _, driverExecutable := range driversBinaries {
@@ -43,20 +44,17 @@ func (client *LocalClient) listDrivers(driversBinaries []string) (volman.ListDri
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			log.Fatal(err)
-			return volman.ListDriversResponse{}, err
+			return client.driverError(logger, err, "fetching stdout", driverExecutable)
 		}
 		if err := cmd.Start(); err != nil {
-			log.Fatal(err)
-			return volman.ListDriversResponse{}, err
+			return client.driverError(logger, err, "starting", driverExecutable)
 		}
 		var driver volman.Driver
 		if err := json.NewDecoder(stdout).Decode(&driver); err != nil {
-			return client.driverError(err, "decoding JSON", driverExecutable)
+			return client.driverError(logger, err, "decoding JSON", driverExecutable)
 		}
 		if err := cmd.Wait(); err != nil {
-			log.Fatal(err)
-			return volman.ListDriversResponse{}, err
+			return client.driverError(logger, err, "waiting", driverExecutable)
 		}
 
 		response.Drivers = append(response.Drivers, driver)
@@ -64,7 +62,7 @@ func (client *LocalClient) listDrivers(driversBinaries []string) (volman.ListDri
 	return response, nil
 }
 
-func (client *LocalClient) driverError(err error, specifics string, driverExecutable string) (volman.ListDriversResponse, error) {
-	log.Fatal(fmt.Sprintf("Error (%s) %s from binary at %s", err.Error(), specifics, driverExecutable))
+func (client *LocalClient) driverError(logger lager.Logger, err error, specifics string, driverExecutable string) (volman.ListDriversResponse, error) {
+	logger.Error(fmt.Sprintf("Error (%s) %s from driver at %s", err.Error(), specifics, driverExecutable), err)
 	return volman.ListDriversResponse{}, err
 }
