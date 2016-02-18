@@ -1,5 +1,3 @@
-# Note: tests have not been ran and CI is not yet created.
-
 # Building
 Prereqs:
 - [go](https://storage.googleapis.com/golang/go1.4.3.darwin-amd64.pkg)

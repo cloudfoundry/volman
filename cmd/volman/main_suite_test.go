@@ -39,7 +39,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	volmanPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/cmd/volman", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
-	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/volmanfakes", "-race")
+	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver", "-race")
 	Expect(err).NotTo(HaveOccurred())
 	return []byte(strings.Join([]string{volmanPath, fakeDriverPath}, ","))
 }, func(pathsByte []byte) {

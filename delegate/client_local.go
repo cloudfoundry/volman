@@ -1,22 +1,23 @@
 package delegate
 
 import (
-	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/volman"
+	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/pivotal-golang/lager"
 )
 
 type LocalClient struct {
 	DriversPath string
+	OurExec     system.Exec
 }
 
 func NewLocalClient(driversPath string) *LocalClient {
-	return &LocalClient{driversPath}
+	return &LocalClient{driversPath, &system.SystemExec{}}
 }
 
 func (client *LocalClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
@@ -38,19 +39,22 @@ func (client *LocalClient) listDrivers(driversBinaries []string) (volman.ListDri
 	var response volman.ListDriversResponse
 
 	for _, driverExecutable := range driversBinaries {
-		cmd := exec.Command(driverExecutable, "info")
-		var out bytes.Buffer
-		cmd.Stdout = &out
+		cmd := client.OurExec.Command(driverExecutable, "info")
 
-		err := cmd.Run()
+		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			log.Fatal(err)
 			return volman.ListDriversResponse{}, err
 		}
-
+		if err := cmd.Start(); err != nil {
+			log.Fatal(err)
+			return volman.ListDriversResponse{}, err
+		}
 		var driver volman.Driver
-		err = json.Unmarshal(out.Bytes(), &driver)
-		if err != nil {
+		if err := json.NewDecoder(stdout).Decode(&driver); err != nil {
+			return client.driverError(err, "decoding JSON", driverExecutable)
+		}
+		if err := cmd.Wait(); err != nil {
 			log.Fatal(err)
 			return volman.ListDriversResponse{}, err
 		}
@@ -58,4 +62,9 @@ func (client *LocalClient) listDrivers(driversBinaries []string) (volman.ListDri
 		response.Drivers = append(response.Drivers, driver)
 	}
 	return response, nil
+}
+
+func (client *LocalClient) driverError(err error, specifics string, driverExecutable string) (volman.ListDriversResponse, error) {
+	log.Fatal(fmt.Sprintf("Error (%s) %s from binary at %s", err.Error(), specifics, driverExecutable))
+	return volman.ListDriversResponse{}, err
 }
