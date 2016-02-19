@@ -1,6 +1,8 @@
 package delegate_test
 
 import (
+	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
@@ -36,3 +38,14 @@ var _ = SynchronizedAfterSuite(func() {
 }, func() {
 	gexec.CleanupBuildArtifacts()
 })
+
+// testing support types:
+
+type errCloser struct{ io.Reader }
+
+func (errCloser) Close() error                     { return nil }
+func (errCloser) Read(p []byte) (n int, err error) { return 0, fmt.Errorf("any") }
+
+type stringCloser struct{ io.Reader }
+
+func (stringCloser) Close() error { return nil }

@@ -32,6 +32,8 @@ func init() {
 
 func main() {
 	withLogger, logTap := logger()
+	withLogger.Info("started")
+	defer withLogger.Info("ends")
 
 	volmanServer := createVolmanServer(withLogger, *atAddress, *driversPath)
 	servers := grouper.Members{
@@ -48,15 +50,14 @@ func main() {
 
 func exitOnFailure(logger lager.Logger, err error) {
 	if err != nil {
-		logger.Fatal("Fatal err.. aborting", err)
+		logger.Error("Fatal err.. aborting", err)
+		panic(err.Error())
 	}
 }
 
 func untilTerminated(logger lager.Logger, process ifrit.Process) {
-	logger.Info("started")
 	err := <-process.Wait()
 	exitOnFailure(logger, err)
-	logger.Info("exited")
 }
 
 func processRunnerFor(servers grouper.Members) ifrit.Runner {

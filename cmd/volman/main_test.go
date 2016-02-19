@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/cloudfoundry-incubator/volman"
@@ -17,6 +18,7 @@ import (
 )
 
 var _ = Describe("Volman", func() {
+
 	BeforeEach(func() {
 		volmanProcess = ginkgomon.Invoke(runner)
 		time.Sleep(time.Millisecond * 1000)
@@ -27,17 +29,18 @@ var _ = Describe("Volman", func() {
 			Consistently(runner).ShouldNot(Exit())
 		})
 	})
+
 	Context("after starting http server", func() {
 		It("should get a 404 for root", func() {
 			_, status, err := get("/")
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(status).Should(ContainSubstring("404"))
 		})
 		It("should return empty list for '/v1/drivers' (200 status)", func() {
 			client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 			testLogger := lagertest.NewTestLogger("MainTest")
 			drivers, err := client.ListDrivers(testLogger)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(len(drivers.Drivers)).To(Equal(0))
 		})
 		It("should have a debug server endpoint", func() {
@@ -54,9 +57,44 @@ var _ = Describe("Volman", func() {
 				testLogger := lagertest.NewTestLogger("MainTest")
 				drivers, err := client.ListDrivers(testLogger)
 
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 				Expect(len(drivers.Drivers)).To(Equal(1))
 				Expect(drivers.Drivers[0].Name).To(Equal("FakeDriver"))
+			})
+
+			It("should mount a volume, given a driver name, volume id, and opaque blob of configuration", func() {
+				client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+				testLogger := lagertest.NewTestLogger("MainTest")
+
+				driver := volman.Driver{
+					Name: "FakeDriver",
+				}
+				volumeId := "fake-volume"
+				config := "Here is some config!"
+
+				mountPoint, err := client.Mount(testLogger, driver, volumeId, config)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mountPoint.Path).NotTo(Equal(""))
+				defer os.Remove(mountPoint.Path)
+
+				matches, err := filepath.Glob(mountPoint.Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(matches)).To(Equal(1))
+			})
+
+			It("should error, given an invalid driver name", func() {
+				client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+				testLogger := lagertest.NewTestLogger("MainTest")
+
+				driver := volman.Driver{
+					Name: "InvalidDriver",
+				}
+
+				_, err := client.Mount(testLogger, driver, "vol", "")
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("Driver 'InvalidDriver' not found in list of known drivers"))
 			})
 
 			AfterEach(func() {

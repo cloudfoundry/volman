@@ -17,7 +17,7 @@ var _ = Describe("Generate", func() {
 			testLogger := lagertest.NewTestLogger("HandlersTest")
 			handler, _ := handlers.New(testLogger, "")
 			w := httptest.NewRecorder()
-			r, _ := http.NewRequest("GET", "http://0.0.0.0/v1/drivers", nil)
+			r, _ := http.NewRequest("GET", "http://0.0.0.0/drivers", nil)
 			handler.ServeHTTP(w, r)
 			Expect(w.Body.String()).Should(Equal("{\"drivers\":null}"))
 			Expect(w.Code).Should(Equal(200))

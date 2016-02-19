@@ -1,9 +1,7 @@
 package delegate_test
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/delegate"
@@ -13,74 +11,80 @@ import (
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
-var _ = Describe("ListDrivers", func() {
+var _ = Describe("Volman", func() {
 
 	Context("has no drivers", func() {
 		BeforeEach(func() {
-			client = &delegate.LocalClient{}
+			client = &delegate.LocalClient{delegate.NewDriverClientCli("", nil)}
 		})
 
 		It("should report empty list of drivers", func() {
 			testLogger := lagertest.NewTestLogger("ClientTest")
 			drivers, err := client.ListDrivers(testLogger)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(len(drivers.Drivers)).To(Equal(0))
 		})
 	})
 
 	Context("has drivers", func() {
-		var fakeCmd *volmanfakes.FakeCmd
+		var fakeDriverClient *volmanfakes.FakeDriverClient
 
 		BeforeEach(func() {
-			var fakeExec = new(volmanfakes.FakeExec)
-			fakeCmd = new(volmanfakes.FakeCmd)
-			fakeExec.CommandReturns(fakeCmd)
-
-			client = &delegate.LocalClient{fakeDriverPath, fakeExec}
+			fakeDriverClient = new(volmanfakes.FakeDriverClient)
+			client = &delegate.LocalClient{fakeDriverClient}
 		})
 
-		It("should error if the driver's stdout cannot be fetched", func() {
-			fakeCmd.StdoutPipeReturns(nil, fmt.Errorf("StdoutPipe Error"))
+		It("should fail to list if an error occurs listing", func() {
+
+			fakeDriverClient.ListDriversReturns(nil, fmt.Errorf("Error Listing drivers"))
 
 			_, err := whenListDriversIsRan()
 
-			Expect(err).Should(HaveOccurred())
+			Expect(err).To(HaveOccurred())
 		})
 
-		It("should error if driver execution cannot be started", func() {
-			fakeCmd.StartReturns(fmt.Errorf("Permission denied"))
+		It("should report list of drivers", func() {
 
-			_, err := whenListDriversIsRan()
+			driver := volman.Driver{
+				Name: "SomeDriver",
+			}
+			driverList := []volman.Driver{driver}
+			fakeDriverClient.ListDriversReturns(driverList, nil)
 
-			Expect(err).Should(HaveOccurred())
+			drivers, err := whenListDriversIsRan()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(drivers.Drivers[0].Name).To(Equal("SomeDriver"))
 		})
 
-		It("should error if a driver's JSON is malformed", func() {
-			fakeCmd.StdoutPipeReturns(errCloser{bytes.NewBufferString("")}, nil)
+		It("should mount a volume, given a driver name, version, volume id, and opaque blob of configuration", func() {
 
-			_, err := whenListDriversIsRan()
+			testLogger := lagertest.NewTestLogger("ClientTest")
 
-			Expect(err).Should(HaveOccurred())
+			driver := volman.Driver{
+				Name: "SomeDriver",
+			}
+			volumeId := "fake-volume"
+			config := "Here is some config!"
 
+			fakeDriverClient.MountReturns("/mnt/something", nil)
+
+			mountPoint, err := client.Mount(testLogger, driver, volumeId, config)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mountPoint.Path).To(Equal("/mnt/something"))
 		})
 
-		Context("that report valid JSON info", func() {
-			BeforeEach(func() {
-				fakeCmd.StdoutPipeReturns(stringCloser{bytes.NewBufferString("{\"Name\":\"SomeDriver\"}")}, nil)
-			})
-			It("should report list of drivers", func() {
-				drivers, err := whenListDriversIsRan()
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(drivers.Drivers[0].Name).To(Equal("SomeDriver"))
-			})
+		It("should fail if underlying mount command fails", func() {
+			fakeDriverClient.MountReturns("", fmt.Errorf("any"))
+			testLogger := lagertest.NewTestLogger("ClientTest")
 
-			It("should error if driver execution completes with failure", func() {
-				fakeCmd.WaitReturns(fmt.Errorf("any"))
+			driver := volman.Driver{
+				Name: "SomeDriver",
+			}
 
-				_, err := whenListDriversIsRan()
+			_, err := client.Mount(testLogger, driver, "volumeId", "config")
 
-				Expect(err).Should(HaveOccurred())
-			})
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
@@ -90,12 +94,3 @@ func whenListDriversIsRan() (volman.ListDriversResponse, error) {
 	testLogger := lagertest.NewTestLogger("ClientTest")
 	return client.ListDrivers(testLogger)
 }
-
-type errCloser struct{ io.Reader }
-
-func (errCloser) Close() error                     { return nil }
-func (errCloser) Read(p []byte) (n int, err error) { return 0, fmt.Errorf("any") }
-
-type stringCloser struct{ io.Reader }
-
-func (stringCloser) Close() error { return nil }

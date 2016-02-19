@@ -4,17 +4,41 @@ import "github.com/tedsuo/rata"
 
 const (
 	ListDriversRoute = "drivers"
+	MountRoute       = "mount"
 )
 
 var Routes = rata.Routes{
-	{Path: "/v1/drivers", Method: "GET", Name: ListDriversRoute},
+	{Path: "/drivers", Method: "GET", Name: ListDriversRoute},
+	{Path: "/drivers/mount/", Method: "POST", Name: MountRoute},
 }
 
 type Driver struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+	Name   string `json:"name"`
+	Binary string `json:"binary,omitempty"`
 }
 
 type ListDriversResponse struct {
 	Drivers []Driver `json:"drivers"`
+}
+
+type MountPointRequest struct {
+	Driver   Driver `json:"driver"`
+	VolumeId string `json:"volumeId"`
+	Config   string `json:"config"`
+}
+
+type MountPointResponse struct {
+	Path string `json:"path"`
+}
+
+func ErrorFrom(err error) Error {
+	return Error{err.Error()}
+}
+
+type Error struct {
+	Description string `json:"description"`
+}
+
+func (e Error) Error() string {
+	return e.Description
 }

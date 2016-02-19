@@ -1,7 +1,9 @@
 package volman
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,6 +20,7 @@ type operationType struct {
 
 type Client interface {
 	ListDrivers(logger lager.Logger) (ListDriversResponse, error)
+	Mount(logger lager.Logger, driver Driver, volumeId string, config string) (MountPointResponse, error)
 }
 
 type remoteClient struct {
@@ -37,39 +40,73 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (ListDriversResponse, er
 	logger.Info("start")
 
 	request, err := r.reqGen.CreateRequest(ListDriversRoute, nil, nil)
-
-	response, err := r.Get(logger, request)
 	if err != nil {
-		logger.Fatal("Error in Listing Drivers", err)
+		return ListDriversResponse{}, r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", ListDriversRoute))
+	}
+
+	response, err := r.HttpClient.Do(request)
+	if err != nil {
+		return ListDriversResponse{}, r.clientError(logger, err, "Error in Listing Drivers remote call")
 	}
 	var drivers ListDriversResponse
 	err = unmarshallJSON(logger, response.Body, &drivers)
 
 	if err != nil {
-		logger.Fatal("Error in Parsing JSON Response of List Drivers", err)
+		return ListDriversResponse{}, r.clientError(logger, err, "Error in Parsing JSON Response of List Drivers")
 	}
 	logger.Info("complete")
 	return drivers, err
 }
 
-func (r *remoteClient) request(logger lager.Logger, request *http.Request, body io.Reader) (*http.Response, error) {
+func (r *remoteClient) Mount(logger lager.Logger, driver Driver, volumeId string, config string) (MountPointResponse, error) {
+	logger = logger.Session("mount")
+	logger.Info("start")
+	defer logger.Info("complete")
+
+	mountPointRequest := MountPointRequest{driver, volumeId, config}
+
+	sendingJson, err := json.Marshal(mountPointRequest)
+	if err != nil {
+		return MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error marshalling JSON request %#v", mountPointRequest))
+	}
+
+	request, err := r.reqGen.CreateRequest(MountRoute, nil, bytes.NewReader(sendingJson))
+	if err != nil {
+		return MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", MountRoute))
+	}
 
 	response, err := r.HttpClient.Do(request)
-	return response, err
+	if err != nil {
+		return MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error mounting volume %s", volumeId))
+	}
 
-}
+	if response.StatusCode == 500 {
+		var remoteError Error
+		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
+			return MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing 500 response from %s", MountRoute))
+		}
+		return MountPointResponse{}, remoteError
+	}
 
-func (r *remoteClient) Get(logger lager.Logger, request *http.Request) (*http.Response, error) {
-	return r.request(logger, request, nil)
+	var mountPoint MountPointResponse
+	if err := unmarshallJSON(logger, response.Body, &mountPoint); err != nil {
+		return MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing response from %s", MountRoute))
+	}
+
+	return mountPoint, err
 }
 
 func unmarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse interface{}) error {
-
 	body, err := ioutil.ReadAll(reader)
 	if err != nil {
-		logger.Fatal("Error in Reading HTTP Response body", err)
+		logger.Error("Error in Reading HTTP Response body from remote.", err)
 	}
 	err = json.Unmarshal(body, jsonResponse)
 
+	return err
+}
+
+func (r *remoteClient) clientError(logger lager.Logger, err error, msg string) error {
+	logger.Error(msg, err)
 	return err
 }
