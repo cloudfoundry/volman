@@ -37,7 +37,8 @@ go get github.com/onsi/ginkgo/ginkgo
 go get github.com/onsi/gomega
 cd -
 
-# generate fakes
+# generate fakes (not will only catch decorated interfaces:
+# //go:generate counterfeiter -o ../volmanfakes/fake_<interface_name>.go . InterfaceName
 go generate ./...
 
 # run tests
