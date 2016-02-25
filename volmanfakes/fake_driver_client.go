@@ -5,11 +5,10 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/delegate"
 	"github.com/pivotal-golang/lager"
 )
 
-type FakeDriverClient struct {
+type FakeDriverPlugin struct {
 	ListDriversStub        func(logger lager.Logger) ([]volman.Driver, error)
 	listDriversMutex       sync.RWMutex
 	listDriversArgsForCall []struct {
@@ -33,7 +32,7 @@ type FakeDriverClient struct {
 	}
 }
 
-func (fake *FakeDriverClient) ListDrivers(logger lager.Logger) ([]volman.Driver, error) {
+func (fake *FakeDriverPlugin) ListDrivers(logger lager.Logger) ([]volman.Driver, error) {
 	fake.listDriversMutex.Lock()
 	fake.listDriversArgsForCall = append(fake.listDriversArgsForCall, struct {
 		logger lager.Logger
@@ -46,19 +45,19 @@ func (fake *FakeDriverClient) ListDrivers(logger lager.Logger) ([]volman.Driver,
 	}
 }
 
-func (fake *FakeDriverClient) ListDriversCallCount() int {
+func (fake *FakeDriverPlugin) ListDriversCallCount() int {
 	fake.listDriversMutex.RLock()
 	defer fake.listDriversMutex.RUnlock()
 	return len(fake.listDriversArgsForCall)
 }
 
-func (fake *FakeDriverClient) ListDriversArgsForCall(i int) lager.Logger {
+func (fake *FakeDriverPlugin) ListDriversArgsForCall(i int) lager.Logger {
 	fake.listDriversMutex.RLock()
 	defer fake.listDriversMutex.RUnlock()
 	return fake.listDriversArgsForCall[i].logger
 }
 
-func (fake *FakeDriverClient) ListDriversReturns(result1 []volman.Driver, result2 error) {
+func (fake *FakeDriverPlugin) ListDriversReturns(result1 []volman.Driver, result2 error) {
 	fake.ListDriversStub = nil
 	fake.listDriversReturns = struct {
 		result1 []volman.Driver
@@ -66,7 +65,7 @@ func (fake *FakeDriverClient) ListDriversReturns(result1 []volman.Driver, result
 	}{result1, result2}
 }
 
-func (fake *FakeDriverClient) Mount(logger lager.Logger, driver volman.Driver, volumeId string, config string) (string, error) {
+func (fake *FakeDriverPlugin) Mount(logger lager.Logger, driver volman.Driver, volumeId string, config string) (string, error) {
 	fake.mountMutex.Lock()
 	fake.mountArgsForCall = append(fake.mountArgsForCall, struct {
 		logger   lager.Logger
@@ -82,19 +81,19 @@ func (fake *FakeDriverClient) Mount(logger lager.Logger, driver volman.Driver, v
 	}
 }
 
-func (fake *FakeDriverClient) MountCallCount() int {
+func (fake *FakeDriverPlugin) MountCallCount() int {
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
 	return len(fake.mountArgsForCall)
 }
 
-func (fake *FakeDriverClient) MountArgsForCall(i int) (lager.Logger, volman.Driver, string, string) {
+func (fake *FakeDriverPlugin) MountArgsForCall(i int) (lager.Logger, volman.Driver, string, string) {
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
 	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].driver, fake.mountArgsForCall[i].volumeId, fake.mountArgsForCall[i].config
 }
 
-func (fake *FakeDriverClient) MountReturns(result1 string, result2 error) {
+func (fake *FakeDriverPlugin) MountReturns(result1 string, result2 error) {
 	fake.MountStub = nil
 	fake.mountReturns = struct {
 		result1 string
@@ -102,4 +101,4 @@ func (fake *FakeDriverClient) MountReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
-var _ delegate.DriverClient = new(FakeDriverClient)
+var _ volman.DriverPlugin = new(FakeDriverPlugin)

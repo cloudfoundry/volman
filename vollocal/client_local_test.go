@@ -1,10 +1,10 @@
-package delegate_test
+package vollocal_test
 
 import (
 	"fmt"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/delegate"
+	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +15,7 @@ var _ = Describe("Volman", func() {
 
 	Context("has no drivers", func() {
 		BeforeEach(func() {
-			client = &delegate.LocalClient{delegate.NewDriverClientCli("", nil)}
+			client = &vollocal.LocalClient{vollocal.NewDriverClientCli("", nil)}
 		})
 
 		It("should report empty list of drivers", func() {
@@ -27,11 +27,11 @@ var _ = Describe("Volman", func() {
 	})
 
 	Context("has drivers", func() {
-		var fakeDriverClient *volmanfakes.FakeDriverClient
+		var fakeDriverClient *volmanfakes.FakeDriverPlugin
 
 		BeforeEach(func() {
-			fakeDriverClient = new(volmanfakes.FakeDriverClient)
-			client = &delegate.LocalClient{fakeDriverClient}
+			fakeDriverClient = new(volmanfakes.FakeDriverPlugin)
+			client = &vollocal.LocalClient{fakeDriverClient}
 		})
 
 		It("should fail to list if an error occurs listing", func() {
@@ -60,15 +60,13 @@ var _ = Describe("Volman", func() {
 
 			testLogger := lagertest.NewTestLogger("ClientTest")
 
-			driver := volman.Driver{
-				Name: "SomeDriver",
-			}
+			driverId := "SomeDriver"
 			volumeId := "fake-volume"
 			config := "Here is some config!"
 
 			fakeDriverClient.MountReturns("/mnt/something", nil)
 
-			mountPoint, err := client.Mount(testLogger, driver, volumeId, config)
+			mountPoint, err := client.Mount(testLogger, driverId, volumeId, config)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(mountPoint.Path).To(Equal("/mnt/something"))
@@ -78,11 +76,7 @@ var _ = Describe("Volman", func() {
 			fakeDriverClient.MountReturns("", fmt.Errorf("any"))
 			testLogger := lagertest.NewTestLogger("ClientTest")
 
-			driver := volman.Driver{
-				Name: "SomeDriver",
-			}
-
-			_, err := client.Mount(testLogger, driver, "volumeId", "config")
+			_, err := client.Mount(testLogger, "SomeDriver", "volumeId", "config")
 
 			Expect(err).To(HaveOccurred())
 		})

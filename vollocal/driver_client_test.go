@@ -1,11 +1,11 @@
-package delegate_test
+package vollocal_test
 
 import (
 	"bytes"
 	"io"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/delegate"
+	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("DriverClientCli", func() {
-	var client delegate.DriverClient
+	var client volman.DriverPlugin
 	var fakeCmd *volmanfakes.FakeCmd
 	var fakeExec *volmanfakes.FakeExec
 	var validDriverInfoResponse io.ReadCloser
@@ -26,11 +26,11 @@ var _ = Describe("DriverClientCli", func() {
 
 			validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"SomeDriver\"}")}
 
-			client = &delegate.DriverClientCli{fakeExec, fakeDriverPath}
+			client = &vollocal.DriverClientCli{fakeExec, fakeDriverPath}
 		})
 
 		It("should report an empty list", func() {
-			specialClient := delegate.DriverClientCli{fakeExec, "2457098123912312qasdfaerwcaer"}
+			specialClient := vollocal.DriverClientCli{fakeExec, "2457098123912312qasdfaerwcaer"}
 			fakeCmd.StdoutPipeReturns(errCloser{bytes.NewBufferString("")}, nil)
 			testLogger := lagertest.NewTestLogger("ClientTest")
 			_, err := specialClient.ListDrivers(testLogger)
@@ -58,7 +58,7 @@ var _ = Describe("DriverClientCli", func() {
 
 			validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"SomeDriver\"}")}
 
-			client = &delegate.DriverClientCli{fakeExec, fakeDriverPath}
+			client = &vollocal.DriverClientCli{fakeExec, fakeDriverPath}
 		})
 
 		It("should be able to mount", func() {

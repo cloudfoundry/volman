@@ -1,4 +1,4 @@
-package handlers
+package volhttp
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 
 	cf_http_handlers "github.com/cloudfoundry-incubator/cf_http/handlers"
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/delegate"
+	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
 )
@@ -18,11 +18,11 @@ func respondWithError(logger lager.Logger, info string, err error, w http.Respon
 	cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, volman.ErrorFrom(err))
 }
 
-func New(logger lager.Logger, driversPath string) (http.Handler, error) {
+func NewHandler(logger lager.Logger, driversPath string) (http.Handler, error) {
 	logger = logger.Session("server")
 	var handlers = rata.Handlers{
 		"drivers": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			client := delegate.NewLocalClient(driversPath)
+			client := vollocal.NewLocalClient(driversPath)
 			drivers, _ := client.ListDrivers(logger)
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, drivers)
 		}),
@@ -30,7 +30,7 @@ func New(logger lager.Logger, driversPath string) (http.Handler, error) {
 			logger.Info("mount")
 			defer logger.Info("mount end")
 
-			client := delegate.NewLocalClient(driversPath)
+			client := vollocal.NewLocalClient(driversPath)
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -44,9 +44,9 @@ func New(logger lager.Logger, driversPath string) (http.Handler, error) {
 				return
 			}
 
-			mountPoint, err := client.Mount(logger, mountPointRequest.Driver, mountPointRequest.VolumeId, mountPointRequest.Config)
+			mountPoint, err := client.Mount(logger, mountPointRequest.DriverId, mountPointRequest.VolumeId, mountPointRequest.Config)
 			if err != nil {
-				respondWithError(logger, fmt.Sprintf("Error mounting volume %s with driver %s", mountPointRequest.VolumeId, mountPointRequest.Driver.Name), err, w)
+				respondWithError(logger, fmt.Sprintf("Error mounting volume %s with driver %s", mountPointRequest.VolumeId, mountPointRequest.DriverId), err, w)
 				return
 			}
 

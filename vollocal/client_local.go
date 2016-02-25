@@ -1,4 +1,4 @@
-package delegate
+package vollocal
 
 import (
 	"github.com/cloudfoundry-incubator/volman"
@@ -7,7 +7,7 @@ import (
 )
 
 type LocalClient struct {
-	UseDriverClient DriverClient
+	UseDriverClient volman.DriverPlugin
 }
 
 func NewLocalClient(driversPath string) *LocalClient {
@@ -25,13 +25,20 @@ func (client *LocalClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 		return volman.ListDriversResponse{}, err
 	}
 
-	return volman.ListDriversResponse{drivers}, nil
+	var driverInfos []volman.DriverInfo
+	for _, driver := range drivers {
+		driverInfos = append(driverInfos, volman.DriverInfo{driver.Name})
+	}
+
+	return volman.ListDriversResponse{driverInfos}, nil
 }
 
-func (client *LocalClient) Mount(logger lager.Logger, driver volman.Driver, volumeId string, config string) (volman.MountPointResponse, error) {
+func (client *LocalClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountPointResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
+
+	driver := volman.Driver{Name: driverId}
 
 	mountPath, err := client.UseDriverClient.Mount(logger, driver, volumeId, config)
 	if err != nil {

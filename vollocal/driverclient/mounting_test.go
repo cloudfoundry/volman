@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/delegate/driverclient"
+	"github.com/cloudfoundry-incubator/volman/vollocal/driverclient"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

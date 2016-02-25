@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cloudfoundry-incubator/volman"
+	"github.com/cloudfoundry-incubator/volman/volhttp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -37,7 +37,7 @@ var _ = Describe("Volman", func() {
 			Expect(status).Should(ContainSubstring("404"))
 		})
 		It("should return empty list for '/v1/drivers' (200 status)", func() {
-			client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+			client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 			testLogger := lagertest.NewTestLogger("MainTest")
 			drivers, err := client.ListDrivers(testLogger)
 			Expect(err).NotTo(HaveOccurred())
@@ -53,7 +53,7 @@ var _ = Describe("Volman", func() {
 			})
 
 			It("should return list of drivers for '/v1/drivers' (200 status)", func() {
-				client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 				testLogger := lagertest.NewTestLogger("MainTest")
 				drivers, err := client.ListDrivers(testLogger)
 
@@ -63,16 +63,13 @@ var _ = Describe("Volman", func() {
 			})
 
 			It("should mount a volume, given a driver name, volume id, and opaque blob of configuration", func() {
-				client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 				testLogger := lagertest.NewTestLogger("MainTest")
 
-				driver := volman.Driver{
-					Name: "FakeDriver",
-				}
 				volumeId := "fake-volume"
 				config := "Here is some config!"
 
-				mountPoint, err := client.Mount(testLogger, driver, volumeId, config)
+				mountPoint, err := client.Mount(testLogger, "FakeDriver", volumeId, config)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mountPoint.Path).NotTo(Equal(""))
@@ -84,14 +81,10 @@ var _ = Describe("Volman", func() {
 			})
 
 			It("should error, given an invalid driver name", func() {
-				client := volman.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 				testLogger := lagertest.NewTestLogger("MainTest")
 
-				driver := volman.Driver{
-					Name: "InvalidDriver",
-				}
-
-				_, err := client.Mount(testLogger, driver, "vol", "")
+				_, err := client.Mount(testLogger, "InvalidDriver", "vol", "")
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("Driver 'InvalidDriver' not found in list of known drivers"))

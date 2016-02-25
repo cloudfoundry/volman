@@ -6,7 +6,7 @@ import (
 
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
-	handlers "github.com/cloudfoundry-incubator/volman/handlers"
+	"github.com/cloudfoundry-incubator/volman/volhttp"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
@@ -68,7 +68,7 @@ func createVolmanServer(logger lager.Logger, atAddress string, driversPath strin
 	if driversPath == "" {
 		panic("'-driversPath' must be provide")
 	}
-	handler, err := handlers.New(logger, driversPath)
+	handler, err := volhttp.NewHandler(logger, driversPath)
 	exitOnFailure(logger, err)
 	return http_server.New(atAddress, handler)
 }

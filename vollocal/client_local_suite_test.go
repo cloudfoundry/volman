@@ -1,4 +1,4 @@
-package delegate_test
+package vollocal_test
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-var client volman.Client
+var client volman.Manager
 var fakeDriverPath string
 
 func TestLocalClient(t *testing.T) {

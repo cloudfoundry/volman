@@ -1,28 +1,21 @@
-package delegate
+package vollocal
 
 import (
 	"fmt"
 	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/delegate/driverclient"
 	"github.com/cloudfoundry-incubator/volman/system"
+	"github.com/cloudfoundry-incubator/volman/vollocal/driverclient"
 	"github.com/pivotal-golang/lager"
 )
-
-//go:generate counterfeiter -o ../volmanfakes/fake_driver_client.go . DriverClient
-
-type DriverClient interface {
-	ListDrivers(logger lager.Logger) ([]volman.Driver, error)
-	Mount(logger lager.Logger, driver volman.Driver, volumeId string, config string) (string, error)
-}
 
 type DriverClientCli struct {
 	UseExec     system.Exec
 	DriversPath string
 }
 
-func NewDriverClientCli(path string, useExec system.Exec) DriverClient {
+func NewDriverClientCli(path string, useExec system.Exec) volman.DriverPlugin {
 	return &DriverClientCli{
 		UseExec:     useExec,
 		DriversPath: path,

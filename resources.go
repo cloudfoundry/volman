@@ -18,11 +18,15 @@ type Driver struct {
 }
 
 type ListDriversResponse struct {
-	Drivers []Driver `json:"drivers"`
+	Drivers []DriverInfo `json:"drivers"`
+}
+
+type DriverInfo struct {
+	Name string `json:"name"`
 }
 
 type MountPointRequest struct {
-	Driver   Driver `json:"driver"`
+	DriverId string `json:"driverId"`
 	VolumeId string `json:"volumeId"`
 	Config   string `json:"config"`
 }
