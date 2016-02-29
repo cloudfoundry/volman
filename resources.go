@@ -9,7 +9,7 @@ const (
 
 var Routes = rata.Routes{
 	{Path: "/drivers", Method: "GET", Name: ListDriversRoute},
-	{Path: "/drivers/mount/", Method: "POST", Name: MountRoute},
+	{Path: "/drivers/mount", Method: "POST", Name: MountRoute},
 }
 
 type DriverInfo struct {
