@@ -19,30 +19,28 @@ var _ = Describe("DriverClientCli", func() {
 	var fakeExec *volmanfakes.FakeExec
 	var validDriverInfoResponse io.ReadCloser
 
-	// Context("when given invalid driver path", func() {
-	// 	BeforeEach(func() {
-	// 		fakeExec = new(volmanfakes.FakeExec)
-	// 		fakeCmd = new(volmanfakes.FakeCmd)
-	// 		fakeExec.CommandReturns(fakeCmd)
+	Context("when given invalid driver path", func() {
+		BeforeEach(func() {
+			fakeExec = new(volmanfakes.FakeExec)
+			fakeCmd = new(volmanfakes.FakeCmd)
+			fakeExec.CommandReturns(fakeCmd)
 
-	// 		validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"SomeDriver\"}")}
+			validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"SomeDriver\"}")}
 
-	// 		client = &voldriver.DriverClientCli{fakeExec, fakeDriverPath}
-	// 	})
+			client = &voldriver.DriverClientCli{fakeExec, fakeDriverPath, "SomeDriver"}
+		})
 
-	// 	It("should not be able to mount", func() {
-	// 		fakeCmd.StdoutPipeReturns(errCloser{bytes.NewBufferString("")}, nil)
-	// 		testLogger := lagertest.NewTestLogger("ClientTest")
-	// 		driver := volman.Driver{
-	// 			Name: "SomeDriver",
-	// 		}
-	// 		volumeId := "fake-volume"
-	// 		config := "Here is some config!"
+		It("should not be able to mount", func() {
+			fakeCmd.StdoutPipeReturns(errCloser{bytes.NewBufferString("")}, nil)
+			testLogger := lagertest.NewTestLogger("ClientTest")
 
-	// 		_, err := client.Mount(testLogger, driver, volumeId, config)
-	// 		Expect(err).To(HaveOccurred())
-	// 	})
-	// })
+			volumeId := "fake-volume"
+			config := "Here is some config!"
+
+			_, err := client.Mount(testLogger, volumeId, config)
+			Expect(err).To(HaveOccurred())
+		})
+	})
 
 	Context("when given valid driver path", func() {
 		BeforeEach(func() {

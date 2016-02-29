@@ -1,13 +1,14 @@
 package vollocal
 
 import (
-"fmt"
-"path/filepath"
+	"fmt"
+	"path/filepath"
+	"strings"
+
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
-	"strings"
 )
 
 type LocalClient struct {
@@ -25,7 +26,6 @@ func (client *LocalClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 
 	drivers, err := client.listDrivers(logger)
 
-
 	if err != nil {
 		return volman.ListDriversResponse{}, err
 	}
@@ -38,8 +38,6 @@ func (client *LocalClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	return volman.ListDriversResponse{driverInfos}, nil
 }
 
-
-
 func (client *LocalClient) listDrivers(logger lager.Logger) ([]volman.DriverInfo, error) {
 	logger.Info("start")
 	defer logger.Info("end")
@@ -49,15 +47,19 @@ func (client *LocalClient) listDrivers(logger lager.Logger) ([]volman.DriverInfo
 	}
 	logger.Info(fmt.Sprintf("Found binaries: %#v", driversBinaries))
 	drivers := []volman.DriverInfo{}
-	
-	for _, driverExecutable := range driversBinaries {	
+
+	for _, driverExecutable := range driversBinaries {
 		split := strings.Split(driverExecutable, "/")
-		driver := volman.DriverInfo{Name: split[len(split) - 1]}
-		drivers = append(drivers,driver)
+		driver := volman.DriverInfo{Name: split[len(split)-1]}
+		driverPlugin := voldriver.NewDriverClientCli(client.DriversPath, &system.SystemExec{}, driver.Name)
+		driverInfo, err := driverPlugin.Info(logger)
+		if err != nil {
+			return nil, fmt.Errorf(" Error occured in list drivers (%s)", err.Error())
+		}
+		drivers = append(drivers, driverInfo)
 	}
 	return drivers, nil
 }
-
 
 func (client *LocalClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountPointResponse, error) {
 	logger = logger.Session("mount")
@@ -65,11 +67,11 @@ func (client *LocalClient) Mount(logger lager.Logger, driverId string, volumeId 
 	defer logger.Info("end")
 
 	drivers, err := client.listDrivers(logger)
-	if err != nil { 
+	if err != nil {
 		return volman.MountPointResponse{}, fmt.Errorf("Volman cannot find drivers ", err.Error())
 	}
-	for _, driver := range drivers{
-		if driver.Name == driverId{
+	for _, driver := range drivers {
+		if driver.Name == driverId {
 			driverPlugin := voldriver.NewDriverClientCli(client.DriversPath, &system.SystemExec{}, driver.Name)
 			mountPath, err := driverPlugin.Mount(logger, volumeId, config)
 			if err != nil {
