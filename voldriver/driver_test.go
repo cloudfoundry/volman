@@ -2,6 +2,7 @@ package voldriver_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/cloudfoundry-incubator/volman"
@@ -10,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"
-
 )
 
 var _ = Describe("DriverClientCli", func() {
@@ -30,7 +30,6 @@ var _ = Describe("DriverClientCli", func() {
 	// 		client = &voldriver.DriverClientCli{fakeExec, fakeDriverPath}
 	// 	})
 
-		
 	// 	It("should not be able to mount", func() {
 	// 		fakeCmd.StdoutPipeReturns(errCloser{bytes.NewBufferString("")}, nil)
 	// 		testLogger := lagertest.NewTestLogger("ClientTest")
@@ -51,13 +50,13 @@ var _ = Describe("DriverClientCli", func() {
 			fakeCmd = new(volmanfakes.FakeCmd)
 			fakeExec.CommandReturns(fakeCmd)
 
-			validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"SomeDriver\"}")}
+			validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"fakedriver\"}")}
 
-			client = &voldriver.DriverClientCli{fakeExec,fakeDriverPath,"fakedriver"}
+			client = &voldriver.DriverClientCli{fakeExec, fakeDriverPath, "fakedriver"}
 		})
-		
+
 		It("should not error on get driver info", func() {
-			var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Path\":\"/MountPoint\"}")}
+			var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"fakedriver\",\"Path\":\"/MountPoint\"}")}
 			var stdOutResponses = [...]io.ReadCloser{validDriverMountResponse, validDriverInfoResponse}
 
 			calls := 0
@@ -67,9 +66,11 @@ var _ = Describe("DriverClientCli", func() {
 			}
 
 			testLogger := lagertest.NewTestLogger("ClientTest")
-			
-			_,err := client.Info(testLogger)
+
+			driverInfo, err := client.Info(testLogger)
+			fmt.Printf("driver Info %#v\n", driverInfo)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(driverInfo.Name).To(Equal("fakedriver"))
 
 		})
 
