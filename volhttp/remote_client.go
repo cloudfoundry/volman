@@ -29,7 +29,8 @@ func NewRemoteClient(volmanURL string) *remoteClient {
 func (r *remoteClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
 	logger = logger.Session("list-drivers")
 	logger.Info("start")
-
+	defer logger.Info("end")
+	
 	request, err := r.reqGen.CreateRequest(volman.ListDriversRoute, nil, nil)
 	if err != nil {
 		return volman.ListDriversResponse{}, r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", volman.ListDriversRoute))
@@ -52,7 +53,7 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (volman.ListDriversRespo
 func (r *remoteClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountPointResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
-	defer logger.Info("complete")
+	defer logger.Info("end")
 
 	mountPointRequest := volman.MountPointRequest{driverId, volumeId, config}
 

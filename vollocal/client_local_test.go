@@ -2,20 +2,27 @@ package vollocal_test
 
 import (
 	"fmt"
-
+	"bytes"
+	"io"
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
+	_"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"
+
 )
 
 var _ = Describe("Volman", func() {
 
-	Context("has no drivers", func() {
+	var fakeCmd *volmanfakes.FakeCmd
+	var fakeExec *volmanfakes.FakeExec
+	var validDriverInfoResponse io.ReadCloser
+
+	Context("has no drivers in location", func() {
 		BeforeEach(func() {
-			client = &vollocal.LocalClient{vollocal.NewDriverClientCli("", nil)}
+			client = &vollocal.LocalClient{DriversPath: fmt.Sprintf("%s/tmp",defaultPluginsDirectory)}
 		})
 
 		It("should report empty list of drivers", func() {
@@ -24,66 +31,59 @@ var _ = Describe("Volman", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(drivers.Drivers)).To(Equal(0))
 		})
+
+		
 	})
-
-	Context("has drivers", func() {
-		var fakeDriverClient *volmanfakes.FakeDriverPlugin
-
+	Context("has driver in location", func() {
 		BeforeEach(func() {
-			fakeDriverClient = new(volmanfakes.FakeDriverPlugin)
-			client = &vollocal.LocalClient{fakeDriverClient}
-		})
-
-		It("should fail to list if an error occurs listing", func() {
-
-			fakeDriverClient.ListDriversReturns(nil, fmt.Errorf("Error Listing drivers"))
-
-			_, err := whenListDriversIsRan()
-
-			Expect(err).To(HaveOccurred())
+			client = &vollocal.LocalClient{DriversPath: defaultPluginsDirectory}
 		})
 
 		It("should report list of drivers", func() {
-
-			driver := volman.Driver{
-				Name: "SomeDriver",
-			}
-			driverList := []volman.Driver{driver}
-			fakeDriverClient.ListDriversReturns(driverList, nil)
-
-			drivers, err := whenListDriversIsRan()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(drivers.Drivers[0].Name).To(Equal("SomeDriver"))
-		})
-
-		It("should mount a volume, given a driver name, version, volume id, and opaque blob of configuration", func() {
-
 			testLogger := lagertest.NewTestLogger("ClientTest")
-
-			driverId := "SomeDriver"
-			volumeId := "fake-volume"
-			config := "Here is some config!"
-
-			fakeDriverClient.MountReturns("/mnt/something", nil)
-
-			mountPoint, err := client.Mount(testLogger, driverId, volumeId, config)
-
+			drivers, err := client.ListDrivers(testLogger)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(mountPoint.Path).To(Equal("/mnt/something"))
+			Expect(len(drivers.Drivers)).ToNot(Equal(0))
 		})
-
-		It("should fail if underlying mount command fails", func() {
-			fakeDriverClient.MountReturns("", fmt.Errorf("any"))
+		It("should report only one fakedriver", func() {
 			testLogger := lagertest.NewTestLogger("ClientTest")
-
-			_, err := client.Mount(testLogger, "SomeDriver", "volumeId", "config")
-
-			Expect(err).To(HaveOccurred())
+			drivers, err := client.ListDrivers(testLogger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(drivers.Drivers)).To(Equal(1))
+			Expect(drivers.Drivers[0].Name).To(Equal("fakedriver"))
 		})
+
 	})
 
-})
 
+
+
+Context("when given valid driver path", func() {
+		BeforeEach(func() {
+			fakeExec = new(volmanfakes.FakeExec)
+			fakeCmd = new(volmanfakes.FakeCmd)
+			fakeExec.CommandReturns(fakeCmd)
+			client = &vollocal.LocalClient{DriversPath: defaultPluginsDirectory}
+		})
+
+		It("should be able to mount", func() {
+			var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Path\":\"/MountPoint\"}")}
+			var stdOutResponses = [...]io.ReadCloser{validDriverMountResponse, validDriverInfoResponse}
+
+			calls := 0
+			fakeCmd.StdoutPipeStub = func() (io.ReadCloser, error) {
+				defer func() { calls++ }()
+				return stdOutResponses[calls], nil
+			}
+			testLogger := lagertest.NewTestLogger("ClientTest")
+			volumeId := "fake-volume"
+			config := "Here is some config!"
+			mountPath, err := client.Mount(testLogger, "fakedriver", volumeId, config)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mountPath).NotTo(Equal(""))
+		})
+	})
+})
 func whenListDriversIsRan() (volman.ListDriversResponse, error) {
 	testLogger := lagertest.NewTestLogger("ClientTest")
 	return client.ListDrivers(testLogger)

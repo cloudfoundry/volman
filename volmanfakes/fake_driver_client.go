@@ -9,20 +9,19 @@ import (
 )
 
 type FakeDriverPlugin struct {
-	ListDriversStub        func(logger lager.Logger) ([]volman.Driver, error)
-	listDriversMutex       sync.RWMutex
-	listDriversArgsForCall []struct {
+	InfoStub        func(logger lager.Logger) (volman.DriverInfo, error)
+	infoMutex       sync.RWMutex
+	infoArgsForCall []struct {
 		logger lager.Logger
 	}
-	listDriversReturns struct {
-		result1 []volman.Driver
+	infoReturns struct {
+		result1 volman.DriverInfo
 		result2 error
 	}
-	MountStub        func(logger lager.Logger, driver volman.Driver, volumeId string, config string) (string, error)
+	MountStub        func(logger lager.Logger, volumeId string, config string) (string, error)
 	mountMutex       sync.RWMutex
 	mountArgsForCall []struct {
 		logger   lager.Logger
-		driver   volman.Driver
 		volumeId string
 		config   string
 	}
@@ -32,50 +31,49 @@ type FakeDriverPlugin struct {
 	}
 }
 
-func (fake *FakeDriverPlugin) ListDrivers(logger lager.Logger) ([]volman.Driver, error) {
-	fake.listDriversMutex.Lock()
-	fake.listDriversArgsForCall = append(fake.listDriversArgsForCall, struct {
+func (fake *FakeDriverPlugin) Info(logger lager.Logger) (volman.DriverInfo, error) {
+	fake.infoMutex.Lock()
+	fake.infoArgsForCall = append(fake.infoArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.listDriversMutex.Unlock()
-	if fake.ListDriversStub != nil {
-		return fake.ListDriversStub(logger)
+	fake.infoMutex.Unlock()
+	if fake.InfoStub != nil {
+		return fake.InfoStub(logger)
 	} else {
-		return fake.listDriversReturns.result1, fake.listDriversReturns.result2
+		return fake.infoReturns.result1, fake.infoReturns.result2
 	}
 }
 
-func (fake *FakeDriverPlugin) ListDriversCallCount() int {
-	fake.listDriversMutex.RLock()
-	defer fake.listDriversMutex.RUnlock()
-	return len(fake.listDriversArgsForCall)
+func (fake *FakeDriverPlugin) InfoCallCount() int {
+	fake.infoMutex.RLock()
+	defer fake.infoMutex.RUnlock()
+	return len(fake.infoArgsForCall)
 }
 
-func (fake *FakeDriverPlugin) ListDriversArgsForCall(i int) lager.Logger {
-	fake.listDriversMutex.RLock()
-	defer fake.listDriversMutex.RUnlock()
-	return fake.listDriversArgsForCall[i].logger
+func (fake *FakeDriverPlugin) InfoArgsForCall(i int) lager.Logger {
+	fake.infoMutex.RLock()
+	defer fake.infoMutex.RUnlock()
+	return fake.infoArgsForCall[i].logger
 }
 
-func (fake *FakeDriverPlugin) ListDriversReturns(result1 []volman.Driver, result2 error) {
-	fake.ListDriversStub = nil
-	fake.listDriversReturns = struct {
-		result1 []volman.Driver
+func (fake *FakeDriverPlugin) InfoReturns(result1 volman.DriverInfo, result2 error) {
+	fake.InfoStub = nil
+	fake.infoReturns = struct {
+		result1 volman.DriverInfo
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeDriverPlugin) Mount(logger lager.Logger, driver volman.Driver, volumeId string, config string) (string, error) {
+func (fake *FakeDriverPlugin) Mount(logger lager.Logger, volumeId string, config string) (string, error) {
 	fake.mountMutex.Lock()
 	fake.mountArgsForCall = append(fake.mountArgsForCall, struct {
 		logger   lager.Logger
-		driver   volman.Driver
 		volumeId string
 		config   string
-	}{logger, driver, volumeId, config})
+	}{logger, volumeId, config})
 	fake.mountMutex.Unlock()
 	if fake.MountStub != nil {
-		return fake.MountStub(logger, driver, volumeId, config)
+		return fake.MountStub(logger, volumeId, config)
 	} else {
 		return fake.mountReturns.result1, fake.mountReturns.result2
 	}
@@ -87,10 +85,10 @@ func (fake *FakeDriverPlugin) MountCallCount() int {
 	return len(fake.mountArgsForCall)
 }
 
-func (fake *FakeDriverPlugin) MountArgsForCall(i int) (lager.Logger, volman.Driver, string, string) {
+func (fake *FakeDriverPlugin) MountArgsForCall(i int) (lager.Logger, string, string) {
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
-	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].driver, fake.mountArgsForCall[i].volumeId, fake.mountArgsForCall[i].config
+	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].volumeId, fake.mountArgsForCall[i].config
 }
 
 func (fake *FakeDriverPlugin) MountReturns(result1 string, result2 error) {

@@ -15,11 +15,12 @@ type InfoCommand struct {
 }
 
 func (x *InfoCommand) Execute(args []string) error {
-	driver := volman.Driver{
-		Name: "FakeDriver",
+	driverInfo := volman.DriverInfo{
+		Name: "fakedriver",
+		Path: "/fake/path",
 	}
 
-	jsonBlob, err := json.Marshal(driver)
+	jsonBlob, err := json.Marshal(driverInfo)
 	if err != nil {
 		panic("Error Marshaling the driver")
 	}
@@ -35,7 +36,6 @@ type MountCommand struct {
 func (x *MountCommand) Execute(args []string) error {
 
 	tmpDriversPath, err := ioutil.TempDir("", "fakeDriverMountPoint")
-
 	mountPoint := volman.MountPointResponse{tmpDriversPath}
 
 	jsonBlob, err := json.Marshal(mountPoint)

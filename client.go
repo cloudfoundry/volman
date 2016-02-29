@@ -10,6 +10,6 @@ type Manager interface {
 //go:generate counterfeiter -o volmanfakes/fake_driver_client.go . DriverPlugin
 
 type DriverPlugin interface {
-	ListDrivers(logger lager.Logger) ([]Driver, error)
-	Mount(logger lager.Logger, driver Driver, volumeId string, config string) (string, error)
+	Info(logger lager.Logger) (DriverInfo, error)
+	Mount(logger lager.Logger, volumeId string, config string) (string, error)
 }

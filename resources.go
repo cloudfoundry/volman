@@ -12,18 +12,15 @@ var Routes = rata.Routes{
 	{Path: "/drivers/mount/", Method: "POST", Name: MountRoute},
 }
 
-type Driver struct {
-	Name   string `json:"name"`
-	Binary string `json:"binary,omitempty"`
+type DriverInfo struct {
+	Name string `json:"name"`
+	Path string `json:"path,omitempty"`
 }
 
 type ListDriversResponse struct {
 	Drivers []DriverInfo `json:"drivers"`
 }
 
-type DriverInfo struct {
-	Name string `json:"name"`
-}
 
 type MountPointRequest struct {
 	DriverId string `json:"driverId"`

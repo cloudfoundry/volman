@@ -20,6 +20,8 @@ func respondWithError(logger lager.Logger, info string, err error, w http.Respon
 
 func NewHandler(logger lager.Logger, driversPath string) (http.Handler, error) {
 	logger = logger.Session("server")
+	logger.Info("start")
+	defer logger.Info("end")
 	var handlers = rata.Handlers{
 		"drivers": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			client := vollocal.NewLocalClient(driversPath)

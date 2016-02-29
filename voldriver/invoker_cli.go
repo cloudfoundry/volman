@@ -1,4 +1,4 @@
-package driverclient
+package voldriver
 
 import (
 	"encoding/json"
@@ -21,8 +21,9 @@ func NewCliInvoker(useExec system.Exec, executable string, args ...string) CliIn
 }
 
 func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{}) error {
+	logger.Info("start")
+	defer logger.Info("end")
 	cmd := invoker.UseCmd
-
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return invoker.DriverError(logger, err, "fetching stdout")

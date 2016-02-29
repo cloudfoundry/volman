@@ -1,11 +1,11 @@
-package driverclient_test
+package voldriver_test
 
 import (
 	"bytes"
 	"fmt"
 	"io"
 
-	"github.com/cloudfoundry-incubator/volman/vollocal/driverclient"
+	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("Invoker CLI", func() {
-	var subject *driverclient.CliInvoker
+	var subject *voldriver.CliInvoker
 	var fakeCmd *volmanfakes.FakeCmd
 	var fakeExec *volmanfakes.FakeExec
 	var validJson io.ReadCloser
@@ -26,7 +26,7 @@ var _ = Describe("Invoker CLI", func() {
 
 			validJson = stringCloser{bytes.NewBufferString("{\"Name\":\"JSON\"}")}
 
-			subject = &driverclient.CliInvoker{
+			subject = &voldriver.CliInvoker{
 				UseExec: fakeExec,
 				UseCmd:  fakeCmd,
 			}

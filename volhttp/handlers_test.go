@@ -15,7 +15,7 @@ var _ = Describe("Generate", func() {
 	Context("when generated", func() {
 		It("should produce handler with list drivers route", func() {
 			testLogger := lagertest.NewTestLogger("HandlersTest")
-			handler, _ := volhttp.NewHandler(testLogger, "")
+			handler, _ := volhttp.NewHandler(testLogger, tmpDriversPath)
 			w := httptest.NewRecorder()
 			r, _ := http.NewRequest("GET", "http://0.0.0.0/drivers", nil)
 			handler.ServeHTTP(w, r)

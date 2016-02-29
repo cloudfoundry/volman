@@ -49,7 +49,7 @@ var _ = Describe("Volman", func() {
 		})
 		Context("driver installed in temp directory", func() {
 			BeforeEach(func() {
-				copyFile(fakeDriverPath, tmpDriversPath+"/fake_driver")
+				copyFile(fakeDriverPath, tmpDriversPath+"/fakedriver")
 			})
 
 			It("should return list of drivers for '/v1/drivers' (200 status)", func() {
@@ -59,7 +59,7 @@ var _ = Describe("Volman", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(drivers.Drivers)).To(Equal(1))
-				Expect(drivers.Drivers[0].Name).To(Equal("FakeDriver"))
+				Expect(drivers.Drivers[0].Name).To(Equal("fakedriver"))
 			})
 
 			It("should mount a volume, given a driver name, volume id, and opaque blob of configuration", func() {
@@ -69,7 +69,7 @@ var _ = Describe("Volman", func() {
 				volumeId := "fake-volume"
 				config := "Here is some config!"
 
-				mountPoint, err := client.Mount(testLogger, "FakeDriver", volumeId, config)
+				mountPoint, err := client.Mount(testLogger, "fakedriver", volumeId, config)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mountPoint.Path).NotTo(Equal(""))
@@ -91,7 +91,7 @@ var _ = Describe("Volman", func() {
 			})
 
 			AfterEach(func() {
-				os.Remove(tmpDriversPath + "/fake_driver")
+				os.Remove(tmpDriversPath + "/fakedriver")
 			})
 		})
 	})

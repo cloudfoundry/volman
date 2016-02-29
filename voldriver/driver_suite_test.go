@@ -1,4 +1,4 @@
-package vollocal_test
+package voldriver_test
 
 import (
 	"fmt"
@@ -10,20 +10,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	
+
 	"testing"
 )
 
 var client volman.Manager
-var defaultPluginsDirectory string
 var fakeDriverPath string
 
-func TestLocalClient(t *testing.T) {
+func TestDriver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Local Client Suite")
+	RunSpecs(t, "Driver Suite")
 }
-
-
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
@@ -33,22 +30,14 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	return []byte(strings.Join([]string{fakeDriverPath}, ","))
 }, func(pathsByte []byte) {
 	path := string(pathsByte)
-	defaultPluginsDirectory = filepath.Dir(strings.Split(path, ",")[0])
+	fakeDriverPath = filepath.Dir(strings.Split(path, ",")[0])
 })
-
-
-
-
-
-
 
 var _ = SynchronizedAfterSuite(func() {
 
 }, func() {
 	gexec.CleanupBuildArtifacts()
 })
-
-
 
 // testing support types:
 
