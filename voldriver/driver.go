@@ -30,6 +30,7 @@ func (client *DriverClientCli) Mount(logger lager.Logger, volumeId string, confi
 	}{}
 	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "mount", volumeId, config)
 	err := invoker.InvokeDriver(logger, &response)
+
 	if err != nil {
 		return "", err
 	}

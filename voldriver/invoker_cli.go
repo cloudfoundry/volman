@@ -32,8 +32,13 @@ func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{})
 	if err := cmd.Start(); err != nil {
 		return invoker.DriverError(logger, err, "starting")
 	}
+	if output == nil {
+		return invoker.DriverError(logger, err, "decoding JSON")
+	}
+	decoder := json.NewDecoder(stdout)
 
-	if err := json.NewDecoder(stdout).Decode(&output); err != nil {
+	err = decoder.Decode(&output)
+	if err != nil {
 		return invoker.DriverError(logger, err, "decoding JSON")
 	}
 

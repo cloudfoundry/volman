@@ -13,14 +13,13 @@ var Routes = rata.Routes{
 }
 
 type DriverInfo struct {
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 	Path string `json:"path,omitempty"`
 }
 
 type ListDriversResponse struct {
 	Drivers []DriverInfo `json:"drivers"`
 }
-
 
 type MountPointRequest struct {
 	DriverId string `json:"driverId"`
