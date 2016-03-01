@@ -34,15 +34,15 @@ var _ = Describe("Generate", func() {
 		It("should produce handler with mount route", func() {
 			testLogger := lagertest.NewTestLogger("HandlersTest")
 			client := &volmanfakes.FakeManager{}
-			client.MountReturns(volman.MountPointResponse{"dummy_path"}, nil)
+			client.MountReturns(volman.MountResponse{"dummy_path"}, nil)
 			handler, _ := volhttp.NewHandler(testLogger, client)
 			w := httptest.NewRecorder()
-			mountPointRequest := volman.MountPointRequest{}
+			MountRequest := volman.MountRequest{}
 
-			mountJSONRequest, _ := json.Marshal(mountPointRequest)
+			mountJSONRequest, _ := json.Marshal(MountRequest)
 			r, _ := http.NewRequest("POST", "http://0.0.0.0/drivers/mount", bytes.NewReader(mountJSONRequest))
 			handler.ServeHTTP(w, r)
-			mountResponse := volman.MountPointResponse{}
+			mountResponse := volman.MountResponse{}
 			body, err := ioutil.ReadAll(w.Body)
 			err = json.Unmarshal(body, &mountResponse)
 			Expect(err).ToNot(HaveOccurred())

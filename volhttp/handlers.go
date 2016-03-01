@@ -14,7 +14,7 @@ import (
 
 func respondWithError(logger lager.Logger, info string, err error, w http.ResponseWriter) {
 	logger.Error(info, err)
-	cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, volman.ErrorFrom(err))
+	cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, volman.NewError(err))
 }
 
 func NewHandler(logger lager.Logger, client volman.Manager) (http.Handler, error) {
@@ -35,15 +35,15 @@ func NewHandler(logger lager.Logger, client volman.Manager) (http.Handler, error
 				return
 			}
 
-			var mountPointRequest volman.MountPointRequest
-			if err = json.Unmarshal(body, &mountPointRequest); err != nil {
+			var MountRequest volman.MountRequest
+			if err = json.Unmarshal(body, &MountRequest); err != nil {
 				respondWithError(logger, fmt.Sprintf("Error reading mount request body: %#v", body), err, w)
 				return
 			}
 
-			mountPoint, err := client.Mount(logger, mountPointRequest.DriverId, mountPointRequest.VolumeId, mountPointRequest.Config)
+			mountPoint, err := client.Mount(logger, MountRequest.DriverId, MountRequest.VolumeId, MountRequest.Config)
 			if err != nil {
-				respondWithError(logger, fmt.Sprintf("Error mounting volume %s with driver %s", mountPointRequest.VolumeId, mountPointRequest.DriverId), err, w)
+				respondWithError(logger, fmt.Sprintf("Error mounting volume %s with driver %s", MountRequest.VolumeId, MountRequest.DriverId), err, w)
 				return
 			}
 

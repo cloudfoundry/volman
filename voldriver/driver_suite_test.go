@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cloudfoundry-incubator/volman"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -14,7 +13,6 @@ import (
 	"testing"
 )
 
-var client volman.Manager
 var fakeDriverPath string
 
 func TestDriver(t *testing.T) {

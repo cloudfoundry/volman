@@ -3,7 +3,6 @@ package voldriver
 import (
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/pivotal-golang/lager"
 )
@@ -22,30 +21,30 @@ func NewDriverClientCli(path string, useExec system.Exec, name string) *DriverCl
 	}
 }
 
-func (client *DriverClientCli) Mount(logger lager.Logger, volumeId string, config string) (string, error) {
+func (client *DriverClientCli) Mount(logger lager.Logger, mountRequest MountRequest) (MountResponse, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 	response := struct {
 		Path string `json:"path"`
 	}{}
-	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "mount", volumeId, config)
+	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "mount", mountRequest.VolumeId, mountRequest.Config)
 	err := invoker.InvokeDriver(logger, &response)
 
 	if err != nil {
-		return "", err
+		return MountResponse{}, err
 	}
 
-	return response.Path, nil
+	return MountResponse{response.Path}, nil
 }
 
-func (client *DriverClientCli) Info(logger lager.Logger) (volman.DriverInfo, error) {
+func (client *DriverClientCli) Info(logger lager.Logger) (InfoResponse, error) {
 	logger.Info("start")
 	defer logger.Info("end")
-	response := volman.DriverInfo{}
+	response := InfoResponse{}
 	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "info")
 	err := invoker.InvokeDriver(logger, &response)
 	if err != nil {
-		return volman.DriverInfo{}, err
+		return InfoResponse{}, err
 	}
 	return response, nil
 }

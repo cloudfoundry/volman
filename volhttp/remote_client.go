@@ -50,40 +50,40 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (volman.ListDriversRespo
 	return drivers, err
 }
 
-func (r *remoteClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountPointResponse, error) {
+func (r *remoteClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
 
-	mountPointRequest := volman.MountPointRequest{driverId, volumeId, config}
+	MountRequest := volman.MountRequest{driverId, volumeId, config}
 
-	sendingJson, err := json.Marshal(mountPointRequest)
+	sendingJson, err := json.Marshal(MountRequest)
 	if err != nil {
-		return volman.MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error marshalling JSON request %#v", mountPointRequest))
+		return volman.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error marshalling JSON request %#v", MountRequest))
 	}
 
 	request, err := r.reqGen.CreateRequest(volman.MountRoute, nil, bytes.NewReader(sendingJson))
 
 	if err != nil {
-		return volman.MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", volman.MountRoute))
+		return volman.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", volman.MountRoute))
 	}
 
 	response, err := r.HttpClient.Do(request)
 	if err != nil {
-		return volman.MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error mounting volume %s", volumeId))
+		return volman.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error mounting volume %s", volumeId))
 	}
 
 	if response.StatusCode == 500 {
 		var remoteError volman.Error
 		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
-			return volman.MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing 500 response from %s", volman.MountRoute))
+			return volman.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing 500 response from %s", volman.MountRoute))
 		}
-		return volman.MountPointResponse{}, remoteError
+		return volman.MountResponse{}, remoteError
 	}
 
-	var mountPoint volman.MountPointResponse
+	var mountPoint volman.MountResponse
 	if err := unmarshallJSON(logger, response.Body, &mountPoint); err != nil {
-		return volman.MountPointResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing response from %s", volman.MountRoute))
+		return volman.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing response from %s", volman.MountRoute))
 	}
 
 	return mountPoint, err

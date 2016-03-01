@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman"
 	flags "github.com/jessevdk/go-flags"
 )
@@ -15,12 +16,12 @@ type InfoCommand struct {
 }
 
 func (x *InfoCommand) Execute(args []string) error {
-	driverInfo := volman.DriverInfo{
+	InfoResponse := voldriver.InfoResponse{
 		Name: "fakedriver",
 		Path: "/fake/path",
 	}
 
-	jsonBlob, err := json.Marshal(driverInfo)
+	jsonBlob, err := json.Marshal(InfoResponse)
 	if err != nil {
 		panic("Error Marshaling the driver")
 	}
@@ -36,7 +37,7 @@ type MountCommand struct {
 func (x *MountCommand) Execute(args []string) error {
 
 	tmpDriversPath, err := ioutil.TempDir("", "fakeDriverMountPoint")
-	mountPoint := volman.MountPointResponse{tmpDriversPath}
+	mountPoint := volman.MountResponse{tmpDriversPath}
 
 	jsonBlob, err := json.Marshal(mountPoint)
 	if err != nil {

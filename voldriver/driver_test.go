@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
@@ -13,11 +12,11 @@ import (
 )
 
 var _ = Describe("DriverClientCli", func() {
-	var client volman.DriverPlugin
+	var client voldriver.Driver
 	var fakeCmd *volmanfakes.FakeCmd
 	var fakeExec *volmanfakes.FakeExec
-	var validDriverInfoResponse io.ReadCloser
-	var invalidDriverInfoResponse io.ReadCloser
+	var validInfoResponseResponse io.ReadCloser
+	var invalidInfoResponseResponse io.ReadCloser
 
 	Context("when given invalid driver path", func() {
 		BeforeEach(func() {
@@ -25,12 +24,12 @@ var _ = Describe("DriverClientCli", func() {
 			fakeCmd = new(volmanfakes.FakeCmd)
 			fakeExec.CommandReturns(fakeCmd)
 
-			invalidDriverInfoResponse = stringCloser{bytes.NewBufferString("")}
+			invalidInfoResponseResponse = stringCloser{bytes.NewBufferString("")}
 
 			client = &voldriver.DriverClientCli{fakeExec, fakeDriverPath, "SomeDriver"}
 		})
 		It("should error on get driver info", func() {
-			var stdOutResponses = [...]io.ReadCloser{invalidDriverInfoResponse}
+			var stdOutResponses = [...]io.ReadCloser{invalidInfoResponseResponse}
 
 			fakeCmd.StdoutPipeStub = func() (io.ReadCloser, error) {
 				return stdOutResponses[0], nil
@@ -50,9 +49,9 @@ var _ = Describe("DriverClientCli", func() {
 			volumeId := "fake-volume"
 			config := "Here is some config!"
 
-			mountpoint, err := client.Mount(testLogger, volumeId, config)
+			mountResponse, err := client.Mount(testLogger, voldriver.MountRequest{VolumeId: volumeId, Config: config})
 			Expect(err).To(HaveOccurred())
-			Expect(mountpoint).To(Equal(""))
+			Expect(mountResponse.Path).To(Equal(""))
 		})
 
 	})
@@ -63,14 +62,14 @@ var _ = Describe("DriverClientCli", func() {
 			fakeCmd = new(volmanfakes.FakeCmd)
 			fakeExec.CommandReturns(fakeCmd)
 
-			validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"fakedriver\",\"Path\":\"somePath\"}")}
+			validInfoResponseResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"fakedriver\",\"Path\":\"somePath\"}")}
 
 			client = &voldriver.DriverClientCli{fakeExec, fakeDriverPath, "fakedriver"}
 		})
 
 		It("should not error on get driver info", func() {
 
-			var stdOutResponses = [...]io.ReadCloser{validDriverInfoResponse}
+			var stdOutResponses = [...]io.ReadCloser{validInfoResponseResponse}
 
 			fakeCmd.StdoutPipeStub = func() (io.ReadCloser, error) {
 				return stdOutResponses[0], nil
@@ -78,10 +77,10 @@ var _ = Describe("DriverClientCli", func() {
 
 			testLogger := lagertest.NewTestLogger("ClientTest")
 
-			driverInfo, err := client.Info(testLogger)
+			InfoResponse, err := client.Info(testLogger)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(driverInfo.Name).To(Equal("fakedriver"))
-			Expect(driverInfo.Path).To(Equal("somePath"))
+			Expect(InfoResponse.Name).To(Equal("fakedriver"))
+			Expect(InfoResponse.Path).To(Equal("somePath"))
 
 		})
 
@@ -97,9 +96,9 @@ var _ = Describe("DriverClientCli", func() {
 			volumeId := "fake-volume"
 			config := "Here is some config!"
 
-			mountPath, err := client.Mount(testLogger, volumeId, config)
+			mountResponse, err := client.Mount(testLogger, voldriver.MountRequest{VolumeId: volumeId, Config: config})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(mountPath).To(Equal("/MountPoint"))
+			Expect(mountResponse.Path).To(Equal("/MountPoint"))
 		})
 	})
 })

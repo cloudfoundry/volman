@@ -18,7 +18,7 @@ var _ = Describe("Volman", func() {
 
 	var fakeCmd *volmanfakes.FakeCmd
 	var fakeExec *volmanfakes.FakeExec
-	var validDriverInfoResponse io.ReadCloser
+	var validInfoResponseResponse io.ReadCloser
 
 	Context("has no drivers in location", func() {
 		BeforeEach(func() {
@@ -68,7 +68,7 @@ Context("when given valid driver path", func() {
 
 		It("should be able to mount", func() {
 			var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Path\":\"/MountPoint\"}")}
-			var stdOutResponses = [...]io.ReadCloser{validDriverMountResponse, validDriverInfoResponse}
+			var stdOutResponses = [...]io.ReadCloser{validDriverMountResponse, validInfoResponseResponse}
 
 			calls := 0
 			fakeCmd.StdoutPipeStub = func() (io.ReadCloser, error) {

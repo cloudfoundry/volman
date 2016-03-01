@@ -30,15 +30,15 @@ func (client *LocalClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 		return volman.ListDriversResponse{}, err
 	}
 
-	var driverInfos []volman.DriverInfo
+	var InfoResponses []voldriver.InfoResponse
 	for _, driver := range drivers {
-		driverInfos = append(driverInfos, volman.DriverInfo{driver.Name, client.DriversPath})
+		InfoResponses = append(InfoResponses, voldriver.InfoResponse{driver.Name, client.DriversPath})
 	}
 
-	return volman.ListDriversResponse{driverInfos}, nil
+	return volman.ListDriversResponse{InfoResponses}, nil
 }
 
-func (client *LocalClient) listDrivers(logger lager.Logger) ([]volman.DriverInfo, error) {
+func (client *LocalClient) listDrivers(logger lager.Logger) ([]voldriver.InfoResponse, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 	driversBinaries, err := filepath.Glob(client.DriversPath + "/*")
@@ -46,40 +46,40 @@ func (client *LocalClient) listDrivers(logger lager.Logger) ([]volman.DriverInfo
 		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", client.DriversPath, err.Error())
 	}
 	logger.Info(fmt.Sprintf("Found binaries: %#v", driversBinaries))
-	drivers := []volman.DriverInfo{}
+	drivers := []voldriver.InfoResponse{}
 
 	for _, driverExecutable := range driversBinaries {
 		split := strings.Split(driverExecutable, "/")
-		driver := volman.DriverInfo{Name: split[len(split)-1]}
-		driverPlugin := voldriver.NewDriverClientCli(client.DriversPath, &system.SystemExec{}, driver.Name)
-		driverInfo, err := driverPlugin.Info(logger)
+		driver := voldriver.InfoResponse{Name: split[len(split)-1]}
+		Driver := voldriver.NewDriverClientCli(client.DriversPath, &system.SystemExec{}, driver.Name)
+		InfoResponse, err := Driver.Info(logger)
 		if err != nil {
 			return nil, fmt.Errorf(" Error occured in list drivers (%s)", err.Error())
 		}
-		drivers = append(drivers, driverInfo)
+		drivers = append(drivers, InfoResponse)
 	}
 	return drivers, nil
 }
 
-func (client *LocalClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountPointResponse, error) {
+func (client *LocalClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
 
 	drivers, err := client.listDrivers(logger)
 	if err != nil {
-		return volman.MountPointResponse{}, fmt.Errorf("Volman cannot find drivers ", err.Error())
+		return volman.MountResponse{}, fmt.Errorf("Volman cannot find drivers ", err.Error())
 	}
 	for _, driver := range drivers {
 		if driver.Name == driverId {
-			driverPlugin := voldriver.NewDriverClientCli(client.DriversPath, &system.SystemExec{}, driver.Name)
-			mountPath, err := driverPlugin.Mount(logger, volumeId, config)
+			Driver := voldriver.NewDriverClientCli(client.DriversPath, &system.SystemExec{}, driver.Name)
+			mountResponse, err := Driver.Mount(logger, voldriver.MountRequest{VolumeId: volumeId, Config: config})
 			if err != nil {
-				return volman.MountPointResponse{}, err
+				return volman.MountResponse{}, err
 			}
-			return volman.MountPointResponse{mountPath}, nil
+			return volman.MountResponse{mountResponse.Path}, nil
 		}
 	}
-	return volman.MountPointResponse{}, fmt.Errorf("Driver 'InvalidDriver' not found in list of known drivers")
+	return volman.MountResponse{}, fmt.Errorf("Driver 'InvalidDriver' not found in list of known drivers")
 
 }
