@@ -54,7 +54,7 @@ func (client *LocalClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 		driver := voldriver.NewDriverClientCli(client.DriversPath, &system.SystemExec{}, driverInfoResponse.Name)
 		InfoResponse, err := driver.Info(logger)
 		if err != nil {
-			return nil, fmt.Errorf(" Error occured in list drivers (%s)", err.Error())
+			return nil, fmt.Errorf(" Error occured in list drivers for executable %s (%s)", driverExecutable, err.Error())
 		}
 		drivers = append(drivers, InfoResponse)
 	}
