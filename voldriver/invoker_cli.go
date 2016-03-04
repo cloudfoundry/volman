@@ -3,6 +3,7 @@ package voldriver
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/pivotal-golang/lager"
 )
@@ -39,7 +40,7 @@ func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{})
 
 	err = decoder.Decode(&output)
 	if err != nil {
-		return invoker.DriverError(logger, err, "decoding JSON")		
+		return invoker.DriverError(logger, err, "decoding JSON")
 	}
 
 	if err := cmd.Wait(); err != nil {
