@@ -1,7 +1,6 @@
 package voldriver
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry-incubator/volman/system"
@@ -36,15 +35,11 @@ func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{})
 		return invoker.DriverError(logger, err, "decoding JSON")
 	}
 
-	r := bufio.NewReader(stdout)
-	line, _, _ := r.ReadLine()
-	fmt.Printf("------.....>%s", line)
-
 	decoder := json.NewDecoder(stdout)
 
 	err = decoder.Decode(&output)
 	if err != nil {
-		return invoker.DriverError(logger, err, "decoding JSON")
+		return invoker.DriverError(logger, err, "decoding JSON")		
 	}
 
 	if err := cmd.Wait(); err != nil {
