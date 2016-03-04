@@ -35,19 +35,42 @@ func NewHandler(logger lager.Logger, client volman.Manager) (http.Handler, error
 				return
 			}
 
-			var MountRequest volman.MountRequest
-			if err = json.Unmarshal(body, &MountRequest); err != nil {
+			var mountRequest volman.MountRequest
+			if err = json.Unmarshal(body, &mountRequest); err != nil {
 				respondWithError(logger, fmt.Sprintf("Error reading mount request body: %#v", body), err, w)
 				return
 			}
 
-			mountPoint, err := client.Mount(logger, MountRequest.DriverId, MountRequest.VolumeId, MountRequest.Config)
+			mountPoint, err := client.Mount(logger, mountRequest.DriverId, mountRequest.VolumeId, mountRequest.Config)
 			if err != nil {
-				respondWithError(logger, fmt.Sprintf("Error mounting volume %s with driver %s", MountRequest.VolumeId, MountRequest.DriverId), err, w)
+				respondWithError(logger, fmt.Sprintf("Error mounting volume %s with driver %s", mountRequest.VolumeId, mountRequest.DriverId), err, w)
 				return
 			}
 
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, mountPoint)
+		}),
+		"unmount": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			logger.Info("unmount")
+			defer logger.Info("unmount end")
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				respondWithError(logger, "Error reading unmount request body", err, w)
+				return
+			}
+
+			var unmountRequest volman.UnmountRequest
+			if err = json.Unmarshal(body, &unmountRequest); err != nil {
+				respondWithError(logger, fmt.Sprintf("Error reading unmount request body: %#v", body), err, w)
+				return
+			}
+
+			err = client.Unmount(logger, unmountRequest.DriverId, unmountRequest.VolumeId)
+			if err != nil {
+				respondWithError(logger, fmt.Sprintf("Error unmounting volume %s with driver %s", unmountRequest.VolumeId, unmountRequest.DriverId), err, w)
+				return
+			}
+
+			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, struct{}{})
 		}),
 	}
 

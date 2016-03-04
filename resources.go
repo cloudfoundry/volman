@@ -1,22 +1,21 @@
 package volman
 
 import (
-	"github.com/tedsuo/rata"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/tedsuo/rata"
 )
-
 
 const (
 	ListDriversRoute = "drivers"
 	MountRoute       = "mount"
+	UnmountRoute     = "unmount"
 )
 
 var Routes = rata.Routes{
 	{Path: "/drivers", Method: "GET", Name: ListDriversRoute},
 	{Path: "/drivers/mount", Method: "POST", Name: MountRoute},
+	{Path: "/drivers/unmount", Method: "POST", Name: UnmountRoute},
 }
-
-
 
 type ListDriversResponse struct {
 	Drivers []voldriver.InfoResponse `json:"drivers"`
@@ -30,6 +29,11 @@ type MountRequest struct {
 
 type MountResponse struct {
 	Path string `json:"path"`
+}
+
+type UnmountRequest struct {
+	DriverId string `json:"driverId"`
+	VolumeId string `json:"volumeId"`
 }
 
 func NewError(err error) Error {

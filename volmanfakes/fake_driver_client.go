@@ -28,6 +28,15 @@ type FakeDriver struct {
 		result1 voldriver.MountResponse
 		result2 error
 	}
+	UnmountStub        func(logger lager.Logger, unmountRequest voldriver.UnmountRequest) error
+	unmountMutex       sync.RWMutex
+	unmountArgsForCall []struct {
+		logger         lager.Logger
+		unmountRequest voldriver.UnmountRequest
+	}
+	unmountReturns struct {
+		result1 error
+	}
 }
 
 func (fake *FakeDriver) Info(logger lager.Logger) (voldriver.InfoResponse, error) {
@@ -95,6 +104,39 @@ func (fake *FakeDriver) MountReturns(result1 voldriver.MountResponse, result2 er
 		result1 voldriver.MountResponse
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeDriver) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) error {
+	fake.unmountMutex.Lock()
+	fake.unmountArgsForCall = append(fake.unmountArgsForCall, struct {
+		logger         lager.Logger
+		unmountRequest voldriver.UnmountRequest
+	}{logger, unmountRequest})
+	fake.unmountMutex.Unlock()
+	if fake.UnmountStub != nil {
+		return fake.UnmountStub(logger, unmountRequest)
+	} else {
+		return fake.unmountReturns.result1
+	}
+}
+
+func (fake *FakeDriver) UnmountCallCount() int {
+	fake.unmountMutex.RLock()
+	defer fake.unmountMutex.RUnlock()
+	return len(fake.unmountArgsForCall)
+}
+
+func (fake *FakeDriver) UnmountArgsForCall(i int) (lager.Logger, voldriver.UnmountRequest) {
+	fake.unmountMutex.RLock()
+	defer fake.unmountMutex.RUnlock()
+	return fake.unmountArgsForCall[i].logger, fake.unmountArgsForCall[i].unmountRequest
+}
+
+func (fake *FakeDriver) UnmountReturns(result1 error) {
+	fake.UnmountStub = nil
+	fake.unmountReturns = struct {
+		result1 error
+	}{result1}
 }
 
 var _ voldriver.Driver = new(FakeDriver)

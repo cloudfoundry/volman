@@ -15,7 +15,7 @@ var _ = Describe("DriverClientCli", func() {
 	var client voldriver.Driver
 	var fakeCmd *volmanfakes.FakeCmd
 	var fakeExec *volmanfakes.FakeExec
-	var validInfoResponseResponse io.ReadCloser
+	var validInfoResponseResponse = stringCloser{bytes.NewBufferString("")}
 	var invalidInfoResponseResponse io.ReadCloser
 
 	Context("when given invalid driver path", func() {
@@ -23,9 +23,6 @@ var _ = Describe("DriverClientCli", func() {
 			fakeExec = new(volmanfakes.FakeExec)
 			fakeCmd = new(volmanfakes.FakeCmd)
 			fakeExec.CommandReturns(fakeCmd)
-
-			invalidInfoResponseResponse = stringCloser{bytes.NewBufferString("")}
-
 			client = &voldriver.DriverClientCli{fakeExec, fakeDriverPath, "SomeDriver"}
 		})
 		It("should error on get driver info", func() {
@@ -52,6 +49,10 @@ var _ = Describe("DriverClientCli", func() {
 			mountResponse, err := client.Mount(testLogger, voldriver.MountRequest{VolumeId: volumeId, Config: config})
 			Expect(err).To(HaveOccurred())
 			Expect(mountResponse.Path).To(Equal(""))
+		})
+
+		It("should not be able to unmount", func() {
+			// redundant test
 		})
 
 	})
@@ -99,6 +100,36 @@ var _ = Describe("DriverClientCli", func() {
 			mountResponse, err := client.Mount(testLogger, voldriver.MountRequest{VolumeId: volumeId, Config: config})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(mountResponse.Path).To(Equal("/MountPoint"))
+		})
+
+		It("should be able to unmount", func() {
+			var validDriverUnmountResponse = stringCloser{bytes.NewBufferString("{}")}
+			var stdOutResponses = [...]io.ReadCloser{validDriverUnmountResponse}
+
+			fakeCmd.StdoutPipeStub = func() (io.ReadCloser, error) {
+				return stdOutResponses[0], nil
+			}
+
+			testLogger := lagertest.NewTestLogger("ClientTest") // todo: move this to top level before
+			volumeId := "fake-volume"
+
+			err := client.Unmount(testLogger, voldriver.UnmountRequest{VolumeId: volumeId})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should not unmount a volume that doesnt exist", func() {
+			var invalidDriverUnmountResponse = errCloser{bytes.NewBufferString("")}
+			var stdOutResponses = [...]io.ReadCloser{invalidDriverUnmountResponse}
+
+			fakeCmd.StdoutPipeStub = func() (io.ReadCloser, error) {
+				return stdOutResponses[0], nil
+			}
+
+			testLogger := lagertest.NewTestLogger("ClientTest") // todo: move this to top level before
+			volumeId := "fake-volume"
+
+			err := client.Unmount(testLogger, voldriver.UnmountRequest{VolumeId: volumeId})
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

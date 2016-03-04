@@ -1,6 +1,6 @@
 package voldriver
 
-import(
+import (
 	"github.com/pivotal-golang/lager"
 )
 
@@ -14,6 +14,7 @@ type InfoResponse struct {
 type Driver interface {
 	Info(logger lager.Logger) (InfoResponse, error)
 	Mount(logger lager.Logger, mountRequest MountRequest) (MountResponse, error)
+	Unmount(logger lager.Logger, unmountRequest UnmountRequest) error
 }
 
 type MountRequest struct {
@@ -23,4 +24,8 @@ type MountRequest struct {
 
 type MountResponse struct {
 	Path string `json:"path"`
+}
+
+type UnmountRequest struct {
+	VolumeId string `json:"volumeId"`
 }

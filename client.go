@@ -7,4 +7,5 @@ import "github.com/pivotal-golang/lager"
 type Manager interface {
 	ListDrivers(logger lager.Logger) (ListDriversResponse, error)
 	Mount(logger lager.Logger, driverId string, volumeId string, config string) (MountResponse, error)
+	Unmount(logger lager.Logger, driverId string, volumeId string) error
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,7 +48,7 @@ var _ = Describe("Volman", func() {
 			_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", debugServerAddress))
 			Expect(err).NotTo(HaveOccurred())
 		})
-		Context("driver installed in temp directory", func() {
+		Context("when driver installed in temp directory", func() {
 			BeforeEach(func() {
 				copyFile(fakeDriverPath, tmpDriversPath+"/fakedriver")
 			})
@@ -62,22 +63,41 @@ var _ = Describe("Volman", func() {
 				Expect(drivers.Drivers[0].Name).To(Equal("fakedriver"))
 			})
 
-			It("should mount a volume, given a driver name, volume id, and opaque blob of configuration", func() {
-				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-				testLogger := lagertest.NewTestLogger("MainTest")
+			Context("when mounting given a driver name, volume id, and opaque blob of configuration", func() {
+				var err error
+				var volumeId = "fake-volume"
+				var mountPoint volman.MountResponse
 
-				volumeId := "fake-volume"
-				config := "Here is some config!"
+				BeforeEach(func() {
+					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+					testLogger := lagertest.NewTestLogger("MainTest")
+					config := "Here is some config!"
+					mountPoint, err = client.Mount(testLogger, "fakedriver", volumeId, config)
+				})
 
-				mountPoint, err := client.Mount(testLogger, "fakedriver", volumeId, config)
+				It("should mount a volume", func() {
+					Expect(err).NotTo(HaveOccurred())
+					Expect(mountPoint.Path).NotTo(Equal(""))
+					defer os.Remove(mountPoint.Path)
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(mountPoint.Path).NotTo(Equal(""))
-				defer os.Remove(mountPoint.Path)
+					matches, err := filepath.Glob(mountPoint.Path)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(matches)).To(Equal(1))
+				})
 
-				matches, err := filepath.Glob(mountPoint.Path)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(len(matches)).To(Equal(1))
+				FIt("should unmount a volume given same volume ID", func() {
+					defer os.Remove(mountPoint.Path)
+					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+					testLogger := lagertest.NewTestLogger("MainTest")
+
+					err := client.Unmount(testLogger, "fakedriver", volumeId)
+					Expect(err).NotTo(HaveOccurred())
+
+					// todo: actually remove path in fake driver, then enable
+					// matches, err := filepath.Glob(mountPoint.Path)
+					// Expect(err).NotTo(HaveOccurred())
+					// Expect(len(matches)).To(Equal(0))
+				})
 			})
 
 			It("should error, given an invalid driver name", func() {
