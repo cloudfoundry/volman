@@ -1,9 +1,9 @@
 package voldriver
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-
 	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/pivotal-golang/lager"
 )
@@ -35,6 +35,11 @@ func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{})
 	if output == nil {
 		return invoker.DriverError(logger, err, "decoding JSON")
 	}
+
+	r := bufio.NewReader(stdout)
+	line, _, _ := r.ReadLine()
+	fmt.Printf("------.....>%s", line)
+
 	decoder := json.NewDecoder(stdout)
 
 	err = decoder.Decode(&output)
