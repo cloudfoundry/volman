@@ -14,16 +14,23 @@ type CliInvoker struct {
 	UseCmd     system.Cmd
 }
 
-func NewCliInvoker(useExec system.Exec, executable string, args ...string) CliInvoker {
-	invoker := CliInvoker{useExec, executable, nil}
-	invoker.UseCmd = invoker.UseExec.Command(executable, args...)
-	return invoker
+func NewCliInvoker(useExec system.Exec, executable string) *CliInvoker {
+	return &CliInvoker{useExec, executable, nil}
 }
 
-func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{}) error {
+func (invoker *CliInvoker) Command(args ...string) {
+	invoker.UseCmd = invoker.UseExec.Command(invoker.executable, args...)
+}
+
+func (invoker *CliInvoker) Execute(logger lager.Logger, output interface{}) error {
+	if output == nil {
+		return invoker.DriverError(logger, nil, "invoke-driver illegal argument: <output> must not be nil")
+	}
+
 	logger = logger.Session("invoke-driver")
 	logger.Info("start")
 	defer logger.Info("end")
+
 	cmd := invoker.UseCmd
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -33,13 +40,8 @@ func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{})
 	if err := cmd.Start(); err != nil {
 		return invoker.DriverError(logger, err, "starting")
 	}
-	if output == nil {
-		return invoker.DriverError(logger, err, "decoding JSON")
-	}
-	decoder := json.NewDecoder(stdout)
 
-	err = decoder.Decode(&output)
-	if err != nil {
+	if err := json.NewDecoder(stdout).Decode(&output); err != nil {
 		return invoker.DriverError(logger, err, "decoding JSON")
 	}
 

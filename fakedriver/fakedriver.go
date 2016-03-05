@@ -5,71 +5,58 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	flags "github.com/jessevdk/go-flags"
 )
-
-var rootDir string
 
 type InfoCommand struct {
 	Info func() `short:"i" long:"info" description:"Print program information"`
 }
 
 func (x *InfoCommand) Execute(args []string) error {
-	InfoResponse := voldriver.InfoResponse{
-		Name: "fakedriver",
-		Path: "/fake/path",
-	}
+	fakeDriver := NewLocalDriver()
+	testLogger := NewTestLogger("FakeDriver")
+	defer testLogger.Close()
 
-	jsonBlob, err := json.Marshal(InfoResponse)
+	response, err := fakeDriver.Info(testLogger)
 	if err != nil {
-		panic("Error Marshaling the driver")
+		return err
 	}
-	fmt.Println(string(jsonBlob))
-
+	printJson(response)
 	return nil
 }
 
 type MountCommand struct {
-	Mount string `short:"v" long:"volume" description:"ID of the volume to mount"`
+	Volume string `short:"v" long:"volume" description:"ID of the volume to mount"`
 }
 
 func (x *MountCommand) Execute(args []string) error {
+	fakeDriver := NewLocalDriver()
+	testLogger := NewTestLogger("FakeDriver")
+	defer testLogger.Close()
 
-	mountPath := os.TempDir() + rootDir + x.Mount
-	err := os.MkdirAll(mountPath, 0777)
+	response, err := fakeDriver.Mount(testLogger, voldriver.MountRequest{x.Volume, ""})
 	if err != nil {
-		fmt.Printf("Error creating volume %s", err.Error())
-		return nil
+		return err
 	}
-	mountPoint := volman.MountResponse{mountPath}
-
-	jsonBlob, err := json.Marshal(mountPoint)
-	if err != nil {
-		panic("Error marshaling mount response")
-	}
-	fmt.Println(string(jsonBlob))
-
+	printJson(response)
 	return nil
 }
 
 type UnmountCommand struct {
-	Unmount string `short:"v" long:"volume" description:"ID of the volume Id to unmount"`
+	Volume string `short:"v" long:"volume" description:"ID of the volume Id to unmount"`
 }
 
 func (x *UnmountCommand) Execute(args []string) error {
+	fakeDriver := NewLocalDriver()
+	testLogger := NewTestLogger("FakeDriver")
+	defer testLogger.Close()
 
-	mountPath := os.TempDir() + rootDir + x.Unmount
-	exists, err := exists(mountPath)
+	err := fakeDriver.Unmount(testLogger, voldriver.UnmountRequest{x.Volume})
 	if err != nil {
-		return fmt.Errorf("Error establishing if volume exists")
+		return err
 	}
-	if !exists {
-		return fmt.Errorf("Volume %s does not exist, nothing to do!", x.Unmount)
-	}
-
-	fmt.Println("{}")
+	printJson(struct{}{})
 	return nil
 }
 
@@ -81,7 +68,6 @@ func main() {
 	var unmountCmd UnmountCommand
 	var options Options
 	var parser = flags.NewParser(&options, flags.Default)
-	rootDir = "_fakedriver/"
 
 	parser.AddCommand("info",
 		"Print Info",
@@ -112,4 +98,12 @@ func exists(path string) (bool, error) {
 		return false, nil
 	}
 	return true, err
+}
+
+func printJson(response interface{}) {
+	jsonBlob, err := json.Marshal(response)
+	if err != nil {
+		panic("Error Marshaling the driver")
+	}
+	fmt.Println(string(jsonBlob))
 }

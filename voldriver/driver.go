@@ -8,17 +8,12 @@ import (
 )
 
 type DriverClientCli struct {
-	UseExec     system.Exec
-	DriversPath string
-	Name        string
+	Invoker *CliInvoker
 }
 
 func NewDriverClientCli(path string, useExec system.Exec, name string) *DriverClientCli {
 	return &DriverClientCli{
-		UseExec:     useExec,
-		DriversPath: path,
-		Name:        name,
-	}
+		NewCliInvoker(useExec, fmt.Sprintf("%s/%s", path, name))}
 }
 
 func (client *DriverClientCli) Mount(logger lager.Logger, mountRequest MountRequest) (MountResponse, error) {
@@ -28,8 +23,8 @@ func (client *DriverClientCli) Mount(logger lager.Logger, mountRequest MountRequ
 	response := struct {
 		Path string `json:"path"`
 	}{}
-	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "mount", mountRequest.VolumeId, mountRequest.Config)
-	err := invoker.InvokeDriver(logger, &response)
+	client.Invoker.Command("mount", mountRequest.VolumeId, mountRequest.Config)
+	err := client.Invoker.Execute(logger, &response)
 	if err != nil {
 		return MountResponse{}, err
 	}
@@ -41,8 +36,8 @@ func (client *DriverClientCli) Unmount(logger lager.Logger, unmountRequest Unmou
 	logger.Info("start")
 	defer logger.Info("end")
 	response := new(interface{})
-	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "unmount", unmountRequest.VolumeId)
-	return invoker.InvokeDriver(logger, &response)
+	client.Invoker.Command("unmount", unmountRequest.VolumeId)
+	return client.Invoker.Execute(logger, &response)
 }
 
 func (client *DriverClientCli) Info(logger lager.Logger) (InfoResponse, error) {
@@ -50,8 +45,8 @@ func (client *DriverClientCli) Info(logger lager.Logger) (InfoResponse, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 	response := InfoResponse{}
-	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "info")
-	err := invoker.InvokeDriver(logger, &response)
+	client.Invoker.Command("info")
+	err := client.Invoker.Execute(logger, &response)
 	if err != nil {
 		return InfoResponse{}, err
 	}

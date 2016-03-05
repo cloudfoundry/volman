@@ -10,6 +10,7 @@ import (
 type Cmd interface {
 	Start() error
 	StdoutPipe() (io.ReadCloser, error)
+	StderrPipe() (io.ReadCloser, error)
 	Wait() error
 }
 

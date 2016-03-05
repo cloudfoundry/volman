@@ -113,5 +113,5 @@ func (client *localClient) driverCall(logger lager.Logger, driverId string, call
 			return nil
 		}
 	}
-	return fmt.Errorf("Volman can't find driver %s", driverId)
+	return fmt.Errorf("Driver '%s' not found in list of known drivers", driverId)
 }

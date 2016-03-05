@@ -69,8 +69,8 @@ var _ = Describe("Volman", func() {
 
 		It("should be able to mount", func() {
 			var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Path\":\"/MountPoint\"}")}
-			var stdOutResponses = [...]io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
-			makeCommandReturnStdOutResponsesInOrder(fakeCmd, stdOutResponses)
+			var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
+			volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
 
 			volumeId := "fake-volume"
 			config := "Here is some config!"
@@ -82,8 +82,8 @@ var _ = Describe("Volman", func() {
 
 		It("should not be able to mount if mount fails", func() {
 			var invalidDriverMountResponse = errCloser{bytes.NewBufferString("")}
-			var stdOutResponses = [...]io.ReadCloser{validDriverInfoResponse, invalidDriverMountResponse}
-			makeCommandReturnStdOutResponsesInOrder(fakeCmd, stdOutResponses)
+			var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, invalidDriverMountResponse}
+			volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
 
 			volumeId := "fake-volume"
 			config := "Here is some config!"
@@ -94,8 +94,8 @@ var _ = Describe("Volman", func() {
 
 		It("should be able to unmount", func() {
 			var validDriverUnmountResponse = stringCloser{bytes.NewBufferString("{}")}
-			var stdOutResponses = [...]io.ReadCloser{validDriverInfoResponse, validDriverUnmountResponse}
-			makeCommandReturnStdOutResponsesInOrder(fakeCmd, stdOutResponses)
+			var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverUnmountResponse}
+			volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
 
 			volumeId := "fake-volume"
 
@@ -136,8 +136,8 @@ var _ = Describe("Volman", func() {
 
 			It("should not be able to mount", func() {
 				var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Path\":\"/MountPoint\"}")}
-				var stdOutResponses = [...]io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
-				makeCommandReturnStdOutResponsesInOrder(fakeCmd, stdOutResponses)
+				var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
+				volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
 
 				volumeId := "fake-volume"
 				config := "Here is some config!"
@@ -147,8 +147,8 @@ var _ = Describe("Volman", func() {
 
 			It("should not be able to unmount", func() {
 				var validDriverMountResponse = stringCloser{bytes.NewBufferString("{}")}
-				var stdOutResponses = [...]io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
-				makeCommandReturnStdOutResponsesInOrder(fakeCmd, stdOutResponses)
+				var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
+				volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
 
 				volumeId := "fake-volume"
 
@@ -158,14 +158,6 @@ var _ = Describe("Volman", func() {
 		})
 	})
 })
-
-func makeCommandReturnStdOutResponsesInOrder(fakeCmd *volmanfakes.FakeCmd, stdOutResponses []io.ReadCloser) {
-	calls := 0
-	fakeCmd.StdoutPipeStub = func() (io.ReadCloser, error) {
-		defer func() { calls++ }()
-		return stdOutResponses[calls], nil
-	}
-}
 
 func whenListDriversIsRan() (volman.ListDriversResponse, error) {
 	testLogger := lagertest.NewTestLogger("ClientTest")
