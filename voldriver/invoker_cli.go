@@ -3,7 +3,6 @@ package voldriver
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/pivotal-golang/lager"
 )
