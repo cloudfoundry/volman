@@ -22,6 +22,13 @@ type FakeCmd struct {
 		result1 io.ReadCloser
 		result2 error
 	}
+	StderrPipeStub        func() (io.ReadCloser, error)
+	stderrPipeMutex       sync.RWMutex
+	stderrPipeArgsForCall []struct{}
+	stderrPipeReturns     struct {
+		result1 io.ReadCloser
+		result2 error
+	}
 	WaitStub        func() error
 	waitMutex       sync.RWMutex
 	waitArgsForCall []struct{}
@@ -74,6 +81,31 @@ func (fake *FakeCmd) StdoutPipeCallCount() int {
 func (fake *FakeCmd) StdoutPipeReturns(result1 io.ReadCloser, result2 error) {
 	fake.StdoutPipeStub = nil
 	fake.stdoutPipeReturns = struct {
+		result1 io.ReadCloser
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeCmd) StderrPipe() (io.ReadCloser, error) {
+	fake.stderrPipeMutex.Lock()
+	fake.stderrPipeArgsForCall = append(fake.stderrPipeArgsForCall, struct{}{})
+	fake.stderrPipeMutex.Unlock()
+	if fake.StderrPipeStub != nil {
+		return fake.StderrPipeStub()
+	} else {
+		return fake.stderrPipeReturns.result1, fake.stderrPipeReturns.result2
+	}
+}
+
+func (fake *FakeCmd) StderrPipeCallCount() int {
+	fake.stderrPipeMutex.RLock()
+	defer fake.stderrPipeMutex.RUnlock()
+	return len(fake.stderrPipeArgsForCall)
+}
+
+func (fake *FakeCmd) StderrPipeReturns(result1 io.ReadCloser, result2 error) {
+	fake.StderrPipeStub = nil
+	fake.stderrPipeReturns = struct {
 		result1 io.ReadCloser
 		result2 error
 	}{result1, result2}

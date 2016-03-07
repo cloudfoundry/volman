@@ -8,23 +8,29 @@ import (
 )
 
 type DriverClientCli struct {
-	Invoker *CliInvoker
+	UseExec     system.Exec
+	DriversPath string
+	Name        string
 }
 
 func NewDriverClientCli(path string, useExec system.Exec, name string) *DriverClientCli {
 	return &DriverClientCli{
-		NewCliInvoker(useExec, fmt.Sprintf("%s/%s", path, name))}
+		UseExec:     useExec,
+		DriversPath: path,
+		Name:        name,
+	}
 }
 
 func (client *DriverClientCli) Mount(logger lager.Logger, mountRequest MountRequest) (MountResponse, error) {
 	logger = logger.Session("driver-mount")
 	logger.Info("start")
+	logger.Info(fmt.Sprintf("mount request %#v", mountRequest))
 	defer logger.Info("end")
 	response := struct {
 		Path string `json:"path"`
 	}{}
-	client.Invoker.Command("mount", mountRequest.VolumeId, mountRequest.Config)
-	err := client.Invoker.Execute(logger, &response)
+	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "mount", "--volume", mountRequest.VolumeId, mountRequest.Config)
+	err := invoker.InvokeDriver(logger, &response)
 	if err != nil {
 		return MountResponse{}, err
 	}
@@ -36,8 +42,8 @@ func (client *DriverClientCli) Unmount(logger lager.Logger, unmountRequest Unmou
 	logger.Info("start")
 	defer logger.Info("end")
 	response := new(interface{})
-	client.Invoker.Command("unmount", unmountRequest.VolumeId)
-	return client.Invoker.Execute(logger, &response)
+	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "unmount", unmountRequest.VolumeId)
+	return invoker.InvokeDriver(logger, &response)
 }
 
 func (client *DriverClientCli) Info(logger lager.Logger) (InfoResponse, error) {
@@ -45,8 +51,8 @@ func (client *DriverClientCli) Info(logger lager.Logger) (InfoResponse, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 	response := InfoResponse{}
-	client.Invoker.Command("info")
-	err := client.Invoker.Execute(logger, &response)
+	invoker := NewCliInvoker(client.UseExec, fmt.Sprintf("%s/%s", client.DriversPath, client.Name), "info")
+	err := invoker.InvokeDriver(logger, &response)
 	if err != nil {
 		return InfoResponse{}, err
 	}

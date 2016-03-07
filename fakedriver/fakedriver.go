@@ -15,10 +15,8 @@ type InfoCommand struct {
 
 func (x *InfoCommand) Execute(args []string) error {
 	fakeDriver := NewLocalDriver()
-	testLogger := NewTestLogger("FakeDriver")
-	defer testLogger.Close()
 
-	response, err := fakeDriver.Info(testLogger)
+	response, err := fakeDriver.Info(nil)
 	if err != nil {
 		return err
 	}
@@ -32,10 +30,8 @@ type MountCommand struct {
 
 func (x *MountCommand) Execute(args []string) error {
 	fakeDriver := NewLocalDriver()
-	testLogger := NewTestLogger("FakeDriver")
-	defer testLogger.Close()
 
-	response, err := fakeDriver.Mount(testLogger, voldriver.MountRequest{x.Volume, ""})
+	response, err := fakeDriver.Mount(nil, voldriver.MountRequest{x.Volume, ""})
 	if err != nil {
 		return err
 	}
@@ -49,10 +45,8 @@ type UnmountCommand struct {
 
 func (x *UnmountCommand) Execute(args []string) error {
 	fakeDriver := NewLocalDriver()
-	testLogger := NewTestLogger("FakeDriver")
-	defer testLogger.Close()
 
-	err := fakeDriver.Unmount(testLogger, voldriver.UnmountRequest{x.Volume})
+	err := fakeDriver.Unmount(nil, voldriver.UnmountRequest{x.Volume})
 	if err != nil {
 		return err
 	}

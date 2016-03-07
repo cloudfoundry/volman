@@ -59,6 +59,7 @@ func (client *localClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 		driverInfoResponse := voldriver.InfoResponse{Name: split[len(split)-1]}
 		driver := voldriver.NewDriverClientCli(client.DriversPath, client.UseExec, driverInfoResponse.Name)
 		InfoResponse, err := driver.Info(logger)
+		logger.Info(fmt.Sprintf("Driver executable %s returned info %#v", driverExecutable, InfoResponse))
 		if err != nil {
 			msg := fmt.Sprintf(" Error occured in list drivers for executable %s (%s)", driverExecutable, err.Error())
 			logger.Error(msg, err)
@@ -72,12 +73,16 @@ func (client *localClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
+	logger.Info(fmt.Sprintf("Driver %s mounting volume %s", driverId, volumeId))	
 	defer logger.Info("end")
 
 	var response voldriver.MountResponse
 	err := client.driverCall(logger, driverId, func(driver voldriver.Driver) error {
 		var err error
-		response, err = driver.Mount(logger, voldriver.MountRequest{VolumeId: volumeId, Config: config})
+		mountRequest := voldriver.MountRequest{VolumeId: volumeId, Config: config}
+		logger.Info(fmt.Sprintf("Calling driver %s with mount request %#v", driverId, mountRequest))
+		response, err = driver.Mount(logger, mountRequest)
+		logger.Info(fmt.Sprintf("Response from driver.Mount was %#v", response))
 		return err
 	})
 	return volman.MountResponse{response.Path}, err
@@ -86,6 +91,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeId string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
+	logger.Info(fmt.Sprintf("Unmounting volume %s", volumeId))	
 	defer logger.Info("end")
 
 	err := client.driverCall(logger, driverId, func(driver voldriver.Driver) error {

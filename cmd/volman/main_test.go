@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/cloudfoundry-incubator/volman"
@@ -68,11 +69,13 @@ var _ = Describe("Volman", func() {
 				var volumeId string
 				var mountPoint volman.MountResponse
 
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 					testLogger := lagertest.NewTestLogger("MainTest")
 					config := "Here is some config!"
-					volumeId = "fake-volume_" + string(GinkgoParallelNode())
+					node := GinkgoParallelNode()
+					volumeId = "fake-volume_" + strconv.Itoa(node)
+					testLogger.Info(fmt.Sprintf("Mounting volume: %s", volumeId))
 					mountPoint, err = client.Mount(testLogger, "fakedriver", volumeId, config)
 					Expect(err).NotTo(HaveOccurred())
 				})

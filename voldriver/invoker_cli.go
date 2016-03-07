@@ -3,7 +3,6 @@ package voldriver
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/pivotal-golang/lager"
 )
@@ -14,23 +13,15 @@ type CliInvoker struct {
 	UseCmd     system.Cmd
 }
 
-func NewCliInvoker(useExec system.Exec, executable string) *CliInvoker {
-	return &CliInvoker{useExec, executable, nil}
+func NewCliInvoker(useExec system.Exec, executable string, args ...string) CliInvoker {
+	invoker := CliInvoker{useExec, executable, nil}
+	invoker.UseCmd = invoker.UseExec.Command(executable, args...)
+	return invoker
 }
 
-func (invoker *CliInvoker) Command(args ...string) {
-	invoker.UseCmd = invoker.UseExec.Command(invoker.executable, args...)
-}
-
-func (invoker *CliInvoker) Execute(logger lager.Logger, output interface{}) error {
-	if output == nil {
-		return invoker.DriverError(logger, nil, "invoke-driver illegal argument: <output> must not be nil")
-	}
-
-	logger = logger.Session("invoke-driver")
+func (invoker *CliInvoker) InvokeDriver(logger lager.Logger, output interface{}) error {
 	logger.Info("start")
 	defer logger.Info("end")
-
 	cmd := invoker.UseCmd
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -40,9 +31,15 @@ func (invoker *CliInvoker) Execute(logger lager.Logger, output interface{}) erro
 	if err := cmd.Start(); err != nil {
 		return invoker.DriverError(logger, err, "starting")
 	}
-
-	if err := json.NewDecoder(stdout).Decode(&output); err != nil {
+	if output == nil {
 		return invoker.DriverError(logger, err, "decoding JSON")
+	}
+
+	decoder := json.NewDecoder(stdout)
+
+	err = decoder.Decode(&output)
+	if err != nil {
+		return invoker.DriverError(logger, err, "decoding JSON")		
 	}
 
 	if err := cmd.Wait(); err != nil {
