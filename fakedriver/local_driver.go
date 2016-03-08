@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"strings"
+
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
 )
@@ -30,7 +32,8 @@ func (d *localDriver) Mount(logger lager.Logger, mountRequest voldriver.MountReq
 	f, _ := d.openLog()
 	defer f.Close()
 
-	mountPath := os.TempDir() + d.rootDir + mountRequest.VolumeId
+	mountPath := d.mountPath(mountRequest.VolumeId)
+
 	d.writeLog(f, "Mounting volume %s", mountRequest.VolumeId)
 	d.writeLog(f, "Creating volume path %s", mountPath)
 	err := os.MkdirAll(mountPath, 0777)
@@ -48,7 +51,8 @@ func (d *localDriver) Unmount(logger lager.Logger, unmountRequest voldriver.Unmo
 	f, _ := d.openLog()
 	defer f.Close()
 
-	mountPath := os.TempDir() + d.rootDir + unmountRequest.VolumeId
+	mountPath := d.mountPath(unmountRequest.VolumeId)
+
 	exists, err := exists(mountPath)
 	if err != nil {
 		d.writeLog(f, "Error establishing if volume exists")
@@ -69,16 +73,26 @@ func (d *localDriver) Unmount(logger lager.Logger, unmountRequest voldriver.Unmo
 	return nil
 }
 
+func (d *localDriver) mountPath(volumeId string) string {
+
+	tmpDir := os.TempDir()
+	if !strings.HasSuffix(tmpDir, "/") {
+		tmpDir = fmt.Sprintf("%s/", tmpDir)
+	}
+
+	return tmpDir + d.rootDir + volumeId
+}
+
 func (d *localDriver) openLog() (*os.File, error) {
-	f, err := os.OpenFile(d.logFile, os.O_CREATE| os.O_APPEND|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(d.logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		panic(fmt.Sprintf("Can't create fakedriver log file %s", d.logFile))
 	}
 	return f, nil
 }
 
-func (d *localDriver) writeLog(f *os.File, msg string, args... string) (error) {
+func (d *localDriver) writeLog(f *os.File, msg string, args ...string) error {
 	t := time.Now()
-	_, err := f.WriteString(fmt.Sprintf("[%s] " + msg + "\n", t.Format(time.RFC3339), args))
+	_, err := f.WriteString(fmt.Sprintf("[%s] "+msg+"\n", t.Format(time.RFC3339), args))
 	return err
 }
