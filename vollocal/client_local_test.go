@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/cloudfoundry-incubator/volman"
-	_ "github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
@@ -16,18 +17,23 @@ import (
 
 var _ = Describe("Volman", func() {
 
-	var fakeCmd *volmanfakes.FakeCmd
-	var fakeExec *volmanfakes.FakeExec
+	var fakeClientFactory *volmanfakes.FakeRemoteClientFactory
+	var fakeClient *volmanfakes.FakeDriver
 	var validDriverInfoResponse io.ReadCloser
 	var testLogger = lagertest.NewTestLogger("ClientTest")
 
+	var driverName string
+
 	BeforeEach(func() {
+		driverName = "fakedriver"
+
 		validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"fakedriver\",\"Path\":\"somePath\"}")}
 	})
 
 	Context("has no drivers in location", func() {
+
 		BeforeEach(func() {
-			client = vollocal.NewLocalClient(fmt.Sprintf("%s/tmp", defaultPluginsDirectory))
+			client = vollocal.NewLocalClient("/noplugins")
 		})
 
 		It("should report empty list of drivers", func() {
@@ -39,7 +45,9 @@ var _ = Describe("Volman", func() {
 	})
 
 	Context("has driver in location", func() {
+
 		BeforeEach(func() {
+			writeDriverSpec(driverName, fmt.Sprintf("{\"Name\": \"fakedriver\",\"Addr\": \"http://0.0.0.0:%d\"}", 8080))
 			client = vollocal.NewLocalClient(defaultPluginsDirectory)
 		})
 
@@ -48,29 +56,29 @@ var _ = Describe("Volman", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(drivers.Drivers)).ToNot(Equal(0))
 		})
-		It("should report only one fakedriver", func() {
+
+		It("should report at least fakedriver", func() {
 			drivers, err := client.ListDrivers(testLogger)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(drivers.Drivers)).To(Equal(1))
+			Expect(len(drivers.Drivers)).ToNot(Equal(0))
 			Expect(drivers.Drivers[0].Name).To(Equal("fakedriver"))
 		})
 
 	})
 
 	Context("when given valid driver path", func() {
-		var driverName string
+
 		BeforeEach(func() {
-			fakeExec = new(volmanfakes.FakeExec)
-			fakeCmd = new(volmanfakes.FakeCmd)
-			fakeExec.CommandReturns(fakeCmd)
-			client = vollocal.NewLocalClientWithExec(defaultPluginsDirectory, fakeExec)
+			fakeClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+			fakeClient = new(volmanfakes.FakeDriver)
+			fakeClientFactory.NewRemoteClientReturns(fakeClient, nil)
+
+			writeDriverSpec(driverName, fmt.Sprintf("{\"Name\": \"fakedriver\",\"Addr\": \"http://0.0.0.0:%d\"}", 8080))
+			client = vollocal.NewLocalClientWithRemoteClientFactory(defaultPluginsDirectory, fakeClientFactory)
 			driverName = "fakedriver"
 		})
 
 		It("should be able to mount", func() {
-			var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Path\":\"/MountPoint\"}")}
-			var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
-			volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
 
 			volumeId := "fake-volume"
 			config := "Here is some config!"
@@ -81,9 +89,8 @@ var _ = Describe("Volman", func() {
 		})
 
 		It("should not be able to mount if mount fails", func() {
-			var invalidDriverMountResponse = errCloser{bytes.NewBufferString("")}
-			var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, invalidDriverMountResponse}
-			volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
+			mountResponse := voldriver.MountResponse{}
+			fakeClient.MountReturns(mountResponse, fmt.Errorf("an error"))
 
 			volumeId := "fake-volume"
 			config := "Here is some config!"
@@ -93,24 +100,18 @@ var _ = Describe("Volman", func() {
 		})
 
 		It("should be able to unmount", func() {
-			var validDriverUnmountResponse = stringCloser{bytes.NewBufferString("{}")}
-			var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverUnmountResponse}
-			volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
-
 			volumeId := "fake-volume"
 
 			err := client.Unmount(testLogger, driverName, volumeId)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("when unable to list drivers", func() {
-			BeforeEach(func() {
-				fakeCmd.StdoutPipeReturns(nil, fmt.Errorf("failure"))
-			})
+		Context("when there is a malformed json driver spec", func() {
 
-			It("should not be able to list drivers", func() {
-				_, err := client.ListDrivers(testLogger)
-				Expect(err).To(HaveOccurred())
+			BeforeEach(func() {
+				driverName = "invalid-driver"
+
+				writeDriverSpec(driverName, "invalid json")
 			})
 
 			It("should not be able to mount", func() {
@@ -130,15 +131,12 @@ var _ = Describe("Volman", func() {
 		})
 
 		Context("when given invalid driver", func() {
+
 			BeforeEach(func() {
 				driverName = "does-not-exist"
 			})
 
 			It("should not be able to mount", func() {
-				var validDriverMountResponse = stringCloser{bytes.NewBufferString("{\"Path\":\"/MountPoint\"}")}
-				var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
-				volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
-
 				volumeId := "fake-volume"
 				config := "Here is some config!"
 				_, err := client.Mount(testLogger, driverName, volumeId, config)
@@ -146,10 +144,6 @@ var _ = Describe("Volman", func() {
 			})
 
 			It("should not be able to unmount", func() {
-				var validDriverMountResponse = stringCloser{bytes.NewBufferString("{}")}
-				var stdOutResponses = []io.ReadCloser{validDriverInfoResponse, validDriverMountResponse}
-				volmanfakes.CmdStdoutPipeReturnsInOrder(fakeCmd, stdOutResponses)
-
 				volumeId := "fake-volume"
 
 				err := client.Unmount(testLogger, driverName, volumeId)
@@ -162,4 +156,18 @@ var _ = Describe("Volman", func() {
 func whenListDriversIsRan() (volman.ListDriversResponse, error) {
 	testLogger := lagertest.NewTestLogger("ClientTest")
 	return client.ListDrivers(testLogger)
+}
+
+func writeDriverSpec(driver string, contents string) {
+	f, err := os.Create(defaultPluginsDirectory + "/" + driver + ".json")
+	if err != nil {
+		fmt.Printf("Error creating file " + err.Error())
+	}
+	defer f.Close()
+	_, err = f.WriteString(contents)
+	if err != nil {
+		fmt.Printf("Error writing to file " + err.Error())
+	}
+	f.Sync()
+
 }

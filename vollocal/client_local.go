@@ -1,27 +1,30 @@
 package vollocal
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/pivotal-golang/lager"
 )
 
 type localClient struct {
 	DriversPath string
-	UseExec     system.Exec
+	Factory     driverhttp.RemoteClientFactory
 }
 
 func NewLocalClient(driversPath string) *localClient {
-	return NewLocalClientWithExec(driversPath, &system.SystemExec{})
+	remoteClientFactory := driverhttp.NewRemoteClientFactory()
+	return NewLocalClientWithRemoteClientFactory(driversPath, remoteClientFactory)
 }
 
-func NewLocalClientWithExec(driversPath string, exec system.Exec) *localClient {
-	return &localClient{driversPath, exec}
+func NewLocalClientWithRemoteClientFactory(driversPath string, factory driverhttp.RemoteClientFactory) *localClient {
+	return &localClient{driversPath, factory}
 }
 
 func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
@@ -47,25 +50,20 @@ func (client *localClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 	logger = logger.Session("list-drivers")
 	logger.Info("start")
 	defer logger.Info("end")
-	driversBinaries, err := filepath.Glob(client.DriversPath + "/*")
+
+	driversBinaries, err := filepath.Glob(client.DriversPath + "/*.json")
 	if err != nil { // untestable on linux, does glob work differently on windows???
 		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", client.DriversPath, err.Error())
 	}
-	logger.Info(fmt.Sprintf("Found binaries: %#v", driversBinaries))
+
+	logger.Info(fmt.Sprintf("Found json specs: %#v", driversBinaries))
 	drivers := []voldriver.InfoResponse{}
 
 	for _, driverExecutable := range driversBinaries {
 		split := strings.Split(driverExecutable, "/")
-		driverInfoResponse := voldriver.InfoResponse{Name: split[len(split)-1]}
-		driver := voldriver.NewDriverClientCli(client.DriversPath, client.UseExec, driverInfoResponse.Name)
-		InfoResponse, err := driver.Info(logger)
-		logger.Info(fmt.Sprintf("Driver executable %s returned info %#v", driverExecutable, InfoResponse))
-		if err != nil {
-			msg := fmt.Sprintf(" Error occured in list drivers for executable %s (%s)", driverExecutable, err.Error())
-			logger.Error(msg, err)
-			return nil, fmt.Errorf(msg)
-		}
-		drivers = append(drivers, InfoResponse)
+		driverInfoResponse := voldriver.InfoResponse{Name: strings.TrimSuffix(split[len(split)-1], ".json")}
+
+		drivers = append(drivers, driverInfoResponse)
 	}
 	return drivers, nil
 }
@@ -73,11 +71,11 @@ func (client *localClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
-	logger.Info(fmt.Sprintf("Driver %s mounting volume %s", driverId, volumeId))	
+	logger.Info(fmt.Sprintf("Driver %s mounting volume %s", driverId, volumeId))
 	defer logger.Info("end")
 
 	var response voldriver.MountResponse
-	err := client.driverCall(logger, driverId, func(driver voldriver.Driver) error {
+	err := client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
 		var err error
 		mountRequest := voldriver.MountRequest{VolumeId: volumeId, Config: config}
 		logger.Info(fmt.Sprintf("Calling driver %s with mount request %#v", driverId, mountRequest))
@@ -91,10 +89,10 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeId string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
-	logger.Info(fmt.Sprintf("Unmounting volume %s", volumeId))	
+	logger.Info(fmt.Sprintf("Unmounting volume %s", volumeId))
 	defer logger.Info("end")
 
-	err := client.driverCall(logger, driverId, func(driver voldriver.Driver) error {
+	err := client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
 		return driver.Unmount(logger, voldriver.UnmountRequest{VolumeId: volumeId})
 	})
 	return err
@@ -102,7 +100,7 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeI
 
 type driverCallback func(driver voldriver.Driver) error
 
-func (client *localClient) driverCall(logger lager.Logger, driverId string, callback driverCallback) error {
+func (client *localClient) callDriver(logger lager.Logger, driverId string, callback driverCallback) error {
 	drivers, err := client.listDrivers(logger)
 	if err != nil {
 		return fmt.Errorf("Volman cannot find any drivers", err.Error())
@@ -110,8 +108,23 @@ func (client *localClient) driverCall(logger lager.Logger, driverId string, call
 	var driver voldriver.Driver
 	for _, driverInfoResponse := range drivers {
 		if driverInfoResponse.Name == driverId {
-			driver = voldriver.NewDriverClientCli(client.DriversPath, client.UseExec, driverInfoResponse.Name)
-			err := callback(driver)
+			// extract url from json file
+
+			var driverJsonSpec voldriver.DriverSpec
+			configFile, err := os.Open(client.DriversPath + "/" + driverInfoResponse.Name + ".json")
+			if err != nil {
+				fmt.Errorf("opening config file", err.Error())
+			}
+
+			jsonParser := json.NewDecoder(configFile)
+			if err = jsonParser.Decode(&driverJsonSpec); err != nil {
+				logger.Error("parsing config file", err)
+				return err
+			}
+
+			logger.Info(fmt.Sprintf("Invoking driver at %s", driverJsonSpec.Address))
+			driver, _ = client.Factory.NewRemoteClient(driverJsonSpec.Address)
+			err = callback(driver)
 			if err != nil {
 				logger.Error(fmt.Sprintf("Error calling driver %s", driverId), err)
 				return err

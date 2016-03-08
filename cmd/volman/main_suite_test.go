@@ -16,14 +16,18 @@ import (
 )
 
 var volmanPath string
-var fakeDriverPath string
-var tmpDriversPath string
-
-var runner *ginkgomon.Runner
 var volmanServerPort int
-var volmanProcess ifrit.Process
-
 var debugServerAddress string
+var volmanProcess ifrit.Process
+var runner *ginkgomon.Runner
+
+var fakeDriverPath string
+var fakedriverServerPort int
+var debugServerAddress2 string
+var fakedriverProcess ifrit.Process
+var fakedriverRunner *ginkgomon.Runner
+
+var tmpDriversPath string
 
 func TestVolman(t *testing.T) {
 	// these integration tests can take a bit, especially under load;
@@ -39,7 +43,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	volmanPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/cmd/volman", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
-	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver", "-race")
+	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver/cmd/fakedriver", "-race")
 	Expect(err).NotTo(HaveOccurred())
 	return []byte(strings.Join([]string{volmanPath, fakeDriverPath}, ","))
 }, func(pathsByte []byte) {
@@ -52,6 +56,18 @@ var _ = BeforeEach(func() {
 	var err error
 	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
 	Expect(err).NotTo(HaveOccurred())
+
+	fakedriverServerPort = 9750 + GinkgoParallelNode()
+	debugServerAddress2 = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
+	fakedriverRunner = ginkgomon.New(ginkgomon.Config{
+		Name: "fakedriverServer",
+		Command: exec.Command(
+			fakeDriverPath,
+			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", fakedriverServerPort),
+			"-debugAddr", debugServerAddress2,
+		),
+		StartCheck: "fakedriverServer.started",
+	})
 
 	volmanServerPort = 8750 + GinkgoParallelNode()
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 8850+GinkgoParallelNode())
@@ -69,6 +85,7 @@ var _ = BeforeEach(func() {
 
 var _ = AfterEach(func() {
 	ginkgomon.Kill(volmanProcess)
+	ginkgomon.Kill(fakedriverProcess)
 })
 
 var _ = SynchronizedAfterSuite(func() {

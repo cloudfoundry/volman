@@ -6,8 +6,9 @@ import (
 
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
-	"github.com/cloudfoundry-incubator/volman/volhttp"
-	"github.com/cloudfoundry-incubator/volman/vollocal"
+
+	"github.com/cloudfoundry-incubator/volman/fakedriver"
+	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
@@ -17,7 +18,7 @@ import (
 
 var atAddress = flag.String(
 	"listenAddr",
-	"0.0.0.0:8750",
+	"0.0.0.0:9750",
 	"host:port to serve volume management functions",
 )
 
@@ -36,9 +37,9 @@ func main() {
 	withLogger.Info("started")
 	defer withLogger.Info("ends")
 
-	volmanServer := createVolmanServer(withLogger, *atAddress, *driversPath)
+	fakeDriverServer := createFakedriverServer(withLogger, *atAddress, *driversPath)
 	servers := grouper.Members{
-		{"volman-server", volmanServer},
+		{"fakedriver-server", fakeDriverServer},
 	}
 	if dbgAddr := cf_debug_server.DebugAddress(flag.CommandLine); dbgAddr != "" {
 		servers = append(grouper.Members{
@@ -65,19 +66,17 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
 }
 
-func createVolmanServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
-	if driversPath == "" {
-		panic("'-driversPath' must be provided")
-	}
-	client := vollocal.NewLocalClient(driversPath)
-	handler, err := volhttp.NewHandler(logger, client)
+func createFakedriverServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
+
+	client := fakedriver.NewLocalDriver()
+	handler, err := driverhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)
 	return http_server.New(atAddress, handler)
 }
 
 func logger() (lager.Logger, *lager.ReconfigurableSink) {
 
-	logger, reconfigurableSink := cf_lager.New("volman")
+	logger, reconfigurableSink := cf_lager.New("fakedriverServer")
 	return logger, reconfigurableSink
 }
 

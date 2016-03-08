@@ -2,36 +2,30 @@ package voldriver
 
 import (
 	"github.com/pivotal-golang/lager"
+	"github.com/tedsuo/rata"
 )
 
-type InfoResponse struct {
-	Name string `json:"name,omitempty"`
-	Path string `json:"path,omitempty"`
+const (
+	MountRoute   = "mount"
+	UnmountRoute = "unmount"
+)
+
+var Routes = rata.Routes{
+	{Path: "/mount", Method: "POST", Name: MountRoute},
+	{Path: "/unmount", Method: "POST", Name: UnmountRoute},
 }
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_client.go . Driver
 
 type Driver interface {
 	Info(logger lager.Logger) (InfoResponse, error)
-
-	/**
-	 * Mounts a volume
-	 *
-	 * If successful your CLI implementation is expected to write the MountResponse to stdout
-	 * return nil for error and exit with 0
-	 * If unsuccessful your CLI implementation is expected to write nothing to stdout and
-	 * exit with 1
-	 */
 	Mount(logger lager.Logger, mountRequest MountRequest) (MountResponse, error)
-
-	/**
-	 * Unmounts a volume
-	 *
-	 * If successful your CLI implementation is expected to return nil and exits with code 0
-	 * If unsuccessful your CLI implementation is expected to write nothing to stdout and
-	 * exit with code 1
-	 */
 	Unmount(logger lager.Logger, unmountRequest UnmountRequest) error
+}
+
+type InfoResponse struct {
+	Name string `json:"name,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 type MountRequest struct {
@@ -45,4 +39,21 @@ type MountResponse struct {
 
 type UnmountRequest struct {
 	VolumeId string `json:"volumeId"`
+}
+
+func NewError(err error) Error {
+	return Error{err.Error()}
+}
+
+type Error struct {
+	Description string `json:"description"`
+}
+
+func (e Error) Error() string {
+	return e.Description
+}
+
+type DriverSpec struct {
+	Name    string `json:"Name"`
+	Address string `json:"Addr"`
 }

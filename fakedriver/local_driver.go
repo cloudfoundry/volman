@@ -1,9 +1,8 @@
-package main
+package fakedriver
 
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"strings"
 
@@ -29,17 +28,13 @@ func (d *localDriver) Info(logger lager.Logger) (voldriver.InfoResponse, error) 
 
 func (d *localDriver) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) (voldriver.MountResponse, error) {
 
-	f, _ := d.openLog()
-	defer f.Close()
-
 	mountPath := d.mountPath(mountRequest.VolumeId)
 
-	d.writeLog(f, "Mounting volume %s", mountRequest.VolumeId)
-	d.writeLog(f, "Creating volume path %s", mountPath)
+	logger.Info(fmt.Sprintf("Mounting volume %s", mountRequest.VolumeId))
+	logger.Info(fmt.Sprintf("Creating volume path %s", mountPath))
 	err := os.MkdirAll(mountPath, 0777)
 	if err != nil {
-		fmt.Printf("Error creating volume %s", err.Error())
-		d.writeLog(f, "Error creating volume %s", err.Error())
+		logger.Info(fmt.Sprintf("Error creating volume %s", err.Error()))
 		return voldriver.MountResponse{}, fmt.Errorf("Error creating volume %s", err.Error())
 	}
 	mountPoint := voldriver.MountResponse{mountPath}
@@ -48,29 +43,37 @@ func (d *localDriver) Mount(logger lager.Logger, mountRequest voldriver.MountReq
 
 func (d *localDriver) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) error {
 
-	f, _ := d.openLog()
-	defer f.Close()
-
 	mountPath := d.mountPath(unmountRequest.VolumeId)
 
 	exists, err := exists(mountPath)
 	if err != nil {
-		d.writeLog(f, "Error establishing if volume exists")
+		logger.Info(fmt.Sprintf("Error establishing if volume exists"))
 		return fmt.Errorf("Error establishing if volume exists")
 	}
 	if !exists {
-		d.writeLog(f, "Volume %s does not exist, nothing to do!", unmountRequest.VolumeId)
+		logger.Info(fmt.Sprintf("Volume %s does not exist, nothing to do!", unmountRequest.VolumeId))
 		return fmt.Errorf("Volume %s does not exist, nothing to do!", unmountRequest.VolumeId)
 	} else {
-		d.writeLog(f, "Removing volume path %s", mountPath)
+		logger.Info(fmt.Sprintf("Removing volume path %s", mountPath))
 		err := os.RemoveAll(mountPath)
 		if err != nil {
-			d.writeLog(f, "Unexpected error removing mount path %s", unmountRequest.VolumeId)
+			logger.Info(fmt.Sprintf("Unexpected error removing mount path %s", unmountRequest.VolumeId))
 			return fmt.Errorf("Unexpected error removing mount path %s", unmountRequest.VolumeId)
 		}
-		d.writeLog(f, "Unmounted volume %s", unmountRequest.VolumeId)
+		logger.Info(fmt.Sprintf("Unmounted volume %s", unmountRequest.VolumeId))
 	}
 	return nil
+}
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, err
 }
 
 func (d *localDriver) mountPath(volumeId string) string {
@@ -81,18 +84,4 @@ func (d *localDriver) mountPath(volumeId string) string {
 	}
 
 	return tmpDir + d.rootDir + volumeId
-}
-
-func (d *localDriver) openLog() (*os.File, error) {
-	f, err := os.OpenFile(d.logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(fmt.Sprintf("Can't create fakedriver log file %s", d.logFile))
-	}
-	return f, nil
-}
-
-func (d *localDriver) writeLog(f *os.File, msg string, args ...string) error {
-	t := time.Now()
-	_, err := f.WriteString(fmt.Sprintf("[%s] "+msg+"\n", t.Format(time.RFC3339), args))
-	return err
 }
