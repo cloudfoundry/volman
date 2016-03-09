@@ -10,17 +10,25 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/volman"
+	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
+	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
 var _ = Describe("Volman", func() {
 
+	var (
+		testLogger lager.Logger
+	)
+
 	BeforeEach(func() {
+		testLogger = lagertest.NewTestLogger("MainTest")
+
 		fakedriverProcess = ginkgomon.Invoke(fakedriverRunner)
 		time.Sleep(time.Millisecond * 1000)
 
@@ -46,7 +54,6 @@ var _ = Describe("Volman", func() {
 
 		It("should return empty list for '/v1/drivers' (200 status)", func() {
 			client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-			testLogger := lagertest.NewTestLogger("MainTest")
 			drivers, err := client.ListDrivers(testLogger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(drivers.Drivers)).To(Equal(0))
@@ -60,15 +67,14 @@ var _ = Describe("Volman", func() {
 		Context("when driver installed in the spec file plugins directory", func() {
 
 			BeforeEach(func() {
-				f, _ := os.Create(tmpDriversPath + "/fakedriver.json")
-				defer f.Close()
-				f.WriteString(fmt.Sprintf("{\"Name\": \"fakedriver\",\"Addr\": \"http://0.0.0.0:%d\"}", fakedriverServerPort))
-				f.Sync()
+
+				err := voldriver.WriteDriverSpec(testLogger, tmpDriversPath, "fakedriver", fmt.Sprintf("http://0.0.0.0:%d", fakedriverServerPort))
+				Expect(err).NotTo(HaveOccurred())
+
 			})
 
 			It("should return list of drivers for '/v1/drivers' (200 status)", func() {
 				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-				testLogger := lagertest.NewTestLogger("MainTest")
 				drivers, err := client.ListDrivers(testLogger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(drivers.Drivers)).To(Equal(1))
@@ -82,7 +88,6 @@ var _ = Describe("Volman", func() {
 
 				JustBeforeEach(func() {
 					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-					testLogger := lagertest.NewTestLogger("MainTest")
 					config := "Here is some config!"
 					node := GinkgoParallelNode()
 					volumeId = "fake-volume_" + strconv.Itoa(node)
@@ -102,7 +107,6 @@ var _ = Describe("Volman", func() {
 
 				It("should unmount a volume given same volume ID", func() {
 					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-					testLogger := lagertest.NewTestLogger("MainTest")
 
 					err := client.Unmount(testLogger, "fakedriver", volumeId)
 					Expect(err).NotTo(HaveOccurred())
@@ -115,7 +119,6 @@ var _ = Describe("Volman", func() {
 
 			It("should error, given an invalid driver name", func() {
 				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-				testLogger := lagertest.NewTestLogger("MainTest")
 
 				_, err := client.Mount(testLogger, "InvalidDriver", "vol", "")
 

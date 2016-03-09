@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
@@ -47,7 +46,9 @@ var _ = Describe("Volman", func() {
 	Context("has driver in location", func() {
 
 		BeforeEach(func() {
-			writeDriverSpec(driverName, fmt.Sprintf("{\"Name\": \"fakedriver\",\"Addr\": \"http://0.0.0.0:%d\"}", 8080))
+			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
+			Expect(err).NotTo(HaveOccurred())
+
 			client = vollocal.NewLocalClient(defaultPluginsDirectory)
 		})
 
@@ -73,7 +74,8 @@ var _ = Describe("Volman", func() {
 			fakeClient = new(volmanfakes.FakeDriver)
 			fakeClientFactory.NewRemoteClientReturns(fakeClient, nil)
 
-			writeDriverSpec(driverName, fmt.Sprintf("{\"Name\": \"fakedriver\",\"Addr\": \"http://0.0.0.0:%d\"}", 8080))
+			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
+			Expect(err).NotTo(HaveOccurred())
 			client = vollocal.NewLocalClientWithRemoteClientFactory(defaultPluginsDirectory, fakeClientFactory)
 			driverName = "fakedriver"
 		})
@@ -111,7 +113,8 @@ var _ = Describe("Volman", func() {
 			BeforeEach(func() {
 				driverName = "invalid-driver"
 
-				writeDriverSpec(driverName, "invalid json")
+				err := voldriver.WriteDriverSpecWithContents(testLogger, defaultPluginsDirectory, driverName, []byte("invalid json"))
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should not be able to mount", func() {
@@ -156,18 +159,4 @@ var _ = Describe("Volman", func() {
 func whenListDriversIsRan() (volman.ListDriversResponse, error) {
 	testLogger := lagertest.NewTestLogger("ClientTest")
 	return client.ListDrivers(testLogger)
-}
-
-func writeDriverSpec(driver string, contents string) {
-	f, err := os.Create(defaultPluginsDirectory + "/" + driver + ".json")
-	if err != nil {
-		fmt.Printf("Error creating file " + err.Error())
-	}
-	defer f.Close()
-	_, err = f.WriteString(contents)
-	if err != nil {
-		fmt.Printf("Error writing to file " + err.Error())
-	}
-	f.Sync()
-
 }
