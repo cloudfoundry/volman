@@ -16,9 +16,9 @@ import (
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
-var _ = Describe("Generate", func() {
+var _ = Describe("Volman Handlers", func() {
 
-	Context("when generated", func() {
+	Context("when generating http handlers", func() {
 
 		It("should produce handler with list drivers route", func() {
 			testLogger := lagertest.NewTestLogger("HandlersTest")

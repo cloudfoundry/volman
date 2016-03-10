@@ -6,22 +6,29 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 
 	"github.com/cloudfoundry-incubator/cf_http"
+	"github.com/cloudfoundry-incubator/volman/system/http"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
 )
 
 type remoteClient struct {
-	HttpClient *http.Client
+	HttpClient http.Client
 	reqGen     *rata.RequestGenerator
 }
 
 func NewRemoteClient(url string) *remoteClient {
 	return &remoteClient{
-		HttpClient: cf_http.NewClient(),
+		HttpClient: http.NewClientFrom(cf_http.NewClient()),
+		reqGen:     rata.NewRequestGenerator(url, voldriver.Routes),
+	}
+}
+
+func NewRemoteClientWithHttpClient(url string, httpClient http.Client) *remoteClient {
+	return &remoteClient{
+		HttpClient: httpClient,
 		reqGen:     rata.NewRequestGenerator(url, voldriver.Routes),
 	}
 }
@@ -39,13 +46,12 @@ func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRe
 	defer logger.Info("end")
 
 	sendingJson, err := json.Marshal(mountRequest)
-	if err != nil {
+	if err != nil { // error path is untestable due to structure type validation in function parameters
 		return voldriver.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error marshalling JSON request %#v", mountRequest))
 	}
 
 	request, err := r.reqGen.CreateRequest(voldriver.MountRoute, nil, bytes.NewReader(sendingJson))
-
-	if err != nil {
+	if err != nil { // error path is untestable due to structure type validation in function parameters
 		return voldriver.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", voldriver.MountRoute))
 	}
 
@@ -76,12 +82,12 @@ func (r *remoteClient) Unmount(logger lager.Logger, unmountRequest voldriver.Unm
 	defer logger.Info("end")
 
 	payload, err := json.Marshal(unmountRequest)
-	if err != nil {
+	if err != nil { // error path is untestable due to structure type validation in function parameters
 		return r.clientError(logger, err, fmt.Sprintf("Error marshalling JSON request %#v", unmountRequest))
 	}
 
 	request, err := r.reqGen.CreateRequest(voldriver.UnmountRoute, nil, bytes.NewReader(payload))
-	if err != nil {
+	if err != nil { // error path is untestable due to structure type validation in function parameters
 		return r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", voldriver.UnmountRoute))
 	}
 

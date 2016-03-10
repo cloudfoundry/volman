@@ -19,8 +19,10 @@ var Routes = rata.Routes{
 
 type Driver interface {
 	Info(logger lager.Logger) (InfoResponse, error)
+	//	Create(logger lager.Logger, createRequest) error
 	Mount(logger lager.Logger, mountRequest MountRequest) (MountResponse, error)
 	Unmount(logger lager.Logger, unmountRequest UnmountRequest) error
+	//Remove(logger lager.Logger, removeRequest) error
 }
 
 type InfoResponse struct {

@@ -12,27 +12,27 @@ type FakeCmd struct {
 	StartStub        func() error
 	startMutex       sync.RWMutex
 	startArgsForCall []struct{}
-	startReturns struct {
+	startReturns     struct {
 		result1 error
 	}
 	StdoutPipeStub        func() (io.ReadCloser, error)
 	stdoutPipeMutex       sync.RWMutex
 	stdoutPipeArgsForCall []struct{}
-	stdoutPipeReturns struct {
+	stdoutPipeReturns     struct {
 		result1 io.ReadCloser
 		result2 error
 	}
 	StderrPipeStub        func() (io.ReadCloser, error)
 	stderrPipeMutex       sync.RWMutex
 	stderrPipeArgsForCall []struct{}
-	stderrPipeReturns struct {
+	stderrPipeReturns     struct {
 		result1 io.ReadCloser
 		result2 error
 	}
 	WaitStub        func() error
 	waitMutex       sync.RWMutex
 	waitArgsForCall []struct{}
-	waitReturns struct {
+	waitReturns     struct {
 		result1 error
 	}
 }

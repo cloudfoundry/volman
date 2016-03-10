@@ -17,7 +17,7 @@ func respondWithError(logger lager.Logger, info string, err error, w http.Respon
 	cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, voldriver.NewError(err))
 }
 
-func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, error) {
+func NewHandler(logger lager.Logger, driver voldriver.Driver) (http.Handler, error) {
 	logger = logger.Session("server")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -38,7 +38,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 				return
 			}
 
-			mountResponse, err := client.Mount(logger, mountRequest)
+			mountResponse, err := driver.Mount(logger, mountRequest)
 			if err != nil {
 				respondWithError(logger, fmt.Sprintf("Error mounting volume %s", mountRequest.VolumeId), err, w)
 				return
@@ -62,7 +62,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 				return
 			}
 
-			err = client.Unmount(logger, unmountRequest)
+			err = driver.Unmount(logger, unmountRequest)
 			if err != nil {
 				respondWithError(logger, fmt.Sprintf("Error unmounting volume %s", unmountRequest.VolumeId), err, w)
 				return
