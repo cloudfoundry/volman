@@ -18,7 +18,7 @@ type FakeDriver struct {
 		result1 voldriver.InfoResponse
 		result2 error
 	}
-	MountStub        func(logger lager.Logger, mountRequest voldriver.MountRequest) (voldriver.MountResponse, error)
+	MountStub        func(logger lager.Logger, mountRequest voldriver.MountRequest) voldriver.MountResponse
 	mountMutex       sync.RWMutex
 	mountArgsForCall []struct {
 		logger       lager.Logger
@@ -26,16 +26,33 @@ type FakeDriver struct {
 	}
 	mountReturns struct {
 		result1 voldriver.MountResponse
-		result2 error
 	}
-	UnmountStub        func(logger lager.Logger, unmountRequest voldriver.UnmountRequest) error
+	UnmountStub        func(logger lager.Logger, unmountRequest voldriver.UnmountRequest) voldriver.ErrorResponse
 	unmountMutex       sync.RWMutex
 	unmountArgsForCall []struct {
 		logger         lager.Logger
 		unmountRequest voldriver.UnmountRequest
 	}
 	unmountReturns struct {
-		result1 error
+		result1 voldriver.ErrorResponse
+	}
+	CreateStub        func(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse
+	createMutex       sync.RWMutex
+	createArgsForCall []struct {
+		logger        lager.Logger
+		createRequest voldriver.CreateRequest
+	}
+	createReturns struct {
+		result1 voldriver.ErrorResponse
+	}
+	GetStub        func(logger lager.Logger, getRequest voldriver.GetRequest) voldriver.GetResponse
+	getMutex       sync.RWMutex
+	getArgsForCall []struct {
+		logger     lager.Logger
+		getRequest voldriver.GetRequest
+	}
+	getReturns struct {
+		result1 voldriver.GetResponse
 	}
 }
 
@@ -72,7 +89,7 @@ func (fake *FakeDriver) InfoReturns(result1 voldriver.InfoResponse, result2 erro
 	}{result1, result2}
 }
 
-func (fake *FakeDriver) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) (voldriver.MountResponse, error) {
+func (fake *FakeDriver) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) voldriver.MountResponse {
 	fake.mountMutex.Lock()
 	fake.mountArgsForCall = append(fake.mountArgsForCall, struct {
 		logger       lager.Logger
@@ -82,7 +99,7 @@ func (fake *FakeDriver) Mount(logger lager.Logger, mountRequest voldriver.MountR
 	if fake.MountStub != nil {
 		return fake.MountStub(logger, mountRequest)
 	} else {
-		return fake.mountReturns.result1, fake.mountReturns.result2
+		return fake.mountReturns.result1
 	}
 }
 
@@ -98,15 +115,14 @@ func (fake *FakeDriver) MountArgsForCall(i int) (lager.Logger, voldriver.MountRe
 	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].mountRequest
 }
 
-func (fake *FakeDriver) MountReturns(result1 voldriver.MountResponse, result2 error) {
+func (fake *FakeDriver) MountReturns(result1 voldriver.MountResponse) {
 	fake.MountStub = nil
 	fake.mountReturns = struct {
 		result1 voldriver.MountResponse
-		result2 error
-	}{result1, result2}
+	}{result1}
 }
 
-func (fake *FakeDriver) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) error {
+func (fake *FakeDriver) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) voldriver.ErrorResponse {
 	fake.unmountMutex.Lock()
 	fake.unmountArgsForCall = append(fake.unmountArgsForCall, struct {
 		logger         lager.Logger
@@ -132,10 +148,76 @@ func (fake *FakeDriver) UnmountArgsForCall(i int) (lager.Logger, voldriver.Unmou
 	return fake.unmountArgsForCall[i].logger, fake.unmountArgsForCall[i].unmountRequest
 }
 
-func (fake *FakeDriver) UnmountReturns(result1 error) {
+func (fake *FakeDriver) UnmountReturns(result1 voldriver.ErrorResponse) {
 	fake.UnmountStub = nil
 	fake.unmountReturns = struct {
-		result1 error
+		result1 voldriver.ErrorResponse
+	}{result1}
+}
+
+func (fake *FakeDriver) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
+	fake.createMutex.Lock()
+	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+		logger        lager.Logger
+		createRequest voldriver.CreateRequest
+	}{logger, createRequest})
+	fake.createMutex.Unlock()
+	if fake.CreateStub != nil {
+		return fake.CreateStub(logger, createRequest)
+	} else {
+		return fake.createReturns.result1
+	}
+}
+
+func (fake *FakeDriver) CreateCallCount() int {
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
+	return len(fake.createArgsForCall)
+}
+
+func (fake *FakeDriver) CreateArgsForCall(i int) (lager.Logger, voldriver.CreateRequest) {
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
+	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].createRequest
+}
+
+func (fake *FakeDriver) CreateReturns(result1 voldriver.ErrorResponse) {
+	fake.CreateStub = nil
+	fake.createReturns = struct {
+		result1 voldriver.ErrorResponse
+	}{result1}
+}
+
+func (fake *FakeDriver) Get(logger lager.Logger, getRequest voldriver.GetRequest) voldriver.GetResponse {
+	fake.getMutex.Lock()
+	fake.getArgsForCall = append(fake.getArgsForCall, struct {
+		logger     lager.Logger
+		getRequest voldriver.GetRequest
+	}{logger, getRequest})
+	fake.getMutex.Unlock()
+	if fake.GetStub != nil {
+		return fake.GetStub(logger, getRequest)
+	} else {
+		return fake.getReturns.result1
+	}
+}
+
+func (fake *FakeDriver) GetCallCount() int {
+	fake.getMutex.RLock()
+	defer fake.getMutex.RUnlock()
+	return len(fake.getArgsForCall)
+}
+
+func (fake *FakeDriver) GetArgsForCall(i int) (lager.Logger, voldriver.GetRequest) {
+	fake.getMutex.RLock()
+	defer fake.getMutex.RUnlock()
+	return fake.getArgsForCall[i].logger, fake.getArgsForCall[i].getRequest
+}
+
+func (fake *FakeDriver) GetReturns(result1 voldriver.GetResponse) {
+	fake.GetStub = nil
+	fake.getReturns = struct {
+		result1 voldriver.GetResponse
 	}{result1}
 }
 

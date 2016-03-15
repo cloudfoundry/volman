@@ -37,15 +37,12 @@ var _ = Describe("Volman", func() {
 	})
 
 	Context("after starting", func() {
-
 		It("should not exit", func() {
 			Consistently(runner).ShouldNot(Exit())
 		})
-
 	})
 
 	Context("after starting http server", func() {
-
 		It("should get a 404 for root", func() {
 			_, status, err := get("/")
 			Expect(err).NotTo(HaveOccurred())
@@ -65,12 +62,9 @@ var _ = Describe("Volman", func() {
 		})
 
 		Context("when driver installed in the spec file plugins directory", func() {
-
 			BeforeEach(func() {
-
 				err := voldriver.WriteDriverSpec(testLogger, tmpDriversPath, "fakedriver", fmt.Sprintf("http://0.0.0.0:%d", fakedriverServerPort))
 				Expect(err).NotTo(HaveOccurred())
-
 			})
 
 			It("should return list of drivers for '/v1/drivers' (200 status)", func() {
@@ -88,11 +82,11 @@ var _ = Describe("Volman", func() {
 
 				JustBeforeEach(func() {
 					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-					config := "Here is some config!"
 					node := GinkgoParallelNode()
 					volumeId = "fake-volume_" + strconv.Itoa(node)
+
 					testLogger.Info(fmt.Sprintf("Mounting volume: %s", volumeId))
-					mountPoint, err = client.Mount(testLogger, "fakedriver", volumeId, config)
+					mountPoint, err = client.Mount(testLogger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -120,7 +114,7 @@ var _ = Describe("Volman", func() {
 			It("should error, given an invalid driver name", func() {
 				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 
-				_, err := client.Mount(testLogger, "InvalidDriver", "vol", "")
+				_, err := client.Mount(testLogger, "InvalidDriver", "vol", nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("Driver 'InvalidDriver' not found in list of known drivers"))

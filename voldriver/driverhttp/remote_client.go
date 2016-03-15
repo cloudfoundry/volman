@@ -3,7 +3,6 @@ package driverhttp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -40,72 +39,120 @@ func (r *remoteClient) Info(logger lager.Logger) (voldriver.InfoResponse, error)
 	return voldriver.InfoResponse{}, nil
 }
 
-func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) (voldriver.MountResponse, error) {
-	logger = logger.Session("remoteclient-mount")
+func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) voldriver.MountResponse {
+	logger = logger.Session("remoteclient-mount", lager.Data{"mount_request": mountRequest})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	sendingJson, err := json.Marshal(mountRequest)
-	if err != nil { // error path is untestable due to structure type validation in function parameters
-		return voldriver.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error marshalling JSON request %#v", mountRequest))
+	if err != nil {
+		logger.Error("failed-marshalling-request", err)
+		return voldriver.MountResponse{Err: err.Error()}
 	}
 
 	request, err := r.reqGen.CreateRequest(voldriver.MountRoute, nil, bytes.NewReader(sendingJson))
-	if err != nil { // error path is untestable due to structure type validation in function parameters
-		return voldriver.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", voldriver.MountRoute))
+
+	if err != nil {
+		logger.Error("failed-creating-request", err)
+		return voldriver.MountResponse{Err: err.Error()}
 	}
 
 	response, err := r.HttpClient.Do(request)
 	if err != nil {
-		return voldriver.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error mounting volume %s", mountRequest.VolumeId))
+		logger.Error("failed-mounting-volume", err)
+		return voldriver.MountResponse{Err: err.Error()}
 	}
 
 	if response.StatusCode == 500 {
-		var remoteError voldriver.Error
+		var remoteError voldriver.MountResponse
 		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
-			return voldriver.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing 500 response from %s", voldriver.MountRoute))
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.MountResponse{Err: err.Error()}
 		}
-		return voldriver.MountResponse{}, remoteError
+		return remoteError
 	}
 
 	var mountPoint voldriver.MountResponse
 	if err := unmarshallJSON(logger, response.Body, &mountPoint); err != nil {
-		return voldriver.MountResponse{}, r.clientError(logger, err, fmt.Sprintf("Error parsing response from %s", voldriver.MountRoute))
+		logger.Error("failed-parsing-mount-response", err)
+		return voldriver.MountResponse{Err: err.Error()}
 	}
 
-	return mountPoint, err
+	return mountPoint
 }
 
-func (r *remoteClient) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) error {
+func (r *remoteClient) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) voldriver.ErrorResponse {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
 
 	payload, err := json.Marshal(unmountRequest)
-	if err != nil { // error path is untestable due to structure type validation in function parameters
-		return r.clientError(logger, err, fmt.Sprintf("Error marshalling JSON request %#v", unmountRequest))
+	if err != nil {
+		logger.Error("failed-marshalling-request", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
 	request, err := r.reqGen.CreateRequest(voldriver.UnmountRoute, nil, bytes.NewReader(payload))
-	if err != nil { // error path is untestable due to structure type validation in function parameters
-		return r.clientError(logger, err, fmt.Sprintf("Error creating request to %s", voldriver.UnmountRoute))
+	if err != nil {
+		logger.Error("failed-creating-request", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
 	response, err := r.HttpClient.Do(request)
 	if err != nil {
-		return r.clientError(logger, err, fmt.Sprintf("Error unmounting volume %s", unmountRequest.VolumeId))
+		logger.Error("failed-unmounting-volume", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
 	if response.StatusCode == 500 {
-		var remoteError voldriver.Error
+		var remoteErrorResponse voldriver.ErrorResponse
+		if err := unmarshallJSON(logger, response.Body, &remoteErrorResponse); err != nil {
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.ErrorResponse{Err: err.Error()}
+		}
+		return remoteErrorResponse
+	}
+
+	return voldriver.ErrorResponse{}
+}
+
+func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
+	logger = logger.Session("create", lager.Data{"create_request": createRequest})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	payload, err := json.Marshal(createRequest)
+	if err != nil {
+		logger.Error("failed-marshalling-request", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
+	}
+
+	request, err := r.reqGen.CreateRequest(voldriver.CreateRoute, nil, bytes.NewReader(payload))
+	if err != nil {
+		logger.Error("failed-creating-request", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
+	}
+
+	response, err := r.HttpClient.Do(request)
+	if err != nil {
+		logger.Error("failed-creating-volume", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
+	}
+
+	if response.StatusCode == 500 {
+		var remoteError voldriver.ErrorResponse
 		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
-			return r.clientError(logger, err, fmt.Sprintf("Error parsing 500 response from %s", voldriver.UnmountRoute))
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.ErrorResponse{Err: err.Error()}
 		}
 		return remoteError
 	}
 
-	return nil
+	return voldriver.ErrorResponse{}
+}
 
+func (r *remoteClient) Get(logger lager.Logger, getRequest voldriver.GetRequest) voldriver.GetResponse {
+	return voldriver.GetResponse{}
 }
 
 func unmarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse interface{}) error {
@@ -118,7 +165,7 @@ func unmarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse inte
 	return err
 }
 
-func (r *remoteClient) clientError(logger lager.Logger, err error, msg string) error {
+func (r *remoteClient) clientError(logger lager.Logger, err error, msg string) string {
 	logger.Error(msg, err)
-	return err
+	return err.Error()
 }

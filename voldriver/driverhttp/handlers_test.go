@@ -22,11 +22,10 @@ var _ = Describe("Volman Driver Handlers", func() {
 	Context("when generating http handlers", func() {
 		var testLogger = lagertest.NewTestLogger("HandlersTest")
 
-		It("should produce handler with mount route", func() {
-
+		It("should produce a handler with a mount route", func() {
 			By("faking out the driver")
 			driver := &volmanfakes.FakeDriver{}
-			driver.MountReturns(voldriver.MountResponse{"dummy_path"}, nil)
+			driver.MountReturns(voldriver.MountResponse{Mountpoint: "dummy_path"})
 			handler, _ := driverhttp.NewHandler(testLogger, driver)
 			httpResponseRecorder := httptest.NewRecorder()
 			MountRequest := voldriver.MountRequest{}
@@ -44,18 +43,18 @@ var _ = Describe("Volman Driver Handlers", func() {
 
 			By("then expecting correct JSON conversion")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(mountResponse.Path).Should(Equal("dummy_path"))
+			Expect(mountResponse.Mountpoint).Should(Equal("dummy_path"))
 		})
 
-		It("should produce handler with unmount route", func() {
-
+		It("should produce a handler with an unmount route", func() {
 			By("faking out the driver")
 			driver := &volmanfakes.FakeDriver{}
-			driver.UnmountReturns(nil)
+			driver.UnmountReturns(voldriver.ErrorResponse{})
 			handler, _ := driverhttp.NewHandler(testLogger, driver)
 			httpResponseRecorder := httptest.NewRecorder()
 			unmountRequest := voldriver.UnmountRequest{}
-			unmountJSONRequest, _ := json.Marshal(unmountRequest)
+			unmountJSONRequest, err := json.Marshal(unmountRequest)
+			Expect(err).NotTo(HaveOccurred())
 
 			By("then fake serving the response using the handler")
 			httpRequest, _ := http.NewRequest("POST", "http://0.0.0.0/unmount", bytes.NewReader(unmountJSONRequest))
@@ -64,6 +63,25 @@ var _ = Describe("Volman Driver Handlers", func() {
 			By("then expecting correct HTTP status code")
 			Expect(httpResponseRecorder.Code).To(Equal(200))
 
+		})
+
+		It("should produce a handler with a get route", func() {
+			By("faking out the driver")
+			driver := &volmanfakes.FakeDriver{}
+			driver.GetReturns(voldriver.GetResponse{Volume: voldriver.VolumeInfo{Name: "some-volume", Mountpoint: "dummy_path"}})
+			handler, _ := driverhttp.NewHandler(testLogger, driver)
+			httpResponseRecorder := httptest.NewRecorder()
+
+			getRequest := voldriver.GetRequest{}
+			getJSONRequest, err := json.Marshal(getRequest)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("then fake serving the response using the handler")
+			httpRequest, _ := http.NewRequest("GET", "http://0.0.0.0/get", bytes.NewReader(getJSONRequest))
+			handler.ServeHTTP(httpResponseRecorder, httpRequest)
+
+			By("then expecting correct HTTP status code")
+			Expect(httpResponseRecorder.Code).To(Equal(200))
 		})
 	})
 })

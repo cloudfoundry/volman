@@ -37,7 +37,7 @@ func main() {
 	withLogger.Info("started")
 	defer withLogger.Info("ends")
 
-	fakeDriverServer := createFakedriverServer(withLogger, *atAddress, *driversPath)
+	fakeDriverServer := createFakeDriverServer(withLogger, *atAddress, *driversPath)
 	servers := grouper.Members{
 		{"fakedriver-server", fakeDriverServer},
 	}
@@ -66,9 +66,9 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
 }
 
-func createFakedriverServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
-
-	client := fakedriver.NewLocalDriver()
+func createFakeDriverServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
+	fileSystem := fakedriver.NewRealFileSystem()
+	client := fakedriver.NewLocalDriver(&fileSystem)
 	handler, err := driverhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)
 	return http_server.New(atAddress, handler)

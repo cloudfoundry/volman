@@ -18,13 +18,13 @@ type FakeManager struct {
 		result1 volman.ListDriversResponse
 		result2 error
 	}
-	MountStub        func(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error)
+	MountStub        func(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error)
 	mountMutex       sync.RWMutex
 	mountArgsForCall []struct {
 		logger   lager.Logger
 		driverId string
 		volumeId string
-		config   string
+		config   map[string]interface{}
 	}
 	mountReturns struct {
 		result1 volman.MountResponse
@@ -75,13 +75,13 @@ func (fake *FakeManager) ListDriversReturns(result1 volman.ListDriversResponse, 
 	}{result1, result2}
 }
 
-func (fake *FakeManager) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error) {
+func (fake *FakeManager) Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
 	fake.mountMutex.Lock()
 	fake.mountArgsForCall = append(fake.mountArgsForCall, struct {
 		logger   lager.Logger
 		driverId string
 		volumeId string
-		config   string
+		config   map[string]interface{}
 	}{logger, driverId, volumeId, config})
 	fake.mountMutex.Unlock()
 	if fake.MountStub != nil {
@@ -97,7 +97,7 @@ func (fake *FakeManager) MountCallCount() int {
 	return len(fake.mountArgsForCall)
 }
 
-func (fake *FakeManager) MountArgsForCall(i int) (lager.Logger, string, string, string) {
+func (fake *FakeManager) MountArgsForCall(i int) (lager.Logger, string, string, map[string]interface{}) {
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
 	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].driverId, fake.mountArgsForCall[i].volumeId, fake.mountArgsForCall[i].config

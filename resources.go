@@ -22,9 +22,9 @@ type ListDriversResponse struct {
 }
 
 type MountRequest struct {
-	DriverId string `json:"driverId"`
-	VolumeId string `json:"volumeId"`
-	Config   string `json:"config"`
+	DriverId string                 `json:"driverId"`
+	VolumeId string                 `json:"volumeId"`
+	Config   map[string]interface{} `json:"config"`
 }
 
 type MountResponse struct {

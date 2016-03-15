@@ -8,21 +8,25 @@ import (
 const (
 	MountRoute   = "mount"
 	UnmountRoute = "unmount"
+	CreateRoute  = "create"
+	GetRoute     = "get"
 )
 
 var Routes = rata.Routes{
 	{Path: "/mount", Method: "POST", Name: MountRoute},
 	{Path: "/unmount", Method: "POST", Name: UnmountRoute},
+	{Path: "/create", Method: "POST", Name: CreateRoute},
+	{Path: "/get", Method: "GET", Name: GetRoute},
 }
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_client.go . Driver
 
 type Driver interface {
 	Info(logger lager.Logger) (InfoResponse, error)
-	//	Create(logger lager.Logger, createRequest) error
-	Mount(logger lager.Logger, mountRequest MountRequest) (MountResponse, error)
-	Unmount(logger lager.Logger, unmountRequest UnmountRequest) error
-	//Remove(logger lager.Logger, removeRequest) error
+	Mount(logger lager.Logger, mountRequest MountRequest) MountResponse
+	Unmount(logger lager.Logger, unmountRequest UnmountRequest) ErrorResponse
+	Create(logger lager.Logger, createRequest CreateRequest) ErrorResponse
+	Get(logger lager.Logger, getRequest GetRequest) GetResponse
 }
 
 type InfoResponse struct {
@@ -31,16 +35,39 @@ type InfoResponse struct {
 }
 
 type MountRequest struct {
-	VolumeId string `json:"volumeId"`
-	Config   string `json:"config"`
+	Name string
 }
 
 type MountResponse struct {
-	Path string `json:"path"`
+	Err        string
+	Mountpoint string
 }
 
 type UnmountRequest struct {
-	VolumeId string `json:"volumeId"`
+	Name string
+}
+
+type CreateRequest struct {
+	Name string
+	Opts map[string]interface{}
+}
+
+type ErrorResponse struct {
+	Err string
+}
+
+type GetRequest struct {
+	Name string
+}
+
+type GetResponse struct {
+	Volume VolumeInfo
+	Err    string
+}
+
+type VolumeInfo struct {
+	Name       string
+	Mountpoint string
 }
 
 func NewError(err error) Error {

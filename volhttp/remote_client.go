@@ -50,7 +50,7 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (volman.ListDriversRespo
 	return drivers, err
 }
 
-func (r *remoteClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error) {
+func (r *remoteClient) Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -120,7 +120,6 @@ func (r *remoteClient) Unmount(logger lager.Logger, driverId string, volumeId st
 	}
 
 	return nil
-
 }
 
 func unmarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse interface{}) error {

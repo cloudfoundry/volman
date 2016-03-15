@@ -2,6 +2,7 @@ package vollocal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -68,33 +69,65 @@ func (client *localClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 	return drivers, nil
 }
 
-func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config string) (volman.MountResponse, error) {
+func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	logger.Info(fmt.Sprintf("Driver %s mounting volume %s", driverId, volumeId))
 	defer logger.Info("end")
 
+	err := client.create(logger, driverId, volumeId, config)
+	if err != nil {
+		return volman.MountResponse{}, err
+	}
+
 	var response voldriver.MountResponse
-	err := client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
-		var err error
-		mountRequest := voldriver.MountRequest{VolumeId: volumeId, Config: config}
+	err = client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
+		mountRequest := voldriver.MountRequest{Name: volumeId}
 		logger.Info(fmt.Sprintf("Calling driver %s with mount request %#v", driverId, mountRequest))
-		response, err = driver.Mount(logger, mountRequest)
+		response = driver.Mount(logger, mountRequest)
 		logger.Info(fmt.Sprintf("Response from driver.Mount was %#v", response))
-		return err
+
+		if response.Err == "" {
+			return nil
+		}
+		return errors.New(response.Err)
 	})
-	return volman.MountResponse{response.Path}, err
+
+	return volman.MountResponse{response.Mountpoint}, err
 }
 
-func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeId string) error {
+func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeName string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
-	logger.Info(fmt.Sprintf("Unmounting volume %s", volumeId))
+	logger.Info(fmt.Sprintf("Unmounting volume %s", volumeName))
 	defer logger.Info("end")
 
 	err := client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
-		return driver.Unmount(logger, voldriver.UnmountRequest{VolumeId: volumeId})
+		response := driver.Unmount(logger, voldriver.UnmountRequest{Name: volumeName})
+		if response.Err == "" {
+			return nil
+		}
+		return errors.New(response.Err)
 	})
+
+	return err
+}
+
+func (client *localClient) create(logger lager.Logger, driverId string, volumeName string, opts map[string]interface{}) error {
+	logger = logger.Session("create")
+	logger.Info("start")
+	defer logger.Info("end")
+
+	logger.Info("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId, "opts": opts})
+	err := client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
+		response := driver.Create(logger, voldriver.CreateRequest{Name: volumeName, Opts: opts})
+
+		if response.Err == "" {
+			return nil
+		}
+		return errors.New(response.Err)
+	})
+
 	return err
 }
 
