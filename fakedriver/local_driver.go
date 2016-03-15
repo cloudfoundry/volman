@@ -49,7 +49,7 @@ func (d *LocalDriver) Mount(logger lager.Logger, mountRequest voldriver.MountReq
 	mountPath := d.mountPath(vol.volumeID)
 
 	logger.Info("mounting-volume", lager.Data{"id": vol.volumeID, "mountpoint": mountPath})
-	err := d.fileSystem.MkdirAll(mountPath, 0777)
+	err := d.fileSystem.MkdirAll(mountPath, os.ModePerm)
 	if err != nil {
 		logger.Error("failed-creating-mountpoint", err)
 		return voldriver.MountResponse{Err: fmt.Sprintf("Error mounting volume: %s", err.Error())}

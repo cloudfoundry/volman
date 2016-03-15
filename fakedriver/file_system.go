@@ -19,7 +19,13 @@ func NewRealFileSystem() realFileSystem {
 }
 
 func (f *realFileSystem) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
+	err := os.MkdirAll(path, perm)
+	if err != nil {
+		return err
+	}
+
+	return os.Chmod(path, perm)
+
 }
 
 func (f *realFileSystem) TempDir() string {
