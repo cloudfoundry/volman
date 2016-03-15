@@ -57,7 +57,7 @@ func (client *localClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", client.DriversPath, err.Error())
 	}
 
-	logger.Info(fmt.Sprintf("Found json specs: %#v", driversBinaries))
+	logger.Info("found-json-specs", lager.Data{"driversBinaries": driversBinaries})
 	drivers := []voldriver.InfoResponse{}
 
 	for _, driverExecutable := range driversBinaries {
@@ -72,7 +72,8 @@ func (client *localClient) listDrivers(logger lager.Logger) ([]voldriver.InfoRes
 func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
-	logger.Info(fmt.Sprintf("Driver %s mounting volume %s", driverId, volumeId))
+	logger.Info("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
+
 	defer logger.Info("end")
 
 	err := client.create(logger, driverId, volumeId, config)
@@ -83,9 +84,10 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	var response voldriver.MountResponse
 	err = client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
 		mountRequest := voldriver.MountRequest{Name: volumeId}
-		logger.Info(fmt.Sprintf("Calling driver %s with mount request %#v", driverId, mountRequest))
+		logger.Info("calling-driver-with-mount request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
 		response = driver.Mount(logger, mountRequest)
-		logger.Info(fmt.Sprintf("Response from driver.Mount was %#v", response))
+
+		logger.Info("response-from-driver", lager.Data{"response": response})
 
 		if response.Err == "" {
 			return nil
@@ -99,7 +101,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeName string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
-	logger.Info(fmt.Sprintf("Unmounting volume %s", volumeName))
+	logger.Info("unmounting-volume", lager.Data{"volumeName": volumeName})
 	defer logger.Info("end")
 
 	err := client.callDriver(logger, driverId, func(driver voldriver.Driver) error {
@@ -151,15 +153,15 @@ func (client *localClient) callDriver(logger lager.Logger, driverId string, call
 
 			jsonParser := json.NewDecoder(configFile)
 			if err = jsonParser.Decode(&driverJsonSpec); err != nil {
-				logger.Error("parsing config file", err)
+				logger.Error("parsing-config-file-error", err)
 				return err
 			}
 
-			logger.Info(fmt.Sprintf("Invoking driver at %s", driverJsonSpec.Address))
+			logger.Info("invoking-driver", lager.Data{"address": driverJsonSpec.Address})
 			driver, _ = client.Factory.NewRemoteClient(driverJsonSpec.Address)
 			err = callback(driver)
 			if err != nil {
-				logger.Error(fmt.Sprintf("Error calling driver %s", driverId), err)
+				logger.Error(fmt.Sprintf("error-calling-driver%s-error-%#v", driverId), err)
 				return err
 			}
 			return nil
