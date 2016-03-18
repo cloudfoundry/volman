@@ -28,16 +28,36 @@ var driversPath = flag.String(
 	"Path to directory where drivers are installed",
 )
 
+var transport = flag.String(
+	"transport",
+	"tcp",
+	"Transport protocol to transmit HTTP over",
+)
+
 func init() {
 	parseCommandLine()
 }
 
 func main() {
-	withLogger, logTap := logger()
-	withLogger.Info("started")
-	defer withLogger.Info("ends")
+	var withLogger lager.Logger
+	var logTap *lager.ReconfigurableSink
 
-	fakeDriverServer := createFakeDriverServer(withLogger, *atAddress, *driversPath)
+	var fakeDriverServer ifrit.Runner
+
+	if *transport == "tcp" {
+		withLogger, logTap = logger()
+		withLogger.Info("started")
+		defer withLogger.Info("ends")
+		fakeDriverServer = createFakeDriverServer(withLogger, *atAddress, *driversPath)
+	} else {
+
+		withLogger, logTap = unixLogger()
+		withLogger.Info("started")
+		defer withLogger.Info("ends")
+
+		fakeDriverServer = createFakeDriverUnixServer(withLogger, *atAddress, *driversPath)
+	}
+
 	servers := grouper.Members{
 		{"fakedriver-server", fakeDriverServer},
 	}
@@ -52,7 +72,7 @@ func main() {
 
 func exitOnFailure(logger lager.Logger, err error) {
 	if err != nil {
-		logger.Error("Fatal err.. aborting", err)
+		logger.Error("fatal-err..aborting", err)
 		panic(err.Error())
 	}
 }
@@ -74,12 +94,24 @@ func createFakeDriverServer(logger lager.Logger, atAddress string, driversPath s
 	return http_server.New(atAddress, handler)
 }
 
+func createFakeDriverUnixServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
+	fileSystem := fakedriver.NewRealFileSystem()
+	client := fakedriver.NewLocalDriver(&fileSystem)
+	handler, err := driverhttp.NewHandler(logger, client)
+	exitOnFailure(logger, err)
+	return http_server.NewUnixServer(atAddress, handler)
+}
+
 func logger() (lager.Logger, *lager.ReconfigurableSink) {
 
 	logger, reconfigurableSink := cf_lager.New("fakedriverServer")
 	return logger, reconfigurableSink
 }
+func unixLogger() (lager.Logger, *lager.ReconfigurableSink) {
 
+	logger, reconfigurableSink := cf_lager.New("fakedriverUnixServer")
+	return logger, reconfigurableSink
+}
 func parseCommandLine() {
 	cf_lager.AddFlags(flag.CommandLine)
 	cf_debug_server.AddFlags(flag.CommandLine)

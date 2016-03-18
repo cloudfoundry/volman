@@ -3,6 +3,7 @@ package vollocal_test
 import (
 	"bytes"
 	"io"
+	"time"
 
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
@@ -11,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
 var _ = Describe("Volman", func() {
@@ -23,7 +25,6 @@ var _ = Describe("Volman", func() {
 
 	BeforeEach(func() {
 		driverName = "fakedriver"
-
 		validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"fakedriver\",\"Path\":\"somePath\"}")}
 	})
 
@@ -63,23 +64,28 @@ var _ = Describe("Volman", func() {
 		})
 	})
 
-	Describe("Mount and Unmount", func() {
+	Describe("Mount and Unmount with TCP config", func() {
+		var tcpclient volman.Manager
+		var err error
 		Context("when given valid driver path", func() {
 			BeforeEach(func() {
+				fakedriverProcess = ginkgomon.Invoke(fakedriverRunner)
+				time.Sleep(time.Millisecond * 1000)
+
 				fakeClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+
 				fakeDriver = new(volmanfakes.FakeDriver)
 				fakeClientFactory.NewRemoteClientReturns(fakeDriver, nil)
-
+				driverName = "fakedriver"
 				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
 				Expect(err).NotTo(HaveOccurred())
-				client = vollocal.NewLocalClientWithRemoteClientFactory(defaultPluginsDirectory, fakeClientFactory)
-				driverName = "fakedriver"
+				tcpclient = vollocal.NewLocalClientWithRemoteClientFactory(defaultPluginsDirectory, fakeClientFactory)
 			})
 
 			It("should be able to mount", func() {
 				volumeId := "fake-volume"
 
-				mountPath, err := client.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+				mountPath, err := tcpclient.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mountPath).NotTo(Equal(""))
 			})
@@ -89,55 +95,95 @@ var _ = Describe("Volman", func() {
 				fakeDriver.MountReturns(mountResponse)
 
 				volumeId := "fake-volume"
-
-				_, err := client.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+				_, err = tcpclient.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should be able to unmount", func() {
 				volumeId := "fake-volume"
 
-				err := client.Unmount(testLogger, driverName, volumeId)
+				err = tcpclient.Unmount(testLogger, driverName, volumeId)
 				Expect(err).NotTo(HaveOccurred())
 			})
-
-			Context("when there is a malformed json driver spec", func() {
-				BeforeEach(func() {
-					driverName = "invalid-driver"
-
-					err := voldriver.WriteDriverSpecWithContents(testLogger, defaultPluginsDirectory, driverName, []byte("invalid json"))
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should not be able to mount", func() {
-					volumeId := "fake-volume"
-					_, err := client.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
-					Expect(err).To(HaveOccurred())
-				})
-
-				It("should not be able to unmount", func() {
-					volumeId := "fake-volume"
-
-					err := client.Unmount(testLogger, driverName, volumeId)
-					Expect(err).To(HaveOccurred())
-				})
-			})
-
 			Context("when given invalid driver", func() {
+
 				BeforeEach(func() {
 					driverName = "does-not-exist"
 				})
 
 				It("should not be able to mount", func() {
 					volumeId := "fake-volume"
-					_, err := client.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+					_, err = tcpclient.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).To(HaveOccurred())
 				})
 
 				It("should not be able to unmount", func() {
 					volumeId := "fake-volume"
 
-					err := client.Unmount(testLogger, driverName, volumeId)
+					err = tcpclient.Unmount(testLogger, driverName, volumeId)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+
+	})
+	Describe("Mount and Unmount with unix config", func() {
+		var unixclient volman.Manager
+		var err error
+		Context("when given valid driver path", func() {
+			BeforeEach(func() {
+				fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
+				time.Sleep(time.Millisecond * 1000)
+				fakeClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+
+				fakeDriver = new(volmanfakes.FakeDriver)
+				fakeClientFactory.NewRemoteClientReturns(fakeDriver, nil)
+				driverName = "fakedriver"
+				Expect(err).NotTo(HaveOccurred())
+				unixclient = vollocal.NewLocalClientWithRemoteClientFactory(defaultPluginsDirectory, fakeClientFactory)
+				driverName = "fakedriver"
+			})
+
+			It("should be able to mount", func() {
+				volumeId := "fake-volume"
+
+				mountPath, err := unixclient.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mountPath).NotTo(Equal(""))
+			})
+
+			It("should not be able to mount if mount fails", func() {
+				mountResponse := voldriver.MountResponse{Err: "an error"}
+				fakeDriver.MountReturns(mountResponse)
+
+				volumeId := "fake-volume"
+				_, err = unixclient.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should be able to unmount", func() {
+				volumeId := "fake-volume"
+
+				err = unixclient.Unmount(testLogger, driverName, volumeId)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("when given invalid driver", func() {
+
+				BeforeEach(func() {
+					driverName = "does-not-exist"
+				})
+
+				It("should not be able to mount", func() {
+					volumeId := "fake-volume"
+					_, err = unixclient.Mount(testLogger, driverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should not be able to unmount", func() {
+					volumeId := "fake-volume"
+
+					err = unixclient.Unmount(testLogger, driverName, volumeId)
 					Expect(err).To(HaveOccurred())
 				})
 			})

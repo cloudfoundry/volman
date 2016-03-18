@@ -11,6 +11,8 @@ import (
 
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
+
+	"github.com/cloudfoundry-incubator/cf_http/unix_transport"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -20,12 +22,74 @@ import (
 )
 
 var _ = Describe("Fake Driver Integration", func() {
-	BeforeEach(func() {
-		fakedriverServerProcess = ginkgomon.Invoke(runner)
-		time.Sleep(time.Millisecond * 1000)
+	Context("given a started fakedriver Unix server", func() {
+		BeforeEach(func() {
+			fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
+			time.Sleep(time.Millisecond * 1000)
+		})
+
+		It("should get a 404 for root to prove it started", func() {
+			unixSocketUrl := "unix://" + socketPath
+			_, status, err := getUnix(unixSocketUrl, socketPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(status).Should(ContainSubstring("404"))
+		})
 	})
 
+	Context("given a mounted volume", func() {
+		var volumeId string
+		var volumeName string
+		var mountResponse voldriver.MountResponse
+		var client voldriver.Driver
+		var testLogger *lagertest.TestLogger
+		JustBeforeEach(func() {
+			fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
+			time.Sleep(time.Millisecond * 1000)
+
+			client = driverhttp.NewRemoteUnixClient(socketPath)
+			testLogger = lagertest.NewTestLogger("FakeDriver Server Test")
+			node := GinkgoParallelNode()
+			volumeId = "fake-volume-id_" + strconv.Itoa(node)
+			volumeName = "fake-volume-name_" + strconv.Itoa(node)
+			testLogger.Info("creating-volume", lager.Data{"name": volumeName})
+			createRequest := voldriver.CreateRequest{Name: volumeName, Opts: map[string]interface{}{"volume_id": volumeId}}
+			createResponse := client.Create(testLogger, createRequest)
+			Expect(createResponse.Err).To(Equal(""))
+
+			mountRequest := voldriver.MountRequest{Name: volumeName}
+			mountResponse = client.Mount(testLogger, mountRequest)
+			Expect(mountResponse.Err).To(Equal(""))
+		})
+
+		It("should exist", func() {
+			Expect(mountResponse.Mountpoint).NotTo(Equal(""))
+			defer os.Remove(mountResponse.Mountpoint)
+
+			matches, err := filepath.Glob(mountResponse.Mountpoint)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(matches)).To(Equal(1))
+		})
+
+		It("should unmount a volume given same volume ID", func() {
+			unmountRequest := voldriver.UnmountRequest{Name: volumeName}
+			unmountErr := client.Unmount(testLogger, unmountRequest)
+			Expect(unmountErr.Err).To(Equal(""))
+
+			matches, err := filepath.Glob(mountResponse.Mountpoint)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(matches)).To(Equal(0))
+		})
+
+		AfterEach(func() {
+			os.Remove(mountResponse.Mountpoint)
+		})
+	})
 	Context("given a started fakedriver server", func() {
+		BeforeEach(func() {
+			fakedriverServerProcess = ginkgomon.Invoke(runner)
+			time.Sleep(time.Millisecond * 1000)
+		})
+
 		It("should not exit", func() {
 			Consistently(runner).ShouldNot(Exit())
 		})
@@ -93,6 +157,17 @@ var _ = Describe("Fake Driver Integration", func() {
 func get(path string) (body string, status string, err error) {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://0.0.0.0:%d%s", fakedriverServerPort, path), nil)
 	response, _ := (&http.Client{}).Do(req)
+	defer response.Body.Close()
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	return string(bodyBytes[:]), response.Status, err
+}
+
+func getUnix(path string, socketPath string) (body string, status string, err error) {
+	req, _ := http.NewRequest("GET", path, nil)
+	client := http.Client{
+		Transport: unix_transport.New(socketPath),
+	}
+	response, _ := client.Do(req)
 	defer response.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	return string(bodyBytes[:]), response.Status, err

@@ -20,8 +20,24 @@ type remoteClient struct {
 
 func NewRemoteClient(url string) *remoteClient {
 	return &remoteClient{
+		/* make a client based on protocol indicated by url string */
 		HttpClient: http.NewClientFrom(cf_http.NewClient()),
 		reqGen:     rata.NewRequestGenerator(url, voldriver.Routes),
+	}
+}
+
+func NewRemoteUnixClient(socketPath string) *remoteClient {
+	unixClient := cf_http.NewUnixClient(socketPath)
+	return &remoteClient{
+		HttpClient: unixClient,
+		reqGen:     rata.NewRequestGenerator("unix://"+socketPath, voldriver.Routes),
+	}
+}
+
+func NewRemoteUnixClientWithClient(socketPath string, unixClient http.Client) *remoteClient {
+	return &remoteClient{
+		HttpClient: unixClient,
+		reqGen:     rata.NewRequestGenerator("unix://"+socketPath, voldriver.Routes),
 	}
 }
 
@@ -132,7 +148,6 @@ func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.Creat
 		logger.Error("failed-creating-request", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
-
 	response, err := r.HttpClient.Do(request)
 	if err != nil {
 		logger.Error("failed-creating-volume", err)

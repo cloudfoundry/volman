@@ -2,7 +2,10 @@ package main_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 	"testing"
 	"time"
 
@@ -16,10 +19,12 @@ import (
 var fakedriverServerPath string
 
 var runner *ginkgomon.Runner
+var unixRunner *ginkgomon.Runner
 var fakedriverServerPort int
 var fakedriverServerProcess ifrit.Process
-
+var fakedriverUnixServerProcess ifrit.Process
 var debugServerAddress string
+var socketPath string
 
 func TestFakedriverServer(t *testing.T) {
 	// these integration tests can take a bit, especially under load;
@@ -53,10 +58,26 @@ var _ = BeforeEach(func() {
 		),
 		StartCheck: "fakedriverServer.started",
 	})
+
+	tmpdir, err := ioutil.TempDir(os.TempDir(), "fake-driver-test")
+	Ω(err).ShouldNot(HaveOccurred())
+
+	socketPath = path.Join(tmpdir, "fakedriver_unix.sock")
+
+	unixRunner = ginkgomon.New(ginkgomon.Config{
+		Name: "fakedriverUnixServer",
+		Command: exec.Command(
+			fakedriverServerPath,
+			"-listenAddr", socketPath,
+			"-transport", "unix",
+		),
+		StartCheck: "fakedriverUnixServer.started",
+	})
 })
 
 var _ = AfterEach(func() {
 	ginkgomon.Kill(fakedriverServerProcess)
+	ginkgomon.Kill(fakedriverUnixServerProcess)
 })
 
 var _ = SynchronizedAfterSuite(func() {

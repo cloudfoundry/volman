@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -28,6 +29,12 @@ var fakedriverProcess ifrit.Process
 var fakedriverRunner *ginkgomon.Runner
 
 var tmpDriversPath string
+
+var fakedriverServerPath string
+
+var unixRunner *ginkgomon.Runner
+var fakedriverUnixServerProcess ifrit.Process
+var socketPath string
 
 func TestVolman(t *testing.T) {
 	// these integration tests can take a bit, especially under load;
@@ -81,11 +88,25 @@ var _ = BeforeEach(func() {
 		),
 		StartCheck: "volman.started",
 	})
+
+	socketPath = path.Join(fakeDriverPath, "fakedriver_unix.sock")
+
+	unixRunner = ginkgomon.New(ginkgomon.Config{
+		Name: "fakedriverUnixServer",
+		Command: exec.Command(
+			fakeDriverPath,
+			"-listenAddr", socketPath,
+			"-transport", "unix",
+		),
+		StartCheck: "fakedriverUnixServer.started",
+	})
+
 })
 
 var _ = AfterEach(func() {
 	ginkgomon.Kill(volmanProcess)
 	ginkgomon.Kill(fakedriverProcess)
+	ginkgomon.Kill(fakedriverUnixServerProcess)
 })
 
 var _ = SynchronizedAfterSuite(func() {

@@ -2,17 +2,18 @@ package driverhttp_test
 
 import (
 	"net/http"
-
-	"github.com/cloudfoundry-incubator/volman/volmanfakes"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/cloudfoundry-incubator/volman/voldriver"
-	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
-	"github.com/pivotal-golang/lager/lagertest"
+	"time"
 
 	"bytes"
 	"fmt"
+
+	"github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
+	"github.com/cloudfoundry-incubator/volman/volmanfakes"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
 var _ = Describe("RemoteClient", func() {
@@ -39,7 +40,7 @@ var _ = Describe("RemoteClient", func() {
 		}
 	})
 
-	Context("when the driver returns as error", func() {
+	Context("when the driver returns as error and the transport is TCP", func() {
 
 		BeforeEach(func() {
 			httpClient = new(volmanfakes.FakeClient)
@@ -75,7 +76,7 @@ var _ = Describe("RemoteClient", func() {
 
 	})
 
-	Context("when the driver returns successful", func() {
+	Context("when the driver returns successful and the transport is TCP", func() {
 		var volumeId string
 
 		BeforeEach(func() {
@@ -90,7 +91,7 @@ var _ = Describe("RemoteClient", func() {
 
 			mountResponse := driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
 
-			By("signaling an error")
+			By("giving back a path with no error")
 			Expect(mountResponse.Err).To(Equal(""))
 			Expect(mountResponse.Mountpoint).To(Equal("somePath"))
 		})
@@ -111,7 +112,7 @@ var _ = Describe("RemoteClient", func() {
 
 	})
 
-	Context("when the driver is malicious", func() {
+	Context("when the driver is malicious and the transport is TCP", func() {
 
 		BeforeEach(func() {
 		})
@@ -167,7 +168,7 @@ var _ = Describe("RemoteClient", func() {
 
 	})
 
-	Context("when the http transport fails", func() {
+	Context("when the http transport fails and the transport is TCP", func() {
 
 		BeforeEach(func() {
 		})
@@ -208,7 +209,48 @@ var _ = Describe("RemoteClient", func() {
 
 			Expect(unmountResponse.Err).NotTo(Equal(""))
 		})
-
 	})
 
+	Context("when the transport is unix", func() {
+		var volumeId string
+
+		BeforeEach(func() {
+
+			httpClient = new(volmanfakes.FakeClient)
+			volumeId = "fake-volume"
+			fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
+			time.Sleep(time.Millisecond * 1000)
+
+			driver = driverhttp.NewRemoteUnixClientWithClient(socketPath, httpClient)
+			validHttpMountResponse = &http.Response{
+				StatusCode: 200,
+				Body:       stringCloser{bytes.NewBufferString("{\"Mountpoint\":\"somePath\"}")},
+			}
+
+		})
+
+		It("should be able to mount", func() {
+			httpClient.DoReturns(validHttpMountResponse, nil)
+			mountResponse := driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
+
+			By("returning a mountpoint without errors")
+			Expect(mountResponse.Err).To(Equal(""))
+			Expect(mountResponse.Mountpoint).To(Equal("somePath"))
+		})
+
+		It("should be able to unmount", func() {
+
+			validHttpUnmountResponse := &http.Response{
+				StatusCode: 200,
+			}
+
+			httpClient.DoReturns(validHttpUnmountResponse, nil)
+
+			volumeId := "fake-volume"
+			unmountResponse := driver.Unmount(testLogger, voldriver.UnmountRequest{Name: volumeId})
+
+			Expect(unmountResponse.Err).To(Equal(""))
+		})
+
+	})
 })
