@@ -35,10 +35,12 @@ var transport = flag.String(
 )
 
 func init() {
-	parseCommandLine()
+	// no command line parsing can happen here in go 1.6git soll
 }
 
 func main() {
+	parseCommandLine()
+
 	var withLogger lager.Logger
 	var logTap *lager.ReconfigurableSink
 

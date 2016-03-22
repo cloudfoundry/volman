@@ -28,10 +28,11 @@ var driversPath = flag.String(
 )
 
 func init() {
-	parseCommandLine()
+	// no command line parsing can happen here in go 1.6
 }
 
 func main() {
+	parseCommandLine()
 	withLogger, logTap := logger()
 	withLogger.Info("started")
 	defer withLogger.Info("ends")
