@@ -41,6 +41,18 @@ var _ = Describe("Volman", func() {
 			})
 		})
 
+		Context("when location is not set", func() {
+			BeforeEach(func() {
+				client = vollocal.NewLocalClient("")
+			})
+
+			It("should report empty list of drivers", func() {
+				drivers, err := client.ListDrivers(testLogger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(drivers.Drivers)).To(Equal(0))
+			})
+		})
+
 		Context("has driver in location", func() {
 			BeforeEach(func() {
 				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
@@ -130,6 +142,7 @@ var _ = Describe("Volman", func() {
 	Describe("Mount and Unmount with unix config", func() {
 		var unixclient volman.Manager
 		var err error
+
 		Context("when given valid driver path", func() {
 			BeforeEach(func() {
 				fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
@@ -138,8 +151,6 @@ var _ = Describe("Volman", func() {
 
 				fakeDriver = new(volmanfakes.FakeDriver)
 				fakeClientFactory.NewRemoteClientReturns(fakeDriver, nil)
-				driverName = "fakedriver"
-				Expect(err).NotTo(HaveOccurred())
 				unixclient = vollocal.NewLocalClientWithRemoteClientFactory(defaultPluginsDirectory, fakeClientFactory)
 				driverName = "fakedriver"
 			})
