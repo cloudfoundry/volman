@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/pivotal-golang/lager"
@@ -24,6 +24,7 @@ type DriverFactory interface {
 type realDriverFactory struct {
 	DriversPath string
 	Factory     driverhttp.RemoteClientFactory
+	useOs       system.Os
 }
 
 func NewDriverFactory(driversPath string) DriverFactory {
@@ -32,7 +33,12 @@ func NewDriverFactory(driversPath string) DriverFactory {
 }
 
 func NewDriverFactoryWithRemoteClientFactory(driversPath string, remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
-	return &realDriverFactory{driversPath, remoteClientFactory}
+	return &realDriverFactory{driversPath, remoteClientFactory, &system.SystemOs{}}
+}
+
+func NewDriverFactoryWithOs(driversPath string, useOs system.Os) DriverFactory {
+	remoteClientFactory := driverhttp.NewRemoteClientFactory()
+	return &realDriverFactory{driversPath, remoteClientFactory, useOs}
 }
 
 func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]string, error) {
@@ -70,8 +76,12 @@ func (*realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[st
 }
 
 func (r *realDriverFactory) Driver(logger lager.Logger, driverId string) (voldriver.Driver, error) {
+	logger = logger.Session("driver-factory")
+	logger.Info("start")
+	defer logger.Info("end")
 	drivers, err := r.Discover(logger)
-	if err != nil {
+
+	if err != nil { //untestable as it depends on another untestable error: discovery error
 		return nil, fmt.Errorf("Volman cannot find any drivers", err.Error())
 	}
 	var driver voldriver.Driver
@@ -84,14 +94,14 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string) (voldri
 				case "sock":
 					address = path.Join("unix://", r.DriversPath, driverFileName)
 				case "spec":
-					configFile, err := os.Open(path.Join(r.DriversPath, driverFileName))
+					configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
 					if err != nil {
 						logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
 						return nil, err
 					}
 					reader := bufio.NewReader(configFile)
 					addressBytes, _, err := reader.ReadLine()
-					if err != nil {
+					if err != nil { // no real value in faking this as bigger problems exist when this fails
 						logger.Error(fmt.Sprintf("error-reading-%s", driverFileName), err)
 						return nil, err
 					}
@@ -99,7 +109,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string) (voldri
 				case "json":
 					// extract url from json file
 					var driverJsonSpec voldriver.DriverSpec
-					configFile, err := os.Open(path.Join(r.DriversPath, driverFileName))
+					configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
 					if err != nil {
 						logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
 						return nil, err
@@ -112,7 +122,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string) (voldri
 					address = driverJsonSpec.Address
 				}
 
-				logger.Info("invoking-driver", lager.Data{"address": address})
+				logger.Info("getting-driver", lager.Data{"address": address})
 				driver, err = r.Factory.NewRemoteClient(address)
 				if err != nil {
 					logger.Error(fmt.Sprintf("error-building-driver-attached-to-%s", address), err)
