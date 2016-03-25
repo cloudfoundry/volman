@@ -15,7 +15,7 @@ var fakeDriverPath string
 
 func TestHandlers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Handlers Suite")
+	RunSpecs(t, "Volman Handlers Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

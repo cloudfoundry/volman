@@ -79,9 +79,13 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 		return err
 	}
 
-	response := driver.Unmount(logger, voldriver.UnmountRequest{Name: volumeName})
-	if response.Err != "" {
-		logger.Error("mount-driver-lookup-error", err)
+	if response := driver.Unmount(logger, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
+		logger.Error("unmount-failed", err)
+		return errors.New(response.Err)
+	}
+
+	if response := driver.Remove(logger, voldriver.RemoveRequest{Name: volumeName}); response.Err != "" {
+		logger.Error("remove-failed", err)
 		return errors.New(response.Err)
 	}
 

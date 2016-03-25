@@ -20,7 +20,8 @@ var _ = Describe("Local Driver", func() {
 	var localDriver *fakedriver.LocalDriver
 
 	BeforeEach(func() {
-		logger = lagertest.NewTestLogger("test")
+		logger = lagertest.NewTestLogger("fakedriver-local")
+
 		fakeFileSystem = &volmanfakes.FakeFileSystem{}
 		localDriver = fakedriver.NewLocalDriver(fakeFileSystem)
 	})
@@ -37,22 +38,21 @@ var _ = Describe("Local Driver", func() {
 						"volume_id": volumeID,
 					},
 				})
-
 				Expect(createResponse.Err).To(Equal(""))
-				fakeFileSystem.TempDirReturns("/some/temp/dir/")
+
+				fakeFileSystem.AbsReturns("/some/temp/dir", nil)
 				mountResponse := localDriver.Mount(logger, voldriver.MountRequest{
 					Name: volumeName,
 				})
-
 				Expect(mountResponse.Err).To(Equal(""))
-				Expect(mountResponse.Mountpoint).To(Equal("/some/temp/dir/_fakedriver/test-volume-id"))
+				Expect(mountResponse.Mountpoint).To(Equal("/some/temp/dir/_volumes/test-volume-id"))
 			})
 
 			It("mounts the volume on the local filesystem", func() {
-				Expect(fakeFileSystem.TempDirCallCount()).To(Equal(1))
+				Expect(fakeFileSystem.AbsCallCount()).To(Equal(1))
 				Expect(fakeFileSystem.MkdirAllCallCount()).To(Equal(1))
 				createdDir, permissions := fakeFileSystem.MkdirAllArgsForCall(0)
-				Expect(createdDir).To(Equal("/some/temp/dir/_fakedriver/test-volume-id"))
+				Expect(createdDir).To(Equal("/some/temp/dir/_volumes/test-volume-id"))
 				Expect(permissions).To(BeEquivalentTo(0777))
 			})
 
@@ -62,7 +62,7 @@ var _ = Describe("Local Driver", func() {
 				})
 
 				Expect(getResponse.Err).To(Equal(""))
-				Expect(getResponse.Volume.Mountpoint).To(Equal("/some/temp/dir/_fakedriver/test-volume-id"))
+				Expect(getResponse.Volume.Mountpoint).To(Equal("/some/temp/dir/_volumes/test-volume-id"))
 			})
 		})
 
@@ -93,7 +93,7 @@ var _ = Describe("Local Driver", func() {
 
 			Context("when a volume has been mounted", func() {
 				BeforeEach(func() {
-					fakeFileSystem.TempDirReturns("/some/temp/dir/")
+					fakeFileSystem.AbsReturns("/some/temp/dir/", nil)
 					mountResponse := localDriver.Mount(logger, voldriver.MountRequest{
 						Name: volumeName,
 					})

@@ -21,14 +21,27 @@ func NewHandler(logger lager.Logger, client volman.Manager) (http.Handler, error
 	logger = logger.Session("server")
 	logger.Info("start")
 	defer logger.Info("end")
+
 	var handlers = rata.Handlers{
+
 		"drivers": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			serverlogger := logger
+			logger = logger.Session("drivers")
+			logger.Info("start")
+			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
+
 			drivers, _ := client.ListDrivers(logger)
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, drivers)
 		}),
+
 		"mount": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			logger.Info("mount")
-			defer logger.Info("mount end")
+			serverlogger := logger
+			logger = logger.Session("mount")
+			logger.Info("start")
+			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
+
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				respondWithError(logger, "Error reading mount request body", err, w)
@@ -49,9 +62,14 @@ func NewHandler(logger lager.Logger, client volman.Manager) (http.Handler, error
 
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, mountPoint)
 		}),
+
 		"unmount": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			logger.Info("unmount")
-			defer logger.Info("unmount end")
+			serverlogger := logger
+			logger = logger.Session("unmount")
+			logger.Info("start")
+			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
+
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				respondWithError(logger, "Error reading unmount request body", err, w)

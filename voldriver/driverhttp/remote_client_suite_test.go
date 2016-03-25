@@ -34,7 +34,7 @@ var socketPath string
 
 func TestDriver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Driver Suite")
+	RunSpecs(t, "Driver Remote Client and Handlers Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

@@ -41,6 +41,15 @@ type FakeFileSystem struct {
 	removeAllReturns struct {
 		result1 error
 	}
+	AbsStub        func(path string) (string, error)
+	absMutex       sync.RWMutex
+	absArgsForCall []struct {
+		path string
+	}
+	absReturns struct {
+		result1 string
+		result2 error
+	}
 }
 
 func (fake *FakeFileSystem) MkdirAll(arg1 string, arg2 os.FileMode) error {
@@ -163,6 +172,39 @@ func (fake *FakeFileSystem) RemoveAllReturns(result1 error) {
 	fake.removeAllReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeFileSystem) Abs(path string) (string, error) {
+	fake.absMutex.Lock()
+	fake.absArgsForCall = append(fake.absArgsForCall, struct {
+		path string
+	}{path})
+	fake.absMutex.Unlock()
+	if fake.AbsStub != nil {
+		return fake.AbsStub(path)
+	} else {
+		return fake.absReturns.result1, fake.absReturns.result2
+	}
+}
+
+func (fake *FakeFileSystem) AbsCallCount() int {
+	fake.absMutex.RLock()
+	defer fake.absMutex.RUnlock()
+	return len(fake.absArgsForCall)
+}
+
+func (fake *FakeFileSystem) AbsArgsForCall(i int) string {
+	fake.absMutex.RLock()
+	defer fake.absMutex.RUnlock()
+	return fake.absArgsForCall[i].path
+}
+
+func (fake *FakeFileSystem) AbsReturns(result1 string, result2 error) {
+	fake.AbsStub = nil
+	fake.absReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
 }
 
 var _ fakedriver.FileSystem = new(FakeFileSystem)

@@ -55,6 +55,40 @@ func (r *remoteClient) Info(logger lager.Logger) (voldriver.InfoResponse, error)
 	return voldriver.InfoResponse{}, nil
 }
 
+func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
+	logger = logger.Session("create", lager.Data{"create_request": createRequest})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	payload, err := json.Marshal(createRequest)
+	if err != nil {
+		logger.Error("failed-marshalling-request", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
+	}
+
+	request, err := r.reqGen.CreateRequest(voldriver.CreateRoute, nil, bytes.NewReader(payload))
+	if err != nil {
+		logger.Error("failed-creating-request", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
+	}
+	response, err := r.HttpClient.Do(request)
+	if err != nil {
+		logger.Error("failed-creating-volume", err)
+		return voldriver.ErrorResponse{Err: err.Error()}
+	}
+
+	if response.StatusCode == 500 {
+		var remoteError voldriver.ErrorResponse
+		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.ErrorResponse{Err: err.Error()}
+		}
+		return remoteError
+	}
+
+	return voldriver.ErrorResponse{}
+}
+
 func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) voldriver.MountResponse {
 	logger = logger.Session("remoteclient-mount", lager.Data{"mount_request": mountRequest})
 	logger.Info("start")
@@ -132,41 +166,73 @@ func (r *remoteClient) Unmount(logger lager.Logger, unmountRequest voldriver.Unm
 	return voldriver.ErrorResponse{}
 }
 
-func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
-	logger = logger.Session("create", lager.Data{"create_request": createRequest})
+func (r *remoteClient) Remove(logger lager.Logger, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse {
+	logger = logger.Session("remove")
 	logger.Info("start")
 	defer logger.Info("end")
 
-	payload, err := json.Marshal(createRequest)
+	payload, err := json.Marshal(removeRequest)
 	if err != nil {
 		logger.Error("failed-marshalling-request", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
-	request, err := r.reqGen.CreateRequest(voldriver.CreateRoute, nil, bytes.NewReader(payload))
+	request, err := r.reqGen.CreateRequest(voldriver.RemoveRoute, nil, bytes.NewReader(payload))
 	if err != nil {
 		logger.Error("failed-creating-request", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
+
 	response, err := r.HttpClient.Do(request)
 	if err != nil {
-		logger.Error("failed-creating-volume", err)
+		logger.Error("failed-removing-volume", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
 	if response.StatusCode == 500 {
-		var remoteError voldriver.ErrorResponse
-		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
+		var remoteErrorResponse voldriver.ErrorResponse
+		if err := unmarshallJSON(logger, response.Body, &remoteErrorResponse); err != nil {
 			logger.Error("failed-parsing-error-response", err)
 			return voldriver.ErrorResponse{Err: err.Error()}
 		}
-		return remoteError
+		return remoteErrorResponse
 	}
 
 	return voldriver.ErrorResponse{}
 }
 
 func (r *remoteClient) Get(logger lager.Logger, getRequest voldriver.GetRequest) voldriver.GetResponse {
+	logger = logger.Session("get")
+	logger.Info("start")
+	defer logger.Info("end")
+
+	payload, err := json.Marshal(getRequest)
+	if err != nil {
+		logger.Error("failed-marshalling-request", err)
+		return voldriver.GetResponse{Err: err.Error()}
+	}
+
+	request, err := r.reqGen.CreateRequest(voldriver.GetRoute, nil, bytes.NewReader(payload))
+	if err != nil {
+		logger.Error("failed-creating-request", err)
+		return voldriver.GetResponse{Err: err.Error()}
+	}
+
+	response, err := r.HttpClient.Do(request)
+	if err != nil {
+		logger.Error("failed-getting-volume", err)
+		return voldriver.GetResponse{Err: err.Error()}
+	}
+
+	if response.StatusCode == 500 {
+		var remoteErrorResponse voldriver.GetResponse
+		if err := unmarshallJSON(logger, response.Body, &remoteErrorResponse); err != nil {
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.GetResponse{Err: err.Error()}
+		}
+		return remoteErrorResponse
+	}
+
 	return voldriver.GetResponse{}
 }
 

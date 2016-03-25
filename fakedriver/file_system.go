@@ -1,6 +1,9 @@
 package fakedriver
 
-import "os"
+import (
+	"os"
+	"path/filepath"
+)
 
 //go:generate counterfeiter -o ../volmanfakes/fake_file_system.go . FileSystem
 
@@ -10,6 +13,9 @@ type FileSystem interface {
 	TempDir() string
 	Stat(string) (os.FileInfo, error)
 	RemoveAll(string) error
+
+	// filepath package
+	Abs(path string) (string, error)
 }
 
 type realFileSystem struct{}
@@ -38,4 +44,8 @@ func (f *realFileSystem) Stat(path string) (fi os.FileInfo, err error) {
 
 func (f *realFileSystem) RemoveAll(path string) error {
 	return os.RemoveAll(path)
+}
+
+func (f *realFileSystem) Abs(path string) (string, error) {
+	return filepath.Abs(path)
 }

@@ -6,16 +6,18 @@ import (
 )
 
 const (
+	CreateRoute  = "create"
 	MountRoute   = "mount"
 	UnmountRoute = "unmount"
-	CreateRoute  = "create"
+	RemoveRoute  = "remove"
 	GetRoute     = "get"
 )
 
 var Routes = rata.Routes{
+	{Path: "/create", Method: "POST", Name: CreateRoute},
 	{Path: "/mount", Method: "POST", Name: MountRoute},
 	{Path: "/unmount", Method: "POST", Name: UnmountRoute},
-	{Path: "/create", Method: "POST", Name: CreateRoute},
+	{Path: "/remove", Method: "POST", Name: RemoveRoute},
 	{Path: "/get", Method: "GET", Name: GetRoute},
 }
 
@@ -23,15 +25,21 @@ var Routes = rata.Routes{
 
 type Driver interface {
 	Info(logger lager.Logger) (InfoResponse, error)
+	Create(logger lager.Logger, createRequest CreateRequest) ErrorResponse
 	Mount(logger lager.Logger, mountRequest MountRequest) MountResponse
 	Unmount(logger lager.Logger, unmountRequest UnmountRequest) ErrorResponse
-	Create(logger lager.Logger, createRequest CreateRequest) ErrorResponse
+	Remove(logger lager.Logger, removeRequest RemoveRequest) ErrorResponse
 	Get(logger lager.Logger, getRequest GetRequest) GetResponse
 }
 
 type InfoResponse struct {
 	Name string `json:"name,omitempty"`
 	Path string `json:"path,omitempty"`
+}
+
+type CreateRequest struct {
+	Name string
+	Opts map[string]interface{}
 }
 
 type MountRequest struct {
@@ -47,9 +55,8 @@ type UnmountRequest struct {
 	Name string
 }
 
-type CreateRequest struct {
+type RemoveRequest struct {
 	Name string
-	Opts map[string]interface{}
 }
 
 type ErrorResponse struct {
@@ -68,10 +75,6 @@ type GetResponse struct {
 type VolumeInfo struct {
 	Name       string
 	Mountpoint string
-}
-
-func NewError(err error) Error {
-	return Error{err.Error()}
 }
 
 type Error struct {

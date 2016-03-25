@@ -126,6 +126,8 @@ var _ = Describe("Volman", func() {
 
 				err := client.Unmount(testLogger, driverName, volumeId)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
+				Expect(fakeDriver.RemoveCallCount()).To(Equal(1))
 			})
 
 			It("should not be able to unmount when driver unmount fails", func() {

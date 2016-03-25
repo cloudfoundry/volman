@@ -9,5 +9,5 @@ import (
 
 func TestFakedriver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Fake Driver Suite")
+	RunSpecs(t, "FakeDriver Suite")
 }

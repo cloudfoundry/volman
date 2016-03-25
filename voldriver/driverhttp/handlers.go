@@ -19,9 +19,11 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 	var handlers = rata.Handlers{
 
 		"get": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			serverlogger := logger
 			logger = logger.Session("get-mount")
 			logger.Info("start")
 			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -47,10 +49,43 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, getResponse)
 		}),
 
+		"create": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			serverlogger := logger
+			logger = logger.Session("handle-create")
+			logger.Info("start")
+			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
+
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				logger.Error("failed-reading-create-request-body", err)
+				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, voldriver.ErrorResponse{Err: err.Error()})
+				return
+			}
+
+			var createRequest voldriver.CreateRequest
+			if err = json.Unmarshal(body, &createRequest); err != nil {
+				logger.Error("failed-unmarshalling-create-request-body", err)
+				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, voldriver.ErrorResponse{Err: err.Error()})
+				return
+			}
+
+			createResponse := client.Create(logger, createRequest)
+			if createResponse.Err != "" {
+				logger.Error("failed-creating-volume", errors.New(createResponse.Err))
+				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, createResponse)
+				return
+			}
+
+			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, createResponse)
+		}),
+
 		"mount": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			serverlogger := logger
 			logger = logger.Session("handle-mount")
 			logger.Info("start")
 			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -77,9 +112,11 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 		}),
 
 		"unmount": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			serverlogger := logger
 			logger = logger.Session("handle-unmount")
 			logger.Info("start")
 			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -105,33 +142,35 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, unmountResponse)
 		}),
 
-		"create": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			logger = logger.Session("handle-create")
+		"remove": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			serverlogger := logger
+			logger = logger.Session("handle-remove")
 			logger.Info("start")
 			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
-				logger.Error("failed-reading-create-request-body", err)
+				logger.Error("failed-reading-remove-request-body", err)
 				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, voldriver.ErrorResponse{Err: err.Error()})
 				return
 			}
 
-			var createRequest voldriver.CreateRequest
-			if err = json.Unmarshal(body, &createRequest); err != nil {
-				logger.Error("failed-unmarshalling-create-request-body", err)
+			var removeRequest voldriver.RemoveRequest
+			if err = json.Unmarshal(body, &removeRequest); err != nil {
+				logger.Error("failed-unmarshalling-unmount-request-body", err)
 				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, voldriver.ErrorResponse{Err: err.Error()})
 				return
 			}
 
-			createResponse := client.Create(logger, createRequest)
-			if createResponse.Err != "" {
-				logger.Error("failed-creating-volume", errors.New(createResponse.Err))
-				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, createResponse)
+			removeResponse := client.Remove(logger, removeRequest)
+			if removeResponse.Err != "" {
+				logger.Error("failed-remove-volume", errors.New(removeResponse.Err))
+				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, removeResponse)
 				return
 			}
 
-			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, createResponse)
+			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, removeResponse)
 		}),
 	}
 

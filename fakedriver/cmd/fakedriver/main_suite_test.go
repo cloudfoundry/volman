@@ -32,7 +32,7 @@ func TestFakedriverServer(t *testing.T) {
 	SetDefaultEventuallyTimeout(10 * time.Second)
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Fakedriver Server Cmd Suite")
+	RunSpecs(t, "FakeDriver Server Cmd Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
@@ -62,7 +62,7 @@ var _ = BeforeEach(func() {
 	tmpdir, err := ioutil.TempDir(os.TempDir(), "fake-driver-test")
 	Ω(err).ShouldNot(HaveOccurred())
 
-	socketPath = path.Join(tmpdir, "fakedriver_unix.sock")
+	socketPath = path.Join(tmpdir, "fakedriver.sock")
 
 	unixRunner = ginkgomon.New(ginkgomon.Config{
 		Name: "fakedriverUnixServer",
