@@ -57,7 +57,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 		return volman.MountResponse{}, err
 	}
 	mountRequest := voldriver.MountRequest{Name: volumeId}
-	logger.Info("calling-driver-with-mount request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
+	logger.Info("calling-driver-with-mount-request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
 	mountResponse := driver.Mount(logger, mountRequest)
 	logger.Info("response-from-driver", lager.Data{"response": mountResponse})
 	if mountResponse.Err != "" {

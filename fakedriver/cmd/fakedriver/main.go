@@ -41,23 +41,20 @@ func init() {
 func main() {
 	parseCommandLine()
 
-	var withLogger lager.Logger
+	var logger lager.Logger
 	var logTap *lager.ReconfigurableSink
 
 	var fakeDriverServer ifrit.Runner
 
 	if *transport == "tcp" {
-		withLogger, logTap = logger()
-		withLogger.Info("started")
-		defer withLogger.Info("ends")
-		fakeDriverServer = createFakeDriverServer(withLogger, *atAddress, *driversPath)
+		logger, logTap = newLogger()
+		defer logger.Info("ends")
+		fakeDriverServer = createFakeDriverServer(logger, *atAddress, *driversPath)
 	} else {
+		logger, logTap = newUnixLogger()
+		defer logger.Info("ends")
 
-		withLogger, logTap = unixLogger()
-		withLogger.Info("started")
-		defer withLogger.Info("ends")
-
-		fakeDriverServer = createFakeDriverUnixServer(withLogger, *atAddress, *driversPath)
+		fakeDriverServer = createFakeDriverUnixServer(logger, *atAddress, *driversPath)
 	}
 
 	servers := grouper.Members{
@@ -69,7 +66,10 @@ func main() {
 		}, servers...)
 	}
 	process := ifrit.Invoke(processRunnerFor(servers))
-	untilTerminated(withLogger, process)
+
+	logger.Info("started")
+
+	untilTerminated(logger, process)
 }
 
 func exitOnFailure(logger lager.Logger, err error) {
@@ -104,16 +104,16 @@ func createFakeDriverUnixServer(logger lager.Logger, atAddress string, driversPa
 	return http_server.NewUnixServer(atAddress, handler)
 }
 
-func logger() (lager.Logger, *lager.ReconfigurableSink) {
-
+func newLogger() (lager.Logger, *lager.ReconfigurableSink) {
 	logger, reconfigurableSink := cf_lager.New("fakedriverServer")
 	return logger, reconfigurableSink
 }
-func unixLogger() (lager.Logger, *lager.ReconfigurableSink) {
 
+func newUnixLogger() (lager.Logger, *lager.ReconfigurableSink) {
 	logger, reconfigurableSink := cf_lager.New("fakedriverUnixServer")
 	return logger, reconfigurableSink
 }
+
 func parseCommandLine() {
 	cf_lager.AddFlags(flag.CommandLine)
 	cf_debug_server.AddFlags(flag.CommandLine)
