@@ -226,6 +226,21 @@ var _ = Describe("Local Driver", func() {
 
 	Describe("Remove", func() {
 		const volumeName = "test-volume"
+
+		It("should fail if no volume name provided", func() {
+			removeResponse := localDriver.Remove(logger, voldriver.RemoveRequest{
+				Name: "",
+			})
+			Expect(removeResponse.Err).To(Equal("Missing mandatory 'volume_name'"))
+		})
+
+		It("should fail if no volume was created", func() {
+			removeResponse := localDriver.Remove(logger, voldriver.RemoveRequest{
+				Name: volumeName,
+			})
+			Expect(removeResponse.Err).To(Equal("Volume 'test-volume' not found"))
+		})
+
 		Context("when the volume has been created", func() {
 			BeforeEach(func() {
 				createSuccessful(logger, localDriver, volumeName)
@@ -256,7 +271,7 @@ var _ = Describe("Local Driver", func() {
 				removeResponse := localDriver.Remove(logger, voldriver.RemoveRequest{
 					Name: volumeName,
 				})
-				Expect(removeResponse.Err).To(Equal("Volume test-volume not found"))
+				Expect(removeResponse.Err).To(Equal("Volume 'test-volume' not found"))
 			})
 		})
 	})

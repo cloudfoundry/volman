@@ -134,7 +134,7 @@ func (d *LocalDriver) Remove(logger lager.Logger, removeRequest voldriver.Remove
 	var exists bool
 	if vol, exists = d.volumes[removeRequest.Name]; !exists {
 		logger.Error("failed-volume-removal", fmt.Errorf(fmt.Sprintf("Volume %s not found", removeRequest.Name)))
-		return voldriver.ErrorResponse{fmt.Sprintf("Volume %s not found", removeRequest.Name)}
+		return voldriver.ErrorResponse{fmt.Sprintf("Volume '%s' not found", removeRequest.Name)}
 	}
 
 	if vol.mountpoint != "" {
