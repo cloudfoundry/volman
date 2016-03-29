@@ -29,23 +29,10 @@ var _ = Describe("Local Driver", func() {
 	Describe("Mount", func() {
 		Context("when the volume has been created", func() {
 			const volumeName = "test-volume-name"
-			const volumeID = "test-volume-id"
 
 			BeforeEach(func() {
-				createResponse := localDriver.Create(logger, voldriver.CreateRequest{
-					Name: volumeName,
-					Opts: map[string]interface{}{
-						"volume_id": volumeID,
-					},
-				})
-				Expect(createResponse.Err).To(Equal(""))
-
-				fakeFileSystem.AbsReturns("/some/temp/dir", nil)
-				mountResponse := localDriver.Mount(logger, voldriver.MountRequest{
-					Name: volumeName,
-				})
-				Expect(mountResponse.Err).To(Equal(""))
-				Expect(mountResponse.Mountpoint).To(Equal("/some/temp/dir/_volumes/test-volume-id"))
+				createSuccessful(logger, localDriver, volumeName)
+				mountSuccessful(logger, localDriver, volumeName, fakeFileSystem)
 			})
 
 			It("mounts the volume on the local filesystem", func() {
@@ -57,11 +44,7 @@ var _ = Describe("Local Driver", func() {
 			})
 
 			It("returns the mount point on a /VolumeDriver.Get response", func() {
-				getResponse := localDriver.Get(logger, voldriver.GetRequest{
-					Name: volumeName,
-				})
-
-				Expect(getResponse.Err).To(Equal(""))
+				getResponse := getSuccessful(logger, localDriver, volumeName)
 				Expect(getResponse.Volume.Mountpoint).To(Equal("/some/temp/dir/_volumes/test-volume-id"))
 			})
 		})
@@ -81,46 +64,22 @@ var _ = Describe("Local Driver", func() {
 
 		Context("when a volume has been created", func() {
 			BeforeEach(func() {
-				createResponse := localDriver.Create(logger, voldriver.CreateRequest{
-					Name: volumeName,
-					Opts: map[string]interface{}{
-						"volume_id": "volumeID",
-					},
-				})
-
-				Expect(createResponse.Err).To(Equal(""))
+				createSuccessful(logger, localDriver, volumeName)
 			})
 
 			Context("when a volume has been mounted", func() {
 				BeforeEach(func() {
-					fakeFileSystem.AbsReturns("/some/temp/dir/", nil)
-					mountResponse := localDriver.Mount(logger, voldriver.MountRequest{
-						Name: volumeName,
-					})
-
-					Expect(mountResponse.Err).To(Equal(""))
+					mountSuccessful(logger, localDriver, volumeName, fakeFileSystem)
 				})
 
 				It("/VolumeDriver.Get returns no mountpoint", func() {
-					unmountResponse := localDriver.Unmount(logger, voldriver.UnmountRequest{
-						Name: volumeName,
-					})
-
-					Expect(unmountResponse.Err).To(Equal(""))
-					getResponse := localDriver.Get(logger, voldriver.GetRequest{
-						Name: volumeName,
-					})
-
-					Expect(getResponse.Err).To(Equal(""))
+					unmountSuccessful(logger, localDriver, volumeName)
+					getResponse := getSuccessful(logger, localDriver, volumeName)
 					Expect(getResponse.Volume.Mountpoint).To(Equal(""))
 				})
 
 				It("/VolumeDriver.Unmount removes mountpath from OS", func() {
-					unmountResponse := localDriver.Unmount(logger, voldriver.UnmountRequest{
-						Name: volumeName,
-					})
-
-					Expect(unmountResponse.Err).To(Equal(""))
+					unmountSuccessful(logger, localDriver, volumeName)
 					Expect(fakeFileSystem.RemoveAllCallCount()).To(Equal(1))
 				})
 
@@ -139,11 +98,7 @@ var _ = Describe("Local Driver", func() {
 					})
 
 					It("/VolumeDriver.Get still returns the mountpoint", func() {
-						getResponse := localDriver.Get(logger, voldriver.GetRequest{
-							Name: volumeName,
-						})
-
-						Expect(getResponse.Err).To(Equal(""))
+						getResponse := getSuccessful(logger, localDriver, volumeName)
 						Expect(getResponse.Volume.Mountpoint).NotTo(Equal(""))
 					})
 				})
@@ -163,11 +118,7 @@ var _ = Describe("Local Driver", func() {
 					})
 
 					It("/VolumeDriver.Get still returns the mountpoint", func() {
-						getResponse := localDriver.Get(logger, voldriver.GetRequest{
-							Name: volumeName,
-						})
-
-						Expect(getResponse.Err).To(Equal(""))
+						getResponse := getSuccessful(logger, localDriver, volumeName)
 						Expect(getResponse.Volume.Mountpoint).NotTo(Equal(""))
 					})
 				})
@@ -188,11 +139,7 @@ var _ = Describe("Local Driver", func() {
 					})
 
 					It("/VolumeDriver.Get still returns the mountpoint", func() {
-						getResponse := localDriver.Get(logger, voldriver.GetRequest{
-							Name: volumeName,
-						})
-
-						Expect(getResponse.Err).To(Equal(""))
+						getResponse := getSuccessful(logger, localDriver, volumeName)
 						Expect(getResponse.Volume.Mountpoint).NotTo(Equal(""))
 					})
 				})
@@ -236,26 +183,12 @@ var _ = Describe("Local Driver", func() {
 
 		Context("when a second create is called with the same volume ID", func() {
 			BeforeEach(func() {
-				createResponse := localDriver.Create(logger, voldriver.CreateRequest{
-					Name: "volume",
-					Opts: map[string]interface{}{
-						"volume_id": "bla",
-					},
-				})
-
-				Expect(createResponse.Err).To(Equal(""))
+				createSuccessful(logger, localDriver, "volume")
 			})
 
 			Context("with the same opts", func() {
 				It("does nothing", func() {
-					createResponse := localDriver.Create(logger, voldriver.CreateRequest{
-						Name: "volume",
-						Opts: map[string]interface{}{
-							"volume_id": "bla",
-						},
-					})
-
-					Expect(createResponse.Err).To(Equal(""))
+					createSuccessful(logger, localDriver, "volume")
 				})
 			})
 
@@ -264,7 +197,7 @@ var _ = Describe("Local Driver", func() {
 					createResponse := localDriver.Create(logger, voldriver.CreateRequest{
 						Name: "volume",
 						Opts: map[string]interface{}{
-							"volume_id": "foo",
+							"volume_id": "something_different_than_test",
 						},
 					})
 
@@ -278,35 +211,98 @@ var _ = Describe("Local Driver", func() {
 		Context("when the volume has been created", func() {
 			It("returns the volume name", func() {
 				volumeName := "test-volume"
-
-				createResponse := localDriver.Create(logger, voldriver.CreateRequest{
-					Name: volumeName,
-					Opts: map[string]interface{}{
-						"volume_id": "test",
-					},
-				})
-
-				Expect(createResponse.Err).To(Equal(""))
-
-				getResponse := localDriver.Get(logger, voldriver.GetRequest{
-					Name: volumeName,
-				})
-
-				Expect(getResponse.Err).To(Equal(""))
-				Expect(getResponse.Volume.Name).To(Equal(volumeName))
+				createSuccessful(logger, localDriver, volumeName)
+				getSuccessful(logger, localDriver, volumeName)
 			})
 		})
 
 		Context("when the volume has not been created", func() {
 			It("returns an error", func() {
 				volumeName := "test-volume"
-				getResponse := localDriver.Get(logger, voldriver.GetRequest{
+				getUnsuccessful(logger, localDriver, volumeName)
+			})
+		})
+	})
+
+	Describe("Remove", func() {
+		const volumeName = "test-volume"
+		Context("when the volume has been created", func() {
+			BeforeEach(func() {
+				createSuccessful(logger, localDriver, volumeName)
+			})
+
+			It("destroys volume", func() {
+				removeResponse := localDriver.Remove(logger, voldriver.RemoveRequest{
 					Name: volumeName,
 				})
+				Expect(removeResponse.Err).To(Equal(""))
+				getUnsuccessful(logger, localDriver, volumeName)
+			})
+			Context("when volume has been mounted", func() {
+				It("unmounts and destroys volume", func() {
+					mountSuccessful(logger, localDriver, volumeName, fakeFileSystem)
 
-				Expect(getResponse.Err).To(Equal("Volume not found"))
-				Expect(getResponse.Volume.Name).To(Equal(""))
+					removeResponse := localDriver.Remove(logger, voldriver.RemoveRequest{
+						Name: volumeName,
+					})
+					Expect(removeResponse.Err).To(Equal(""))
+					getUnsuccessful(logger, localDriver, volumeName)
+				})
+			})
+		})
+
+		Context("when the volume has not been created", func() {
+			It("returns an error", func() {
+				removeResponse := localDriver.Remove(logger, voldriver.RemoveRequest{
+					Name: volumeName,
+				})
+				Expect(removeResponse.Err).To(Equal("Volume test-volume not found"))
 			})
 		})
 	})
 })
+
+func getUnsuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string){
+	getResponse := localDriver.Get(logger, voldriver.GetRequest{
+		Name: volumeName,
+	})
+
+	Expect(getResponse.Err).To(Equal("Volume not found"))
+	Expect(getResponse.Volume.Name).To(Equal(""))
+}
+
+func getSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string) voldriver.GetResponse {
+	getResponse := localDriver.Get(logger, voldriver.GetRequest{
+		Name: volumeName,
+	})
+
+	Expect(getResponse.Err).To(Equal(""))
+	Expect(getResponse.Volume.Name).To(Equal(volumeName))
+	return getResponse
+}
+
+func createSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string){
+	createResponse := localDriver.Create(logger, voldriver.CreateRequest{
+		Name: volumeName,
+		Opts: map[string]interface{}{
+			"volume_id": "test-volume-id",
+		},
+	})
+	Expect(createResponse.Err).To(Equal(""))
+}
+
+func mountSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string, fakeFileSystem *volmanfakes.FakeFileSystem){
+	fakeFileSystem.AbsReturns("/some/temp/dir", nil)
+	mountResponse := localDriver.Mount(logger, voldriver.MountRequest{
+	Name: volumeName,
+	})
+	Expect(mountResponse.Err).To(Equal(""))
+	Expect(mountResponse.Mountpoint).To(Equal("/some/temp/dir/_volumes/test-volume-id"))
+}
+
+func unmountSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string) {
+	unmountResponse := localDriver.Unmount(logger, voldriver.UnmountRequest{
+		Name: volumeName,
+	})
+	Expect(unmountResponse.Err).To(Equal(""))
+}
