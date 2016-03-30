@@ -21,29 +21,32 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, string, map[string]interface{})) {
+var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, func() (string, map[string]interface{}))) {
 
 	Describe("Certify Volman with: "+described, func() {
 
 		var (
-			testLogger         lager.Logger
-			driverProcess      ifrit.Process
-			driverRunner       *ginkgomon.Runner
-			volmanProcess      ifrit.Process
-			volmanRunner       *ginkgomon.Runner
-			volmanServerPort   int
-			debugServerAddress string
-			tmpDriversPath     string
-			driverServerPort   int
-			driverName         string
-			volumeName         string
-			opts               map[string]interface{}
+			testLogger                 lager.Logger
+			driverProcess              ifrit.Process
+			driverRunner               *ginkgomon.Runner
+			volmanProcess              ifrit.Process
+			volmanRunner               *ginkgomon.Runner
+			volmanServerPort           int
+			debugServerAddress         string
+			tmpDriversPath             string
+			driverServerPort           int
+			driverName                 string
+			perTestUniqueVolumeName    string
+			perTestUniqueVolumeOptions map[string]interface{}
 		)
 
 		BeforeEach(func() {
 			testLogger = lagertest.NewTestLogger("MainTest")
 
-			driverRunner, volmanRunner, volmanServerPort, debugServerAddress, tmpDriversPath, driverServerPort, driverName, volumeName, opts = args()
+			var volumeInfo func() (string, map[string]interface{})
+
+			driverRunner, volmanRunner, volmanServerPort, debugServerAddress, tmpDriversPath, driverServerPort, driverName, volumeInfo = args()
+			perTestUniqueVolumeName, perTestUniqueVolumeOptions = volumeInfo()
 
 			driverProcess = ginkgomon.Invoke(driverRunner)
 			time.Sleep(time.Millisecond * 1000)
@@ -100,8 +103,8 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 						client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 						//	node := GinkgoParallelNode()
 
-						testLogger.Info(fmt.Sprintf("Mounting volume: %s", volumeName))
-						mountPoint, err = client.Mount(testLogger, driverName, volumeName, opts)
+						testLogger.Info(fmt.Sprintf("Mounting volume: %s", perTestUniqueVolumeName))
+						mountPoint, err = client.Mount(testLogger, driverName, perTestUniqueVolumeName, perTestUniqueVolumeOptions)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -117,7 +120,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 					It("should unmount a volume given same volume ID", func() {
 						client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 
-						err := client.Unmount(testLogger, driverName, volumeName)
+						err := client.Unmount(testLogger, driverName, perTestUniqueVolumeName)
 						Expect(err).NotTo(HaveOccurred())
 
 						matches, err := filepath.Glob(mountPoint.Path)
