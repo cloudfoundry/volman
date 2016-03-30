@@ -199,7 +199,7 @@ func (d *LocalDriver) unmount(logger lager.Logger, name string, mountPath string
 	}
 
 	if !exists {
-		errText := fmt.Sprintf("Volume %s does not exist, nothing te)
+		errText := fmt.Sprintf("Volume %s does not exist (path: %s), nothing to do!", name, mountPath)
 		logger.Error("failed-mountpoint-not-found", errors.New(errText))
 		return voldriver.ErrorResponse{Err: errText}
 	}

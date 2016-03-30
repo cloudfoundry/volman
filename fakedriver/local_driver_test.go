@@ -97,7 +97,7 @@ var _ = Describe("Local Driver", func() {
 					})
 
 					It("returns an error", func() {
-						Expect(unmountResponse.Err).To(Equal(fmt.Sprintf("Volume %s does not exist, nothing to do!", volumeName)))
+						Expect(unmountResponse.Err).To(Equal("Volume volumeName does not exist (path: /some/temp/dir/_volumes/test-volume-id), nothing to do!"))
 					})
 
 					It("/VolumeDriver.Get still returns the mountpoint", func() {
