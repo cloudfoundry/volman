@@ -26,6 +26,8 @@ var driverRunner *ginkgomon.Runner
 
 var mountDir string
 var tmpDriversPath string
+var volumeName string
+var opts map[string]interface{}
 
 func TestVolman(t *testing.T) {
 	// these integration tests can take a bit, especially under load;
@@ -83,6 +85,8 @@ var _ = BeforeEach(func() {
 		),
 		StartCheck: "volman.started",
 	})
+	volumeName = "fake-volume-name"
+	opts = map[string]interface{}{"volume_id": volumeName}
 })
 
 var _ = SynchronizedAfterSuite(func() {

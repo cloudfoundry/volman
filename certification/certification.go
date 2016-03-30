@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/cloudfoundry-incubator/volman"
@@ -22,7 +21,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int)) {
+var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, string, map[string]interface{})) {
 
 	Describe("Certify Volman with: "+described, func() {
 
@@ -36,12 +35,15 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 			debugServerAddress string
 			tmpDriversPath     string
 			driverServerPort   int
+			driverName         string
+			volumeName         string
+			opts               map[string]interface{}
 		)
 
 		BeforeEach(func() {
 			testLogger = lagertest.NewTestLogger("MainTest")
 
-			driverRunner, volmanRunner, volmanServerPort, debugServerAddress, tmpDriversPath, driverServerPort = args()
+			driverRunner, volmanRunner, volmanServerPort, debugServerAddress, tmpDriversPath, driverServerPort, driverName, volumeName, opts = args()
 
 			driverProcess = ginkgomon.Invoke(driverRunner)
 			time.Sleep(time.Millisecond * 1000)
@@ -63,7 +65,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 				Expect(status).Should(ContainSubstring("404"))
 			})
 
-			It("should return empty list for '/v1/drivers' (200 status)", func() {
+			It("should return empty list", func() {
 				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 				drivers, err := client.ListDrivers(testLogger)
 				Expect(err).NotTo(HaveOccurred())
@@ -81,7 +83,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("should return list of drivers for '/v1/drivers' (200 status)", func() {
+				It("should return list of drivers", func() {
 					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 					drivers, err := client.ListDrivers(testLogger)
 					Expect(err).NotTo(HaveOccurred())
@@ -91,16 +93,15 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 
 				Context("when mounting given a driver name, volume id, and opaque blob of configuration", func() {
 					var err error
-					var volumeId string
+					//var volumeId string
 					var mountPoint volman.MountResponse
 
 					JustBeforeEach(func() {
 						client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-						node := GinkgoParallelNode()
-						volumeId = "fake-volume_" + strconv.Itoa(node)
+						//	node := GinkgoParallelNode()
 
-						testLogger.Info(fmt.Sprintf("Mounting volume: %s", volumeId))
-						mountPoint, err = client.Mount(testLogger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+						testLogger.Info(fmt.Sprintf("Mounting volume: %s", volumeName))
+						mountPoint, err = client.Mount(testLogger, driverName, volumeName, opts)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -116,7 +117,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 					It("should unmount a volume given same volume ID", func() {
 						client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 
-						err := client.Unmount(testLogger, "fakedriver", volumeId)
+						err := client.Unmount(testLogger, driverName, volumeName)
 						Expect(err).NotTo(HaveOccurred())
 
 						matches, err := filepath.Glob(mountPoint.Path)
