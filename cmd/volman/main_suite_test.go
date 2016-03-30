@@ -24,6 +24,7 @@ var driverServerPort int
 var debugServerAddress2 string
 var driverRunner *ginkgomon.Runner
 
+var mountDir string
 var tmpDriversPath string
 
 func TestVolman(t *testing.T) {
@@ -54,6 +55,9 @@ var _ = BeforeEach(func() {
 	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
 	Expect(err).NotTo(HaveOccurred())
 
+	mountDir, err = ioutil.TempDir("", "mountDir")
+	Expect(err).NotTo(HaveOccurred())
+
 	driverServerPort = 9750 + GinkgoParallelNode()
 	debugServerAddress2 = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
 	driverRunner = ginkgomon.New(ginkgomon.Config{
@@ -62,6 +66,7 @@ var _ = BeforeEach(func() {
 			driverPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", driverServerPort),
 			"-debugAddr", debugServerAddress2,
+			"-mountDir", mountDir,
 		),
 		StartCheck: "fakedriverServer.started",
 	})

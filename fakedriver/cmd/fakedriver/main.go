@@ -34,9 +34,11 @@ var transport = flag.String(
 	"Transport protocol to transmit HTTP over",
 )
 
-func init() {
-	// no command line parsing can happen here in go 1.6git soll
-}
+var mountDir = flag.String(
+	"mountDir",
+	"/tmp/volumes",
+	"Path to directory where fake volumes are created",
+)
 
 func main() {
 	parseCommandLine()
@@ -49,12 +51,12 @@ func main() {
 	if *transport == "tcp" {
 		logger, logTap = newLogger()
 		defer logger.Info("ends")
-		fakeDriverServer = createFakeDriverServer(logger, *atAddress, *driversPath)
+		fakeDriverServer = createFakeDriverServer(logger, *atAddress, *driversPath, *mountDir)
 	} else {
 		logger, logTap = newUnixLogger()
 		defer logger.Info("ends")
 
-		fakeDriverServer = createFakeDriverUnixServer(logger, *atAddress, *driversPath)
+		fakeDriverServer = createFakeDriverUnixServer(logger, *atAddress, *driversPath, *mountDir)
 	}
 
 	servers := grouper.Members{
@@ -88,17 +90,17 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
 }
 
-func createFakeDriverServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
+func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDir string) ifrit.Runner {
 	fileSystem := fakedriver.NewRealFileSystem()
-	client := fakedriver.NewLocalDriver(&fileSystem)
+	client := fakedriver.NewLocalDriver(&fileSystem, mountDir)
 	handler, err := driverhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)
 	return http_server.New(atAddress, handler)
 }
 
-func createFakeDriverUnixServer(logger lager.Logger, atAddress string, driversPath string) ifrit.Runner {
+func createFakeDriverUnixServer(logger lager.Logger, atAddress, driversPath, mountDir string) ifrit.Runner {
 	fileSystem := fakedriver.NewRealFileSystem()
-	client := fakedriver.NewLocalDriver(&fileSystem)
+	client := fakedriver.NewLocalDriver(&fileSystem, mountDir)
 	handler, err := driverhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)
 	return http_server.NewUnixServer(atAddress, handler)

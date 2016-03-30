@@ -18,12 +18,15 @@ var _ = Describe("Local Driver", func() {
 	var logger lager.Logger
 	var fakeFileSystem *volmanfakes.FakeFileSystem
 	var localDriver *fakedriver.LocalDriver
+	var mountDir string
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("fakedriver-local")
 
+		mountDir = "/path/to/mount"
+
 		fakeFileSystem = &volmanfakes.FakeFileSystem{}
-		localDriver = fakedriver.NewLocalDriver(fakeFileSystem)
+		localDriver = fakedriver.NewLocalDriver(fakeFileSystem, mountDir)
 	})
 
 	Describe("Mount", func() {
@@ -277,7 +280,7 @@ var _ = Describe("Local Driver", func() {
 	})
 })
 
-func getUnsuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string){
+func getUnsuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string) {
 	getResponse := localDriver.Get(logger, voldriver.GetRequest{
 		Name: volumeName,
 	})
@@ -296,7 +299,7 @@ func getSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName
 	return getResponse
 }
 
-func createSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string){
+func createSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string) {
 	createResponse := localDriver.Create(logger, voldriver.CreateRequest{
 		Name: volumeName,
 		Opts: map[string]interface{}{
@@ -306,10 +309,10 @@ func createSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeN
 	Expect(createResponse.Err).To(Equal(""))
 }
 
-func mountSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string, fakeFileSystem *volmanfakes.FakeFileSystem){
+func mountSuccessful(logger lager.Logger, localDriver voldriver.Driver, volumeName string, fakeFileSystem *volmanfakes.FakeFileSystem) {
 	fakeFileSystem.AbsReturns("/some/temp/dir", nil)
 	mountResponse := localDriver.Mount(logger, voldriver.MountRequest{
-	Name: volumeName,
+		Name: volumeName,
 	})
 	Expect(mountResponse.Err).To(Equal(""))
 	Expect(mountResponse.Mountpoint).To(Equal("/some/temp/dir/_volumes/test-volume-id"))

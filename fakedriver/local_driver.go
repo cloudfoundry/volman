@@ -7,8 +7,6 @@ import (
 
 	"strings"
 
-	"path/filepath"
-
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
 )
@@ -18,6 +16,7 @@ const RootDir = "_volumes/"
 type LocalDriver struct { // see voldriver.resources.go
 	volumes    map[string]*volume
 	fileSystem FileSystem
+	mountDir   string
 }
 
 type volume struct {
@@ -25,10 +24,11 @@ type volume struct {
 	mountpoint string
 }
 
-func NewLocalDriver(fileSystem FileSystem) *LocalDriver {
+func NewLocalDriver(fileSystem FileSystem, mountDir string) *LocalDriver {
 	return &LocalDriver{
 		volumes:    map[string]*volume{},
 		fileSystem: fileSystem,
+		mountDir:   mountDir,
 	}
 }
 
@@ -179,8 +179,7 @@ func (d *LocalDriver) exists(path string) (bool, error) {
 }
 
 func (d *LocalDriver) mountPath(logger lager.Logger, volumeId string) string {
-
-	dir, err := d.fileSystem.Abs(filepath.Dir(os.Args[0]))
+	dir, err := d.fileSystem.Abs(d.mountDir)
 	if err != nil {
 		logger.Fatal("error getting path to executable", err)
 	}
