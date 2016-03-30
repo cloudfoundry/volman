@@ -2,16 +2,15 @@ package main_test
 
 import (
 	"github.com/cloudfoundry-incubator/volman/certification"
+	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit/ginkgomon"
-	"github.com/nu7hatch/gouuid"
 )
 
 var _ = Describe("Fake Driver Certification", func() {
 	certification.CertifiyWith("Fakedriver", func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, func() (string, map[string]interface{})) {
-
-		volumeInfo := func()(string, map[string]interface{}){
+		volumeInfo := func() (string, map[string]interface{}) {
 			uuid, err := uuid.NewV4()
 			Expect(err).NotTo(HaveOccurred())
 			volumeId := "fake-volume-id_" + uuid.String()

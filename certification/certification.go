@@ -22,7 +22,6 @@ import (
 )
 
 var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, func() (string, map[string]interface{}))) {
-
 	Describe("Certify Volman with: "+described, func() {
 
 		var (
@@ -139,7 +138,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 				})
 
 				AfterEach(func() {
-					os.Remove(tmpDriversPath + "/"+driverName)
+					os.Remove(tmpDriversPath + "/" + driverName)
 				})
 			})
 		})
