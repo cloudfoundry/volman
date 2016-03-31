@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 )
 
 var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, func() (string, map[string]interface{}))) {
+
 	Describe("Certify Volman with: "+described, func() {
 
 		var (
@@ -60,7 +62,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 			})
 		})
 
-		Context("after starting http server", func() {
+		Context("after starting volman server", func() {
 			It("should get a 404 for root", func() {
 				_, status, err := get("/", volmanServerPort)
 				Expect(err).NotTo(HaveOccurred())
@@ -80,6 +82,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 			})
 
 			Context("when driver installed in the spec file plugins directory", func() {
+
 				BeforeEach(func() {
 					err := voldriver.WriteDriverSpec(testLogger, tmpDriversPath, driverName, fmt.Sprintf("http://0.0.0.0:%d", driverServerPort))
 					Expect(err).NotTo(HaveOccurred())
@@ -95,12 +98,10 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 
 				Context("when mounting given a driver name, volume id, and opaque blob of configuration", func() {
 					var err error
-					//var volumeId string
 					var mountPoint volman.MountResponse
 
 					JustBeforeEach(func() {
 						client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-						//	node := GinkgoParallelNode()
 
 						testLogger.Info(fmt.Sprintf("Mounting volume: %s", perTestUniqueVolumeName))
 						mountPoint, err = client.Mount(testLogger, driverName, perTestUniqueVolumeName, perTestUniqueVolumeOptions)
@@ -111,9 +112,15 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 						Expect(mountPoint.Path).NotTo(Equal(""))
 						//defer os.Remove(mountPoint.Path)
 
-						//matches, err := filepath.Glob(mountPoint.Path)
-						//Expect(err).NotTo(HaveOccurred())
-						//Expect(len(matches)).To(Equal(1))
+						matches, err := filepath.Glob(mountPoint.Path)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(len(matches)).To(Equal(1))
+					})
+
+					It("should be possible to write to the mountPoint", func() {
+						testFile := path.Join(mountPoint.Path, "test.txt")
+						err := ioutil.WriteFile(testFile, []byte("hello persi"), 0644)
+						Expect(err).NotTo(HaveOccurred())
 					})
 
 					It("should unmount a volume given same volume ID", func() {
