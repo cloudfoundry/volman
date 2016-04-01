@@ -121,6 +121,13 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 						testFile := path.Join(mountPoint.Path, "test.txt")
 						err := ioutil.WriteFile(testFile, []byte("hello persi"), 0644)
 						Expect(err).NotTo(HaveOccurred())
+
+						err = os.Remove(testFile)
+						Expect(err).NotTo(HaveOccurred())
+
+						matches, err := filepath.Glob(mountPoint.Path + "/*")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(len(matches)).To(Equal(0))
 					})
 
 					It("should unmount a volume given same volume ID", func() {
