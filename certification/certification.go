@@ -23,7 +23,6 @@ import (
 )
 
 var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, func() (string, map[string]interface{}))) {
-
 	Describe("Certify Volman with: "+described, func() {
 
 		var (
@@ -48,9 +47,6 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 
 			driverRunner, volmanRunner, volmanServerPort, debugServerAddress, tmpDriversPath, driverServerPort, driverName, volumeInfo = args()
 			perTestUniqueVolumeName, perTestUniqueVolumeOptions = volumeInfo()
-
-			driverProcess = ginkgomon.Invoke(driverRunner)
-			time.Sleep(time.Millisecond * 1000)
 
 			volmanProcess = ginkgomon.Invoke(volmanRunner)
 			time.Sleep(time.Millisecond * 1000)
@@ -82,8 +78,8 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 			})
 
 			Context("when driver installed in the spec file plugins directory", func() {
-
 				BeforeEach(func() {
+					driverProcess = ginkgomon.Invoke(driverRunner)
 					err := voldriver.WriteDriverSpec(testLogger, tmpDriversPath, driverName, fmt.Sprintf("http://0.0.0.0:%d", driverServerPort))
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -101,7 +97,8 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 					var mountPoint volman.MountResponse
 
 					JustBeforeEach(func() {
-						client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+						var client volman.Manager
+						client = volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
 
 						testLogger.Info(fmt.Sprintf("Mounting volume: %s", perTestUniqueVolumeName))
 						mountPoint, err = client.Mount(testLogger, driverName, perTestUniqueVolumeName, perTestUniqueVolumeOptions)
@@ -110,7 +107,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 
 					It("should mount a volume", func() {
 						Expect(mountPoint.Path).NotTo(Equal(""))
-						//defer os.Remove(mountPoint.Path)
+						defer os.Remove(mountPoint.Path)
 
 						matches, err := filepath.Glob(mountPoint.Path)
 						Expect(err).NotTo(HaveOccurred())

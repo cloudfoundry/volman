@@ -145,7 +145,7 @@ var _ = Describe("DriverFactory", func() {
 				driver, err := driverFactory.Driver(testLogger, driverName)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(driver).To(Equal(fakeDriver))
-				address := path.Join("unix://", defaultPluginsDirectory, driverName+".sock")
+				address := path.Join(defaultPluginsDirectory, driverName+".sock")
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal(address))
 			})
 			It("should error for invalid sock endpoint address", func() {

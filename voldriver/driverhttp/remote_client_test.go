@@ -29,7 +29,7 @@ var _ = Describe("RemoteClient", func() {
 
 	BeforeEach(func() {
 		httpClient = new(volmanfakes.FakeClient)
-		driver = driverhttp.NewRemoteClientWithHttpClient("http://127.0.0.1:8080", httpClient)
+		driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient)
 		validHttpCreateResponse = &http.Response{
 			StatusCode: 200,
 		}
@@ -44,7 +44,7 @@ var _ = Describe("RemoteClient", func() {
 
 		BeforeEach(func() {
 			httpClient = new(volmanfakes.FakeClient)
-			driver = driverhttp.NewRemoteClientWithHttpClient("http://127.0.0.1:8080", httpClient)
+			driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient)
 			invalidHttpResponse = &http.Response{
 				StatusCode: 500,
 				Body:       stringCloser{bytes.NewBufferString("{\"Err\":\"some error string\"}")},
@@ -219,9 +219,10 @@ var _ = Describe("RemoteClient", func() {
 			httpClient = new(volmanfakes.FakeClient)
 			volumeId = "fake-volume"
 			fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
+
 			time.Sleep(time.Millisecond * 1000)
 
-			driver = driverhttp.NewRemoteUnixClientWithClient(socketPath, httpClient)
+			driver = driverhttp.NewRemoteClientWithClient(socketPath, httpClient)
 			validHttpMountResponse = &http.Response{
 				StatusCode: 200,
 				Body:       stringCloser{bytes.NewBufferString("{\"Mountpoint\":\"somePath\"}")},

@@ -92,7 +92,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string) (voldri
 				extension := strings.Split(driverFileName, ".")[1]
 				switch extension {
 				case "sock":
-					address = path.Join("unix://", r.DriversPath, driverFileName)
+					address = path.Join(r.DriversPath, driverFileName)
 				case "spec":
 					configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
 					if err != nil {

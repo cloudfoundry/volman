@@ -8,6 +8,11 @@ import (
 	"testing"
 	"time"
 
+	//"os"
+	"path"
+
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -23,10 +28,12 @@ var driverPath string
 var driverServerPort int
 var debugServerAddress2 string
 var driverRunner *ginkgomon.Runner
+var unixDriverRunner *ginkgomon.Runner
 
 var mountDir string
 var tmpDriversPath string
 var volumeName string
+var socketPath string
 var opts map[string]interface{}
 
 func TestVolman(t *testing.T) {
@@ -54,23 +61,34 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 var _ = BeforeEach(func() {
 	var err error
-	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
-	Expect(err).NotTo(HaveOccurred())
+
+	tmpDriversPath, err = ioutil.TempDir(os.TempDir(), "volman-cert-test")
+	Expect(err).ShouldNot(HaveOccurred())
 
 	mountDir, err = ioutil.TempDir("", "mountDir")
 	Expect(err).NotTo(HaveOccurred())
 
 	driverServerPort = 9750 + GinkgoParallelNode()
-	debugServerAddress2 = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
 	driverRunner = ginkgomon.New(ginkgomon.Config{
 		Name: "fakedriverServer",
 		Command: exec.Command(
 			driverPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", driverServerPort),
-			"-debugAddr", debugServerAddress2,
 			"-mountDir", mountDir,
 		),
 		StartCheck: "fakedriverServer.started",
+	})
+
+	socketPath = path.Join(tmpDriversPath, "fakedriver.sock")
+	unixDriverRunner = ginkgomon.New(ginkgomon.Config{
+		Name: "fakedriverUnixServer",
+		Command: exec.Command(
+			driverPath,
+			"-listenAddr", socketPath,
+			"-transport", "unix",
+			"-mountDir", mountDir,
+		),
+		StartCheck: "fakedriverUnixServer.started",
 	})
 
 	volmanServerPort = 8750 + GinkgoParallelNode()

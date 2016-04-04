@@ -4,10 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"os/exec"
-	"path"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,18 +11,18 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 
+	"os"
+	"os/exec"
+	"path"
 	"testing"
 )
 
-var fakeDriverPath string
-var fakedriverServerPort int
 var debugServerAddress string
+var fakeDriverPath string
+
+var fakedriverServerPort int
 var fakedriverProcess ifrit.Process
-var fakedriverRunner *ginkgomon.Runner
-
-var tmpDriversPath string
-
-var fakedriverServerPath string
+var tcpRunner *ginkgomon.Runner
 
 var unixRunner *ginkgomon.Runner
 var fakedriverUnixServerProcess ifrit.Process
@@ -44,29 +40,16 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).NotTo(HaveOccurred())
 	return []byte(fakeDriverPath)
 }, func(pathsByte []byte) {
-	path := string(pathsByte)
-	fakeDriverPath = strings.Split(path, ",")[0]
+	fakeDriverPath = string(pathsByte)
 })
 
 var _ = BeforeEach(func() {
-	var err error
-	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
-	Expect(err).NotTo(HaveOccurred())
 
-	fakedriverServerPort = 9750 + GinkgoParallelNode()
-	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
-	fakedriverRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "fakedriverServer",
-		Command: exec.Command(
-			fakeDriverPath,
-			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", fakedriverServerPort),
-			"-debugAddr", debugServerAddress,
-		),
-		StartCheck: "fakedriverServer.started",
-	})
-	tmpdir, err := ioutil.TempDir(os.TempDir(), "remote-client-test")
+	tmpdir, err := ioutil.TempDir(os.TempDir(), "fake-driver-test")
 	Expect(err).ShouldNot(HaveOccurred())
-	socketPath = path.Join(tmpdir, "fakedriver_unix.sock")
+
+	socketPath = path.Join(tmpdir, "fakedriver.sock")
+
 	unixRunner = ginkgomon.New(ginkgomon.Config{
 		Name: "fakedriverUnixServer",
 		Command: exec.Command(
@@ -76,11 +59,9 @@ var _ = BeforeEach(func() {
 		),
 		StartCheck: "fakedriverUnixServer.started",
 	})
-
 })
 
 var _ = AfterEach(func() {
-	ginkgomon.Kill(fakedriverProcess)
 	ginkgomon.Kill(fakedriverUnixServerProcess)
 })
 

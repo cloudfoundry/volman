@@ -6,6 +6,10 @@ import (
 	"io"
 	"io/ioutil"
 
+	"strings"
+
+	"fmt"
+
 	"github.com/cloudfoundry-incubator/cf_http"
 	"github.com/cloudfoundry-incubator/volman/system/http"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
@@ -19,32 +23,20 @@ type remoteClient struct {
 }
 
 func NewRemoteClient(url string) *remoteClient {
-	return &remoteClient{
-		/* make a client based on protocol indicated by url string */
-		HttpClient: http.NewClientFrom(cf_http.NewClient()),
-		reqGen:     rata.NewRequestGenerator(url, voldriver.Routes),
+	httpClient := http.NewClientFrom(cf_http.NewClient())
+
+	if strings.Contains(url, ".sock") {
+		httpClient = cf_http.NewUnixClient(url)
+		url = fmt.Sprintf("unix://%s", url)
 	}
+
+	return NewRemoteClientWithClient(url, httpClient)
 }
 
-func NewRemoteUnixClient(socketPath string) *remoteClient {
-	unixClient := cf_http.NewUnixClient(socketPath)
+func NewRemoteClientWithClient(socketPath string, client http.Client) *remoteClient {
 	return &remoteClient{
-		HttpClient: unixClient,
-		reqGen:     rata.NewRequestGenerator("unix://"+socketPath, voldriver.Routes),
-	}
-}
-
-func NewRemoteUnixClientWithClient(socketPath string, unixClient http.Client) *remoteClient {
-	return &remoteClient{
-		HttpClient: unixClient,
-		reqGen:     rata.NewRequestGenerator("unix://"+socketPath, voldriver.Routes),
-	}
-}
-
-func NewRemoteClientWithHttpClient(url string, httpClient http.Client) *remoteClient {
-	return &remoteClient{
-		HttpClient: httpClient,
-		reqGen:     rata.NewRequestGenerator(url, voldriver.Routes),
+		HttpClient: client,
+		reqGen:     rata.NewRequestGenerator(socketPath, voldriver.Routes),
 	}
 }
 

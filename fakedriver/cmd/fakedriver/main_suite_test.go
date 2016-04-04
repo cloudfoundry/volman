@@ -60,7 +60,7 @@ var _ = BeforeEach(func() {
 	})
 
 	tmpdir, err := ioutil.TempDir(os.TempDir(), "fake-driver-test")
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).ShouldNot(HaveOccurred())
 
 	socketPath = path.Join(tmpdir, "fakedriver.sock")
 

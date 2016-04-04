@@ -22,7 +22,7 @@ import (
 var _ = Describe("UNIX and TCP versions of the fakedriver", func() {
 
 	FakeDriverBehaviorWhenTransportIs("unix", func() (voldriver.Driver, ifrit.Runner) {
-		return driverhttp.NewRemoteUnixClient(socketPath), unixRunner
+		return driverhttp.NewRemoteClient(socketPath), unixRunner
 	})
 
 	FakeDriverBehaviorWhenTransportIs("tcp", func() (voldriver.Driver, ifrit.Runner) {
