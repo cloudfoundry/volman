@@ -53,7 +53,7 @@ func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]string, er
 		if err != nil { // untestable on linux, does glob work differently on windows???
 			return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", r.DriversPath, err.Error())
 		}
-		logger.Info("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
+		logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
 		endpoints = r.insertIfNotFound(logger, endpoints, matchingDriverSpecs)
 	}
 	logger.Info("found-specs", lager.Data{"endpoints": endpoints})
@@ -65,7 +65,7 @@ func (*realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[st
 		split := strings.Split(spec, "/")
 		specFileName := split[len(split)-1]
 		specName := strings.Split(specFileName, ".")[0]
-		logger.Info("insert-unique-specs", lager.Data{"specname": specName, "specFileName": specFileName})
+		logger.Debug("insert-unique-specs", lager.Data{"specname": specName, "specFileName": specFileName})
 		_, ok := endpoints[specName]
 		if ok == false {
 			endpoints[specName] = specFileName
@@ -141,7 +141,7 @@ func (r *realDriverFactory) getMatchingDriverSpecs(logger lager.Logger, pattern 
 	if err != nil { // untestable on linux, does glob work differently on windows???
 		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", r.DriversPath, err.Error())
 	}
-	logger.Info("binaries", lager.Data{"binaries": matchingDriverSpecs})
+	logger.Debug("binaries", lager.Data{"binaries": matchingDriverSpecs})
 	return matchingDriverSpecs, nil
 
 }

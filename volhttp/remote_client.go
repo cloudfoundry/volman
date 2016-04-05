@@ -46,7 +46,7 @@ func (r *remoteClient) ListDrivers(logger lager.Logger) (volman.ListDriversRespo
 	if err != nil {
 		return volman.ListDriversResponse{}, r.clientError(logger, err, "Error in Parsing JSON Response of List Drivers")
 	}
-	logger.Info("complete")
+
 	return drivers, err
 }
 

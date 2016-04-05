@@ -29,10 +29,10 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	if err != nil {
 		return volman.ListDriversResponse{}, err
 	}
-	logger.Info("listing-drivers")
+	logger.Debug("listing-drivers")
 	var infoResponses []voldriver.InfoResponse
 	for driverName, driverFileName := range drivers {
-		logger.Info("driver-name", lager.Data{"drivername": driverName, "driverfilename": driverFileName})
+		logger.Debug("driver-name", lager.Data{"drivername": driverName, "driverfilename": driverFileName})
 		infoResponses = append(infoResponses, voldriver.InfoResponse{driverName, driverFileName})
 	}
 
