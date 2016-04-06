@@ -7,6 +7,8 @@ import (
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 
+	"encoding/json"
+
 	"github.com/cloudfoundry-incubator/volman/fakedriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
@@ -52,7 +54,11 @@ func main() {
 	if *transport == "tcp" {
 		logger, logTap = newLogger()
 		defer logger.Info("ends")
-		fakeDriverServer = createFakeDriverServer(logger, *atAddress, *driversPath, *mountDir)
+		fakeDriverServer = createFakeDriverServer(logger, *atAddress, *driversPath, *mountDir, false)
+	} else if *transport == "tcp-json" {
+		logger, logTap = newLogger()
+		defer logger.Info("ends")
+		fakeDriverServer = createFakeDriverServer(logger, *atAddress, *driversPath, *mountDir, true)
 	} else {
 		logger, logTap = newUnixLogger()
 		defer logger.Info("ends")
@@ -91,12 +97,20 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
 }
 
-func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDir string) ifrit.Runner {
+func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDir string, jsonSpec bool) ifrit.Runner {
 	fileSystem := fakedriver.NewRealFileSystem()
 	advertisedUrl := "http://" + atAddress
 	logger.Info("writing-spec-file", lager.Data{"location": driversPath, "name": "fakedriver", "address": advertisedUrl})
-	err := voldriver.WriteDriverSpec(logger, driversPath, "fakedriver", advertisedUrl)
-	exitOnFailure(logger, err)
+	if jsonSpec {
+		driverJsonSpec := voldriver.DriverSpec{Name: "fakedriver", Address: advertisedUrl}
+		jsonBytes, err := json.Marshal(driverJsonSpec)
+		exitOnFailure(logger, err)
+		err = voldriver.WriteDriverJSONSpec(logger, driversPath, "fakedriver", jsonBytes)
+		exitOnFailure(logger, err)
+	} else {
+		err := voldriver.WriteDriverSpec(logger, driversPath, "fakedriver", advertisedUrl)
+		exitOnFailure(logger, err)
+	}
 	client := fakedriver.NewLocalDriver(&fileSystem, mountDir)
 	handler, err := driverhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)

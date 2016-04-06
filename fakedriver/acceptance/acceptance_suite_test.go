@@ -25,9 +25,11 @@ var volmanRunner *ginkgomon.Runner
 
 var driverPath string
 var driverServerPort int
+var driverServerPortJson int
 var debugServerAddress2 string
 var driverRunner *ginkgomon.Runner
 var unixDriverRunner *ginkgomon.Runner
+var jsonDriverRunner *ginkgomon.Runner
 
 var mountDir string
 var tmpDriversPath string
@@ -74,6 +76,19 @@ var _ = BeforeEach(func() {
 			driverPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", driverServerPort),
 			"-mountDir", mountDir,
+			"-driversPath", tmpDriversPath,
+		),
+		StartCheck: "fakedriverServer.started",
+	})
+
+	driverServerPortJson = 9750 + 100 + GinkgoParallelNode()
+	jsonDriverRunner = ginkgomon.New(ginkgomon.Config{
+		Name: "fakedriverServer",
+		Command: exec.Command(
+			driverPath,
+			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", driverServerPortJson),
+			"-mountDir", mountDir,
+			"-transport", "tcp-json",
 			"-driversPath", tmpDriversPath,
 		),
 		StartCheck: "fakedriverServer.started",
