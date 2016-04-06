@@ -43,8 +43,8 @@ func NewDriverFactoryWithOs(driversPath string, useOs system.Os) DriverFactory {
 
 func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]string, error) {
 	logger = logger.Session("discover")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Debug("start")
+	defer logger.Debug("end")
 	//precedence order: sock -> spec -> json
 	spec_types := [3]string{"sock", "spec", "json"}
 	endpoints := make(map[string]string)
@@ -56,7 +56,7 @@ func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]string, er
 		logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
 		endpoints = r.insertIfNotFound(logger, endpoints, matchingDriverSpecs)
 	}
-	logger.Info("found-specs", lager.Data{"endpoints": endpoints})
+	logger.Debug("found-specs", lager.Data{"endpoints": endpoints})
 	return endpoints, nil
 }
 
@@ -71,7 +71,7 @@ func (*realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[st
 			endpoints[specName] = specFileName
 		}
 	}
-	logger.Info("insert-if-unique", lager.Data{"endpoints": endpoints})
+	logger.Debug("insert-if-unique", lager.Data{"endpoints": endpoints})
 	return endpoints
 }
 

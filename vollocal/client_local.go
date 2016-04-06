@@ -22,8 +22,8 @@ func NewLocalClientWithDriverFactory(driverFactory DriverFactory) *localClient {
 
 func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
 	logger = logger.Session("list-drivers")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Debug("start")
+	defer logger.Debug("end")
 
 	drivers, err := client.driverFactory.Discover(logger)
 	if err != nil {

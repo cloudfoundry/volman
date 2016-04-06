@@ -28,8 +28,8 @@ func NewRemoteClient(volmanURL string) *remoteClient {
 
 func (r *remoteClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
 	logger = logger.Session("list-drivers")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Debug("start")
+	defer logger.Debug("end")
 
 	request, err := r.reqGen.CreateRequest(volman.ListDriversRoute, nil, nil)
 	if err != nil {
