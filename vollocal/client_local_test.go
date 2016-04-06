@@ -45,7 +45,7 @@ var _ = Describe("Volman", func() {
 		})
 		Context("when location is not set", func() {
 			BeforeEach(func() {
-				client = vollocal.NewLocalClient("")
+				client = vollocal.NewLocalClient("garbage")
 			})
 
 			It("should report empty list of drivers", func() {

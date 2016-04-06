@@ -58,6 +58,9 @@ var _ = BeforeEach(func() {
 	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
 	Expect(err).NotTo(HaveOccurred())
 
+	defaultPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest")
+	Expect(err).ShouldNot(HaveOccurred())
+
 	fakedriverServerPort = 9750 + GinkgoParallelNode()
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
 	fakedriverRunner = ginkgomon.New(ginkgomon.Config{
@@ -66,11 +69,10 @@ var _ = BeforeEach(func() {
 			fakeDriverPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", fakedriverServerPort),
 			"-debugAddr", debugServerAddress,
+			"-driversPath", defaultPluginsDirectory,
 		),
 		StartCheck: "fakedriverServer.started",
 	})
-	defaultPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest")
-	Expect(err).ShouldNot(HaveOccurred())
 	socketPath = path.Join(defaultPluginsDirectory, "fakedriver.sock")
 	unixRunner = ginkgomon.New(ginkgomon.Config{
 		Name: "fakedriverUnixServer",
