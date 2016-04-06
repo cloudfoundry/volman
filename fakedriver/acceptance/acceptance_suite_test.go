@@ -1,4 +1,4 @@
-package main_test
+package acceptance_test
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	//"os"
 	"path"
 
 	"os"
@@ -42,7 +41,7 @@ func TestVolman(t *testing.T) {
 	SetDefaultEventuallyTimeout(10 * time.Second)
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Volman Cmd Suite")
+	RunSpecs(t, "Fakedriver Certification Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
