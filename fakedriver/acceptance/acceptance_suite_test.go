@@ -74,6 +74,7 @@ var _ = BeforeEach(func() {
 			driverPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", driverServerPort),
 			"-mountDir", mountDir,
+			"-driversPath", tmpDriversPath,
 		),
 		StartCheck: "fakedriverServer.started",
 	})

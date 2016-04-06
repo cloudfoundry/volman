@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
@@ -80,8 +79,6 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 			Context("when driver installed in the spec file plugins directory", func() {
 				BeforeEach(func() {
 					driverProcess = ginkgomon.Invoke(driverRunner)
-					err := voldriver.WriteDriverSpec(testLogger, tmpDriversPath, driverName, fmt.Sprintf("http://0.0.0.0:%d", driverServerPort))
-					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("should return list of drivers", func() {

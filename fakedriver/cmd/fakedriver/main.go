@@ -8,6 +8,7 @@ import (
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 
 	"github.com/cloudfoundry-incubator/volman/fakedriver"
+	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
@@ -92,6 +93,10 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 
 func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDir string) ifrit.Runner {
 	fileSystem := fakedriver.NewRealFileSystem()
+	advertisedUrl := "http://" + atAddress
+	logger.Info("writing-spec-file", lager.Data{"location": driversPath, "name": "fakedriver", "address": advertisedUrl})
+	err := voldriver.WriteDriverSpec(logger, driversPath, "fakedriver", advertisedUrl)
+	exitOnFailure(logger, err)
 	client := fakedriver.NewLocalDriver(&fileSystem, mountDir)
 	handler, err := driverhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)
