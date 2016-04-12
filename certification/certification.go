@@ -76,10 +76,12 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			Context("when driver installed in the spec file plugins directory", func() {
+			Context("after starting " + described, func() {
 				BeforeEach(func() {
-					driverProcess = ginkgomon.Invoke(driverRunner)
-					time.Sleep(time.Millisecond * 1000)
+					if driverRunner.Name != "noop" {
+						driverProcess = ginkgomon.Invoke(driverRunner)
+						time.Sleep(time.Millisecond * 1000)
+					}
 				})
 
 				It("should return list of drivers", func() {
@@ -149,7 +151,9 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 				AfterEach(func() {
 					os.Remove(tmpDriversPath + "/" + driverName)
 
-					ginkgomon.Kill(driverProcess)
+					if driverRunner.Name != "noop" {
+						ginkgomon.Kill(driverProcess)
+					}
 				})
 			})
 		})
