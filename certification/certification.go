@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
@@ -21,87 +20,70 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkgomon.Runner, int, string, string, int, string, func() (string, map[string]interface{}))) {
+var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixture DriverFixture) {
 	Describe("Certify Volman with: "+described, func() {
-
 		var (
-			testLogger                 lager.Logger
-			driverProcess              ifrit.Process
-			driverRunner               *ginkgomon.Runner
-			volmanProcess              ifrit.Process
-			volmanRunner               *ginkgomon.Runner
-			volmanServerPort           int
-			debugServerAddress         string
-			tmpDriversPath             string
-			driverServerPort           int
-			driverName                 string
-			perTestUniqueVolumeName    string
-			perTestUniqueVolumeOptions map[string]interface{}
+			testLogger lager.Logger
+
+			driverProcess ifrit.Process
+			volmanProcess ifrit.Process
 		)
 
 		BeforeEach(func() {
 			testLogger = lagertest.NewTestLogger("MainTest")
-
-			var volumeInfo func() (string, map[string]interface{})
-
-			driverRunner, volmanRunner, volmanServerPort, debugServerAddress, tmpDriversPath, driverServerPort, driverName, volumeInfo = args()
-			perTestUniqueVolumeName, perTestUniqueVolumeOptions = volumeInfo()
-
-			volmanProcess = ginkgomon.Invoke(volmanRunner)
-			time.Sleep(time.Millisecond * 1000)
+			volmanProcess = ginkgomon.Invoke(volmanFixture.Runner)
 		})
 
 		Context("after starting", func() {
 			It("should not exit", func() {
-				Consistently(volmanRunner).ShouldNot(Exit())
+				Consistently(volmanFixture.Runner).ShouldNot(Exit())
 			})
 		})
 
 		Context("after starting volman server", func() {
 			It("should get a 404 for root", func() {
-				_, status, err := get("/", volmanServerPort)
+				_, status, err := get("/", volmanFixture.Config.ServerPort)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(status).Should(ContainSubstring("404"))
 			})
 
 			It("should return empty list", func() {
-				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+				client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanFixture.Config.ServerPort))
 				drivers, err := client.ListDrivers(testLogger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(drivers.Drivers)).To(Equal(0))
 			})
 
 			It("should have a debug server endpoint", func() {
-				_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", debugServerAddress))
+				_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", volmanFixture.Config.DebugServerAddress))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			Context("after starting " + described, func() {
+			Context("after starting "+described, func() {
 				BeforeEach(func() {
-					if driverRunner.Name != "noop" {
-						driverProcess = ginkgomon.Invoke(driverRunner)
-						time.Sleep(time.Millisecond * 1000)
-					}
+					driverProcess = ginkgomon.Invoke(driverFixture.Runner)
 				})
 
 				It("should return list of drivers", func() {
-					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanFixture.Config.ServerPort))
 					drivers, err := client.ListDrivers(testLogger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(drivers.Drivers)).To(Equal(1))
-					Expect(drivers.Drivers[0].Name).To(Equal(driverName))
+					Expect(drivers.Drivers[0].Name).To(Equal(driverFixture.Config.Name))
 				})
 
 				Context("when mounting given a driver name, volume id, and opaque blob of configuration", func() {
-					var err error
-					var mountPoint volman.MountResponse
+					var (
+						err        error
+						mountPoint volman.MountResponse
+						client     volman.Manager
+					)
 
 					JustBeforeEach(func() {
-						var client volman.Manager
-						client = volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+						client = volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanFixture.Config.ServerPort))
 
-						testLogger.Info(fmt.Sprintf("Mounting volume: %s", perTestUniqueVolumeName))
-						mountPoint, err = client.Mount(testLogger, driverName, perTestUniqueVolumeName, perTestUniqueVolumeOptions)
+						testLogger.Info(fmt.Sprintf("Mounting volume: %s", driverFixture.VolumeData.Name))
+						mountPoint, err = client.Mount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name, driverFixture.VolumeData.Config)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -128,9 +110,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 					})
 
 					It("should unmount a volume given same volume ID", func() {
-						client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
-
-						err := client.Unmount(testLogger, driverName, perTestUniqueVolumeName)
+						err := client.Unmount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name)
 						Expect(err).NotTo(HaveOccurred())
 
 						matches, err := filepath.Glob(mountPoint.Path)
@@ -140,7 +120,7 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 				})
 
 				It("should error, given an invalid driver name", func() {
-					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanServerPort))
+					client := volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanFixture.Config.ServerPort))
 
 					_, err := client.Mount(testLogger, "InvalidDriver", "vol", nil)
 
@@ -149,11 +129,10 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 				})
 
 				AfterEach(func() {
-					os.Remove(tmpDriversPath + "/" + driverName)
+					os.Remove(volmanFixture.Config.DriversPath + "/" + driverFixture.Config.Name)
 
-					if driverRunner.Name != "noop" {
-						ginkgomon.Kill(driverProcess)
-					}
+					ginkgomon.Kill(driverProcess)
+
 				})
 			})
 		})

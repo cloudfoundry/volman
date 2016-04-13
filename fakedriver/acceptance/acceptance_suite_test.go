@@ -2,40 +2,36 @@ package acceptance_test
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
-	"path"
-
-	"os"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/onsi/gomega/gexec"
-	"github.com/tedsuo/ifrit/ginkgomon"
+	"io/ioutil"
+	"os"
+	"path"
+	"github.com/cloudfoundry-incubator/volman/certification"
+	"path/filepath"
 )
 
-var volmanPath string
-var volmanServerPort int
-var debugServerAddress string
-var volmanRunner *ginkgomon.Runner
+var (
+	volmanPath         string
+	volmanServerPort   int
+	debugServerAddress string
 
-var driverPath string
-var driverServerPort int
-var driverServerPortJson int
-var debugServerAddress2 string
-var driverRunner *ginkgomon.Runner
-var unixDriverRunner *ginkgomon.Runner
-var jsonDriverRunner *ginkgomon.Runner
+	driverPath           string
+	driverServerPort     int
+	driverServerPortJson int
 
-var mountDir string
-var tmpDriversPath string
-var volumeName string
-var socketPath string
-var opts map[string]interface{}
+	mountDir       string
+	tmpDriversPath string
+
+	socketPath string
+	fixturesFuncMapFunc func() (map[string]func()(certification.VolmanFixture, certification.DriverFixture))
+)
 
 func TestVolman(t *testing.T) {
 	// these integration tests can take a bit, especially under load;
@@ -47,18 +43,25 @@ func TestVolman(t *testing.T) {
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
-	var err error
-	volmanPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/cmd/volman", "-race")
+	vPath, err := gexec.Build("github.com/cloudfoundry-incubator/volman/cmd/volman", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
-	driverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver/cmd/fakedriver", "-race")
+	dPath, err := gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver/cmd/fakedriver", "-race")
 	Expect(err).NotTo(HaveOccurred())
-	return []byte(strings.Join([]string{volmanPath, driverPath}, ","))
-}, func(pathsByte []byte) {
-	path := string(pathsByte)
-	volmanPath = strings.Split(path, ",")[0]
-	driverPath = strings.Split(path, ",")[1]
+
+	return []byte(strings.Join([]string{vPath, dPath}, ","))
+	}, func(pathsByte []byte) {
+		path := string(pathsByte)
+		volmanPath = strings.Split(path, ",")[0]
+		driverPath = strings.Split(path, ",")[1]
 })
+
+var _ = SynchronizedAfterSuite(func() {
+
+}, func() {
+	gexec.CleanupBuildArtifacts()
+})
+
 
 var _ = BeforeEach(func() {
 	var err error
@@ -70,60 +73,57 @@ var _ = BeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	driverServerPort = 9750 + GinkgoParallelNode()
-	driverRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "fakedriverServer",
-		Command: exec.Command(
-			driverPath,
-			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", driverServerPort),
-			"-mountDir", mountDir,
-			"-driversPath", tmpDriversPath,
-		),
-		StartCheck: "fakedriverServer.started",
-	})
-
 	driverServerPortJson = 9750 + 100 + GinkgoParallelNode()
-	jsonDriverRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "fakedriverServer",
-		Command: exec.Command(
-			driverPath,
-			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", driverServerPortJson),
-			"-mountDir", mountDir,
-			"-transport", "tcp-json",
-			"-driversPath", tmpDriversPath,
-		),
-		StartCheck: "fakedriverServer.started",
-	})
 
 	socketPath = path.Join(tmpDriversPath, "fakedriver.sock")
-	unixDriverRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "fakedriverUnixServer",
-		Command: exec.Command(
-			driverPath,
-			"-listenAddr", socketPath,
-			"-transport", "unix",
-			"-mountDir", mountDir,
-		),
-		StartCheck: "fakedriverUnixServer.started",
-	})
 
 	volmanServerPort = 8750 + GinkgoParallelNode()
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 8850+GinkgoParallelNode())
-	volmanRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "volman",
-		Command: exec.Command(
-			volmanPath,
-			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", volmanServerPort),
-			"-debugAddr", debugServerAddress,
-			"-driversPath", tmpDriversPath,
-		),
-		StartCheck: "volman.started",
-	})
-	volumeName = "fake-volume-name"
-	opts = map[string]interface{}{"volume_id": volumeName}
-})
 
-var _ = SynchronizedAfterSuite(func() {
+	workingDir, err := os.Getwd()
+	Expect(err).NotTo(HaveOccurred())
 
-}, func() {
-	gexec.CleanupBuildArtifacts()
+	fixturesPath := filepath.Join(workingDir, "..", "..", "fixtures", "auto")
+	err = os.MkdirAll(fixturesPath, 0700)
+	Expect(err).NotTo(HaveOccurred())
+
+	transports := []string{"tcp", "tcp-json", "unix"}
+	listenAddresses := []string{
+		fmt.Sprintf("0.0.0.0:%d", driverServerPort),
+		fmt.Sprintf("0.0.0.0:%d", driverServerPortJson),
+		socketPath,
+	}
+	for i, transport := range transports {
+		certificationFixture := certification.CertificationFixture{
+			PathToVolman: volmanPath,
+			VolmanFixture: certification.VolmanFixture{
+				Config: certification.VolmanConfig{
+					ServerPort: volmanServerPort,
+					DebugServerAddress: debugServerAddress,
+					DriversPath: driverPath,
+				},
+			},
+			PathToDriver: driverPath,
+			MountDir: mountDir,
+			Transport: transport,
+			ListenAddress: listenAddresses[i],
+			DriverFixture: certification.DriverFixture{
+				Config: certification.DriverConfig{
+					Name: "fakedriver",
+					Path: driverPath,
+					ServerPort: driverServerPort,
+				},
+				VolumeData: certification.VolumeData{
+					Name: "fake-volume-name",
+					Config: map[string]interface{}{
+						"volume_id": "fake-volume-name",
+					},
+				},
+			},
+		}
+
+		fileName := filepath.Join(fixturesPath, fmt.Sprintf("certification-%s.json", transport))
+		err := certification.SaveCertificationFixture(certificationFixture, fileName)
+		Expect(err).NotTo(HaveOccurred())
+	}
 })
