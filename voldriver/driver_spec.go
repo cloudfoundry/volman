@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/pivotal-golang/lager"
+	"fmt"
 )
 
 func WriteDriverSpec(logger lager.Logger, pluginsDirectory string, driver string, url string) error {
@@ -25,11 +26,14 @@ func WriteDriverSpec(logger lager.Logger, pluginsDirectory string, driver string
 }
 
 func WriteDriverJSONSpec(logger lager.Logger, pluginsDirectory string, driver string, contents []byte) error {
+	println(">WriteDriverJSONSpec")
+	fmt.Printf("====>pluginsDirectory: %s", pluginsDirectory)
 	err := os.MkdirAll(pluginsDirectory, 0700)
 	if err != nil {
 		logger.Error("Error creating file "+err.Error(), err)
 		return err
 	}
+	println(">MkdirAll done")
 
 	f, err := os.Create(pluginsDirectory + "/" + driver + ".json")
 	if err != nil {

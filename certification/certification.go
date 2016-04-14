@@ -32,6 +32,13 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 		BeforeEach(func() {
 			testLogger = lagertest.NewTestLogger("MainTest")
 			volmanProcess = ginkgomon.Invoke(volmanFixture.Runner)
+
+			fmt.Printf("get: volmanFixture.Runner: %#v\n\n", volmanFixture.Runner)
+			fmt.Printf("get: volmanProcess: %#v\n\n", volmanProcess)
+		})
+
+		AfterEach(func() {
+			ginkgomon.Kill(volmanProcess)
 		})
 
 		Context("after starting", func() {
@@ -54,7 +61,7 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 				Expect(len(drivers.Drivers)).To(Equal(0))
 			})
 
-			It("should have a debug server endpoint", func() {
+			FIt("should have a debug server endpoint", func() {
 				_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", volmanFixture.Config.DebugServerAddress))
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -62,6 +69,11 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 			Context("after starting "+described, func() {
 				BeforeEach(func() {
 					driverProcess = ginkgomon.Invoke(driverFixture.Runner)
+				})
+
+				AfterEach(func() {
+					os.Remove(volmanFixture.Config.DriversPath + "/" + driverFixture.Config.Name)
+					ginkgomon.Kill(driverProcess)
 				})
 
 				It("should return list of drivers", func() {
@@ -127,25 +139,24 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("Driver 'InvalidDriver' not found in list of known drivers"))
 				})
-
-				AfterEach(func() {
-					os.Remove(volmanFixture.Config.DriversPath + "/" + driverFixture.Config.Name)
-
-					ginkgomon.Kill(driverProcess)
-
-				})
 			})
 		})
 
-		AfterEach(func() {
-			ginkgomon.Kill(volmanProcess)
-		})
 	})
 }
 
 func get(path string, volmanServerPort int) (body string, status string, err error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("http://0.0.0.0:%d%s", volmanServerPort, path), nil)
-	response, _ := (&http.Client{}).Do(req)
+	fmt.Printf("get: path: %s, volmanServerPort: %d\n\n", path, volmanServerPort)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://127.0.0.1:%d%s", volmanServerPort, path), nil)
+	fmt.Printf("get: rep: %#v\n\n", req)
+	fmt.Printf("get: err: %#v\n\n", err)
+
+	response, err := (&http.Client{}).Do(req)
+	fmt.Printf("get: response: %#v\n\n", response)
+	if err != nil {
+		fmt.Printf("get: err: %#v\n\n", err.Error())
+	}
+
 	defer response.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	return string(bodyBytes[:]), response.Status, err

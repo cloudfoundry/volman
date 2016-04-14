@@ -34,7 +34,6 @@ func init() {
 func main() {
 	parseCommandLine()
 	withLogger, logTap := logger()
-	withLogger.Info("started")
 	defer withLogger.Info("ends")
 
 	volmanServer := createVolmanServer(withLogger, *atAddress, *driversPath)
@@ -47,6 +46,7 @@ func main() {
 		}, servers...)
 	}
 	process := ifrit.Invoke(processRunnerFor(servers))
+	withLogger.Info("started")
 	untilTerminated(withLogger, process)
 }
 

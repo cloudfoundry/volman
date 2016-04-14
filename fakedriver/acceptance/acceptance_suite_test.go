@@ -5,16 +5,16 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/onsi/gomega/gexec"
-	"io/ioutil"
-	"os"
-	"path"
 	"github.com/cloudfoundry-incubator/volman/certification"
-	"path/filepath"
 )
 
 var (
@@ -54,14 +54,9 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		path := string(pathsByte)
 		volmanPath = strings.Split(path, ",")[0]
 		driverPath = strings.Split(path, ",")[1]
+
+		fmt.Printf("===>volmanPath: %s, driverPath: %s\n\n", volmanPath, driverPath)
 })
-
-var _ = SynchronizedAfterSuite(func() {
-
-}, func() {
-	gexec.CleanupBuildArtifacts()
-})
-
 
 var _ = BeforeEach(func() {
 	var err error
@@ -80,19 +75,18 @@ var _ = BeforeEach(func() {
 	volmanServerPort = 8750 + GinkgoParallelNode()
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 8850+GinkgoParallelNode())
 
-	workingDir, err := os.Getwd()
+	fixturesPath, err := GetOrCreateFixturesPath()
 	Expect(err).NotTo(HaveOccurred())
 
-	fixturesPath := filepath.Join(workingDir, "..", "..", "fixtures", "auto")
-	err = os.MkdirAll(fixturesPath, 0700)
-	Expect(err).NotTo(HaveOccurred())
+	fmt.Printf("===>Save fixturesPath: %#v\n\n", fixturesPath)
 
-	transports := []string{"tcp", "tcp-json", "unix"}
-	listenAddresses := []string{
+	transports := []string{"tcp"} //, "tcp-json", "unix"}
+	driverListenAddresses := []string{
 		fmt.Sprintf("0.0.0.0:%d", driverServerPort),
 		fmt.Sprintf("0.0.0.0:%d", driverServerPortJson),
 		socketPath,
 	}
+	ports := []int {driverServerPort, driverServerPortJson, 0}
 	for i, transport := range transports {
 		certificationFixture := certification.CertificationFixture{
 			PathToVolman: volmanPath,
@@ -100,18 +94,19 @@ var _ = BeforeEach(func() {
 				Config: certification.VolmanConfig{
 					ServerPort: volmanServerPort,
 					DebugServerAddress: debugServerAddress,
-					DriversPath: driverPath,
+					DriversPath: tmpDriversPath,
+					ListenAddress: fmt.Sprintf("0.0.0.0:%d", volmanServerPort),
 				},
 			},
 			PathToDriver: driverPath,
 			MountDir: mountDir,
 			Transport: transport,
-			ListenAddress: listenAddresses[i],
 			DriverFixture: certification.DriverFixture{
 				Config: certification.DriverConfig{
 					Name: "fakedriver",
-					Path: driverPath,
-					ServerPort: driverServerPort,
+					Path: tmpDriversPath,
+					ServerPort: ports[i],
+					ListenAddress: driverListenAddresses[i],
 				},
 				VolumeData: certification.VolumeData{
 					Name: "fake-volume-name",
@@ -122,8 +117,30 @@ var _ = BeforeEach(func() {
 			},
 		}
 
+		fmt.Printf("===>certificationFixture: %#v\n\n", certificationFixture)
 		fileName := filepath.Join(fixturesPath, fmt.Sprintf("certification-%s.json", transport))
 		err := certification.SaveCertificationFixture(certificationFixture, fileName)
 		Expect(err).NotTo(HaveOccurred())
 	}
 })
+
+//var _ = SynchronizedAfterSuite(func() {
+//}, func() {
+//	gexec.CleanupBuildArtifacts()
+//})
+
+func GetOrCreateFixturesPath() (string, error) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	fixturesPath := filepath.Join(workingDir, "..", "..", "fixtures", "auto")
+
+	err = os.MkdirAll(fixturesPath, 0700)
+	if err != nil {
+		return "", err
+	}
+
+	return fixturesPath, nil
+}
