@@ -35,8 +35,8 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 			volmanFixture.CreateRunner()
 			volmanProcess = ginkgomon.Invoke(volmanFixture.Runner)
 
-			fmt.Printf("get: volmanFixture.Runner: %#v\n\n", volmanFixture.Runner)
-			fmt.Printf("get: volmanProcess: %#v\n\n", volmanProcess)
+			fmt.Printf("volmanFixture: %#v\n\n", volmanFixture)
+			fmt.Printf("volmanProcess: %#v\n\n", volmanProcess)
 		})
 
 		AfterEach(func() {
@@ -75,10 +75,16 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 
 					driverFixture.CreateRunner()
 					driverProcess = ginkgomon.Invoke(driverFixture.Runner)
+
+					fmt.Printf("driverFixture: %#v\n\n", driverFixture)
+					fmt.Printf("driverProcess: %#v\n\n", driverProcess)
 				})
 
 				AfterEach(func() {
-					os.Remove(volmanFixture.Config.DriversPath + "/" + driverFixture.Config.Name)
+					os.Remove(volmanFixture.Config.DriversPath + "/" + driverFixture.Config.Name + ".json")
+					os.Remove(volmanFixture.Config.DriversPath + "/" + driverFixture.Config.Name + ".spec")
+					os.Remove(volmanFixture.Config.DriversPath + "/" + driverFixture.Config.Name + ".sock")
+
 					ginkgomon.Kill(driverProcess)
 				})
 
@@ -152,15 +158,11 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 }
 
 func get(path string, volmanServerPort int) (body string, status string, err error) {
-	fmt.Printf("get: path: %s, volmanServerPort: %d\n\n", path, volmanServerPort)
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://127.0.0.1:%d%s", volmanServerPort, path), nil)
-	fmt.Printf("get: rep: %#v\n\n", req)
-	fmt.Printf("get: err: %#v\n\n", err)
 
 	response, err := (&http.Client{}).Do(req)
-	fmt.Printf("get: response: %#v\n\n", response)
 	if err != nil {
-		fmt.Printf("get: err: %#v\n\n", err.Error())
+		return "", "", err
 	}
 
 	defer response.Body.Close()
