@@ -10,23 +10,23 @@ import (
 )
 
 var _ = Describe("#CertifyWith", func() {
-		fixturesPath, err := GetOrCreateFixturesPath()
+	fixturesPath, err := GetOrCreateFixturesPath()
+	handleError(err)
+	fmt.Printf("===>fixturesPath: %#v\n\n", fixturesPath)
+
+	fixturesFileNames, err := filepath.Glob(fmt.Sprintf("%s/*.json", fixturesPath))
+	handleError(err)
+	fmt.Printf("===>fixturesFileNames: %#v\n\n", fixturesFileNames)
+
+	for _, fileName := range fixturesFileNames {
+		certificationFixture, err := certification.LoadCertificationFixture(fileName)
 		handleError(err)
-		fmt.Printf("===>fixturesPath: %#v\n\n", fixturesPath)
 
-		fixturesFileNames, err := filepath.Glob(fmt.Sprintf("%s/*.json", fixturesPath))
-		handleError(err)
-		fmt.Printf("===>fixturesFileNames: %#v\n\n", fixturesFileNames)
+		certification.CreateRunners(&certificationFixture)
+		certification.CertifyWith(certificationFixture.DriverFixture.Transport, certificationFixture.VolmanFixture, certificationFixture.DriverFixture)
+	}
 
-		for _, fileName := range fixturesFileNames {
-			certificationFixture, err := certification.LoadCertificationFixture(fileName)
-			handleError(err)
-
-			certification.CreateRunners(&certificationFixture)
-			certification.CertifyWith(certificationFixture.Transport, certificationFixture.VolmanFixture, certificationFixture.DriverFixture)
-				}
-
-		It("hello", func() {println("hello")})
+	It("hello", func() { println("hello") })
 })
 
 func handleError(err error) {

@@ -2,19 +2,18 @@ package acceptance_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-	"io/ioutil"
-	"os"
-	"path"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/onsi/gomega/gexec"
 	"github.com/cloudfoundry-incubator/volman/certification"
+	"github.com/onsi/gomega/gexec"
 )
 
 var (
@@ -29,8 +28,8 @@ var (
 	mountDir       string
 	tmpDriversPath string
 
-	socketPath string
-	fixturesFuncMapFunc func() (map[string]func()(certification.VolmanFixture, certification.DriverFixture))
+	socketPath          string
+	fixturesFuncMapFunc func() map[string]func() (certification.VolmanFixture, certification.DriverFixture)
 )
 
 func TestVolman(t *testing.T) {
@@ -50,12 +49,10 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).NotTo(HaveOccurred())
 
 	return []byte(strings.Join([]string{vPath, dPath}, ","))
-	}, func(pathsByte []byte) {
-		path := string(pathsByte)
-		volmanPath = strings.Split(path, ",")[0]
-		driverPath = strings.Split(path, ",")[1]
-
-		fmt.Printf("===>volmanPath: %s, driverPath: %s\n\n", volmanPath, driverPath)
+}, func(pathsByte []byte) {
+	path := string(pathsByte)
+	volmanPath = strings.Split(path, ",")[0]
+	driverPath = strings.Split(path, ",")[1]
 })
 
 var _ = BeforeEach(func() {
@@ -68,45 +65,34 @@ var _ = BeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	driverServerPort = 9750 + GinkgoParallelNode()
-	driverServerPortJson = 9750 + 100 + GinkgoParallelNode()
-
-	socketPath = path.Join(tmpDriversPath, "fakedriver.sock")
-
+	driverServerPortJson = driverServerPort + 100
 	volmanServerPort = 8750 + GinkgoParallelNode()
-	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 8850+GinkgoParallelNode())
 
 	fixturesPath, err := GetOrCreateFixturesPath()
 	Expect(err).NotTo(HaveOccurred())
 
-	fmt.Printf("===>Save fixturesPath: %#v\n\n", fixturesPath)
-
-	transports := []string{"tcp"} //, "tcp-json", "unix"}
-	driverListenAddresses := []string{
-		fmt.Sprintf("0.0.0.0:%d", driverServerPort),
-		fmt.Sprintf("0.0.0.0:%d", driverServerPortJson),
-		socketPath,
-	}
-	ports := []int {driverServerPort, driverServerPortJson, 0}
+	transports := []string{"tcp", "tcp-json", "unix"}
+	ports := []int{driverServerPort, driverServerPortJson, 0}
 	for i, transport := range transports {
 		certificationFixture := certification.CertificationFixture{
-			PathToVolman: volmanPath,
 			VolmanFixture: certification.VolmanFixture{
+				PathToVolman: volmanPath,
 				Config: certification.VolmanConfig{
-					ServerPort: volmanServerPort,
+					ServerPort:         volmanServerPort,
 					DebugServerAddress: debugServerAddress,
-					DriversPath: tmpDriversPath,
-					ListenAddress: fmt.Sprintf("0.0.0.0:%d", volmanServerPort),
+					DriversPath:        tmpDriversPath,
+					ListenAddress:      fmt.Sprintf("0.0.0.0:%d", volmanServerPort),
 				},
 			},
-			PathToDriver: driverPath,
-			MountDir: mountDir,
-			Transport: transport,
 			DriverFixture: certification.DriverFixture{
+				PathToDriver: driverPath,
+				MountDir:     mountDir,
+				Transport:    transport,
 				Config: certification.DriverConfig{
-					Name: "fakedriver",
-					Path: tmpDriversPath,
-					ServerPort: ports[i],
-					ListenAddress: driverListenAddresses[i],
+					Name:          "fakedriver",
+					Path:          tmpDriversPath,
+					ServerPort:    ports[i],
+					ListenAddress: fmt.Sprintf("0.0.0.0:%d", driverServerPort),
 				},
 				VolumeData: certification.VolumeData{
 					Name: "fake-volume-name",
@@ -117,17 +103,16 @@ var _ = BeforeEach(func() {
 			},
 		}
 
-		fmt.Printf("===>certificationFixture: %#v\n\n", certificationFixture)
 		fileName := filepath.Join(fixturesPath, fmt.Sprintf("certification-%s.json", transport))
 		err := certification.SaveCertificationFixture(certificationFixture, fileName)
 		Expect(err).NotTo(HaveOccurred())
 	}
 })
 
-//var _ = SynchronizedAfterSuite(func() {
-//}, func() {
-//	gexec.CleanupBuildArtifacts()
-//})
+var _ = SynchronizedAfterSuite(func() {
+}, func() {
+	//gexec.CleanupBuildArtifacts()
+})
 
 func GetOrCreateFixturesPath() (string, error) {
 	workingDir, err := os.Getwd()

@@ -31,6 +31,8 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 
 		BeforeEach(func() {
 			testLogger = lagertest.NewTestLogger("MainTest")
+
+			volmanFixture.CreateRunner()
 			volmanProcess = ginkgomon.Invoke(volmanFixture.Runner)
 
 			fmt.Printf("get: volmanFixture.Runner: %#v\n\n", volmanFixture.Runner)
@@ -61,13 +63,17 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 				Expect(len(drivers.Drivers)).To(Equal(0))
 			})
 
-			FIt("should have a debug server endpoint", func() {
+			It("should have a debug server endpoint", func() {
 				_, err := http.Get(fmt.Sprintf("http://%s/debug/pprof/goroutine", volmanFixture.Config.DebugServerAddress))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			Context("after starting "+described, func() {
 				BeforeEach(func() {
+					err := driverFixture.UpdateVolumeData()
+					Expect(err).NotTo(HaveOccurred())
+
+					driverFixture.CreateRunner()
 					driverProcess = ginkgomon.Invoke(driverFixture.Runner)
 				})
 
