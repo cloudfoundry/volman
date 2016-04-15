@@ -2,22 +2,36 @@ package vollocal
 
 import (
 	"errors"
+	"flag"
+	"time"
+
+	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
+	"github.com/tedsuo/ifrit"
 
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )
 
 type localClient struct {
-	driverFactory DriverFactory
+	Registry *DriverSyncer
 }
 
-func NewLocalClient(driversPath string) *localClient {
-	return NewLocalClientWithDriverFactory(NewDriverFactory(driversPath))
+func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifrit.Runner) {
+	driverFactory := NewDriverFactory(driversPath)
+	return NewLocalClientWithDriverFactory(logger, driversPath, driverFactory)
 }
 
-func NewLocalClientWithDriverFactory(driverFactory DriverFactory) *localClient {
-	return &localClient{driverFactory}
+func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory) (*localClient, ifrit.Runner) {
+	cf_lager.AddFlags(flag.NewFlagSet("", flag.PanicOnError))
+	flag.Parse()
+
+	scanInterval := 30 * time.Second
+	clock := clock.NewClock()
+	registry := NewDriverSyncer(logger, driverFactory, scanInterval, clock)
+
+	return &localClient{registry}, registry
 }
 
 func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
@@ -25,17 +39,18 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	drivers, err := client.driverFactory.Discover(logger)
-	if err != nil {
-		return volman.ListDriversResponse{}, err
-	}
 	logger.Debug("listing-drivers")
 	var infoResponses []voldriver.InfoResponse
-	for driverName, driverFileName := range drivers {
-		logger.Debug("driver-name", lager.Data{"drivername": driverName, "driverfilename": driverFileName})
-		infoResponses = append(infoResponses, voldriver.InfoResponse{driverName, driverFileName})
-	}
+	drivers := client.Registry.Drivers()
 
+	for _, driver := range drivers {
+
+		info, err := driver.Info(logger)
+		if err != nil {
+			return volman.ListDriversResponse{}, err
+		}
+		infoResponses = append(infoResponses, info)
+	}
 	return volman.ListDriversResponse{infoResponses}, nil
 }
 
@@ -43,7 +58,6 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	logger = logger.Session("mount")
 	logger.Info("start")
 	logger.Info("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
-
 	defer logger.Info("end")
 
 	err := client.create(logger, driverId, volumeId, config)
@@ -51,8 +65,9 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 		return volman.MountResponse{}, err
 	}
 
-	driver, err := client.driverFactory.Driver(logger, driverId)
-	if err != nil {
+	driver, found := client.Registry.Driver(driverId)
+	if !found {
+		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
 		return volman.MountResponse{}, err
 	}
@@ -73,20 +88,23 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 	logger.Info("unmounting-volume", lager.Data{"volumeName": volumeName})
 	defer logger.Info("end")
 
-	driver, err := client.driverFactory.Driver(logger, driverId)
-	if err != nil {
+	driver, found := client.Registry.Driver(driverId)
+	if !found {
+		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
 		return err
 	}
 
 	if response := driver.Unmount(logger, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
+		err := errors.New(response.Err)
 		logger.Error("unmount-failed", err)
-		return errors.New(response.Err)
+		return err
 	}
 
 	if response := driver.Remove(logger, voldriver.RemoveRequest{Name: volumeName}); response.Err != "" {
+		err := errors.New(response.Err)
 		logger.Error("remove-failed", err)
-		return errors.New(response.Err)
+		return err
 	}
 
 	return nil
@@ -96,9 +114,9 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 	logger = logger.Session("create")
 	logger.Info("start")
 	defer logger.Info("end")
-
-	driver, err := client.driverFactory.Driver(logger, driverId)
-	if err != nil {
+	driver, found := client.Registry.Driver(driverId)
+	if !found {
+		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
 		return err
 	}

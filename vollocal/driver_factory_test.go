@@ -22,7 +22,6 @@ var _ = Describe("DriverFactory", func() {
 	)
 	BeforeEach(func() {
 		testLogger = lagertest.NewTestLogger("ClientTest")
-
 	})
 	Context("when given driverspath with no drivers", func() {
 		It("no drivers are found", func() {
@@ -34,36 +33,41 @@ var _ = Describe("DriverFactory", func() {
 		})
 	})
 	Context("when given driverspath with a single driver", func() {
+
 		BeforeEach(func() {
 			driverName = "some-driver-name"
 			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
 			Expect(err).NotTo(HaveOccurred())
 		})
+
 		It("should find drivers", func() {
 			fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
 			driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
 			drivers, err := driverFactory.Discover(testLogger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(drivers)).To(Equal(1))
-			Expect(drivers[driverName]).To(Equal(driverName + ".spec"))
+			Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(1))
 		})
 	})
 	Context("when given driverspath with hetergeneous driver specifications", func() {
+
 		BeforeEach(func() {
 			driverName = "some-driver-name"
 			err := voldriver.WriteDriverJSONSpec(testLogger, defaultPluginsDirectory, driverName, []byte("{\"url\":\"http://0.0.0.0:8080\"}"))
 			Expect(err).NotTo(HaveOccurred())
-			err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
+			err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:9090")
 			Expect(err).NotTo(HaveOccurred())
 		})
+
 		It("should preferentially select spec over json specification", func() {
 			fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
 			driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
-			drivers, err := driverFactory.Discover(testLogger)
+			_, err := driverFactory.Discover(testLogger)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(drivers)).To(Equal(1))
-			Expect(drivers[driverName]).To(Equal(driverName + ".spec"))
+			actualAddress := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
+			Expect(actualAddress).To(Equal("http://0.0.0.0:9090"))
 		})
+
 	})
 	Context("when a valid driver spec is discovered", func() {
 		var (
@@ -85,7 +89,7 @@ var _ = Describe("DriverFactory", func() {
 			BeforeEach(func() {
 				err := voldriver.WriteDriverJSONSpec(testLogger, defaultPluginsDirectory, driverName, []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 				Expect(err).NotTo(HaveOccurred())
-				driver, err = driverFactory.Driver(testLogger, driverName)
+				driver, err = driverFactory.Driver(testLogger, driverName, driverName+".json")
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
@@ -96,25 +100,27 @@ var _ = Describe("DriverFactory", func() {
 				fakeOs := new(volmanfakes.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
-				_, err := driverFactory.Driver(testLogger, driverName)
+				_, err := driverFactory.Driver(testLogger, driverName, driverName+".json")
 				Expect(err).To(HaveOccurred())
 			})
 		})
+
 		Context("when an invalid json spec is discovered", func() {
 			BeforeEach(func() {
 				err := voldriver.WriteDriverJSONSpec(testLogger, defaultPluginsDirectory, driverName, []byte("{\"invalid\"}"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("should error", func() {
-				_, err := driverFactory.Driver(testLogger, driverName)
+				_, err := driverFactory.Driver(testLogger, driverName, driverName+".json")
 				Expect(err).To(HaveOccurred())
 			})
 		})
+
 		Context("when a spec driver spec is discovered", func() {
 			BeforeEach(func() {
 				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
 				Expect(err).NotTo(HaveOccurred())
-				driver, err = driverFactory.Driver(testLogger, driverName)
+				driver, err = driverFactory.Driver(testLogger, driverName, driverName+".spec")
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
@@ -125,16 +131,18 @@ var _ = Describe("DriverFactory", func() {
 				fakeOs := new(volmanfakes.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
-				_, err := driverFactory.Driver(testLogger, driverName)
+				_, err := driverFactory.Driver(testLogger, driverName, driverName+".spec")
 				Expect(err).To(HaveOccurred())
 			})
-			It("should error if dirver id doesn't match found driver", func() {
+
+			It("should error if driver id doesn't match found driver", func() {
 				fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
 				driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
-				_, err := driverFactory.Driver(testLogger, "garbage")
+				_, err := driverFactory.Driver(testLogger, "garbage", "garbage.garbage")
 				Expect(err).To(HaveOccurred())
 			})
 		})
+
 		Context("when a sock driver spec is discovered", func() {
 			BeforeEach(func() {
 				f, err := os.Create(defaultPluginsDirectory + "/" + driverName + ".sock")
@@ -142,7 +150,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
-				driver, err := driverFactory.Driver(testLogger, driverName)
+				driver, err := driverFactory.Driver(testLogger, driverName, driverName+".sock")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(driver).To(Equal(fakeDriver))
 				address := path.Join(defaultPluginsDirectory, driverName+".sock")
@@ -150,7 +158,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 			It("should error for invalid sock endpoint address", func() {
 				fakeRemoteClientFactory.NewRemoteClientReturns(nil, fmt.Errorf("invalid address"))
-				_, err := driverFactory.Driver(testLogger, driverName)
+				_, err := driverFactory.Driver(testLogger, driverName, driverName+".sock")
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -170,7 +178,7 @@ var _ = Describe("DriverFactory", func() {
 
 		})
 		It("should error", func() {
-			_, err := driverFactory.Driver(testLogger, driverName)
+			_, err := driverFactory.Driver(testLogger, driverName, driverName+".spec")
 			Expect(err).To(HaveOccurred())
 		})
 	})

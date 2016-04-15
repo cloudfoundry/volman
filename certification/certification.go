@@ -16,6 +16,7 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 
+	"github.com/cloudfoundry-incubator/volman/voldriver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -47,6 +48,9 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 			driverRunner, volmanRunner, volmanServerPort, debugServerAddress, tmpDriversPath, driverServerPort, driverName, volumeInfo = args()
 			perTestUniqueVolumeName, perTestUniqueVolumeOptions = volumeInfo()
 
+		})
+
+		JustBeforeEach(func() {
 			volmanProcess = ginkgomon.Invoke(volmanRunner)
 			time.Sleep(time.Millisecond * 1000)
 		})
@@ -77,9 +81,11 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 			})
 
 			Context("when driver installed in the spec file plugins directory", func() {
+
 				BeforeEach(func() {
+					err := voldriver.WriteDriverSpec(testLogger, tmpDriversPath, driverName, fmt.Sprintf("http://0.0.0.0:%d", driverServerPort))
 					driverProcess = ginkgomon.Invoke(driverRunner)
-					time.Sleep(time.Millisecond * 1000)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("should return list of drivers", func() {
@@ -87,7 +93,6 @@ var CertifiyWith = func(described string, args func() (*ginkgomon.Runner, *ginkg
 					drivers, err := client.ListDrivers(testLogger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(drivers.Drivers)).To(Equal(1))
-					Expect(drivers.Drivers[0].Name).To(Equal(driverName))
 				})
 
 				Context("when mounting given a driver name, volume id, and opaque blob of configuration", func() {

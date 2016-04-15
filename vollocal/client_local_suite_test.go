@@ -24,10 +24,10 @@ var client volman.Manager
 var defaultPluginsDirectory string
 
 var fakeDriverPath string
-var fakedriverServerPort int
+var localDriverServerPort int
 var debugServerAddress string
-var fakedriverProcess ifrit.Process
-var fakedriverRunner *ginkgomon.Runner
+var localDriverProcess ifrit.Process
+var localDriverRunner *ginkgomon.Runner
 
 var tmpDriversPath string
 
@@ -61,13 +61,14 @@ var _ = BeforeEach(func() {
 	defaultPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	fakedriverServerPort = 9750 + GinkgoParallelNode()
+	localDriverServerPort = 9750 + GinkgoParallelNode()
+
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
-	fakedriverRunner = ginkgomon.New(ginkgomon.Config{
+	localDriverRunner = ginkgomon.New(ginkgomon.Config{
 		Name: "fakedriverServer",
 		Command: exec.Command(
 			fakeDriverPath,
-			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", fakedriverServerPort),
+			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", localDriverServerPort),
 			"-debugAddr", debugServerAddress,
 			"-driversPath", defaultPluginsDirectory,
 		),
@@ -87,7 +88,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = AfterEach(func() {
-	ginkgomon.Kill(fakedriverProcess)
+	ginkgomon.Kill(localDriverProcess)
 })
 
 var _ = SynchronizedAfterSuite(func() {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/cloudfoundry-incubator/volman/system"
@@ -17,14 +18,16 @@ import (
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory
 
 type DriverFactory interface {
-	Discover(logger lager.Logger) (map[string]string, error)
-	Driver(logger lager.Logger, driverId string) (voldriver.Driver, error)
+	DriversDir() string
+	Discover(logger lager.Logger) (map[string]voldriver.Driver, error)
+	Driver(logger lager.Logger, driverId string, driverFileName string) (voldriver.Driver, error)
 }
 
 type realDriverFactory struct {
-	DriversPath string
-	Factory     driverhttp.RemoteClientFactory
-	useOs       system.Os
+	DriversPath     string
+	Factory         driverhttp.RemoteClientFactory
+	useOs           system.Os
+	DriversRegistry map[string]voldriver.Driver
 }
 
 func NewDriverFactory(driversPath string) DriverFactory {
@@ -33,106 +36,124 @@ func NewDriverFactory(driversPath string) DriverFactory {
 }
 
 func NewDriverFactoryWithRemoteClientFactory(driversPath string, remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
-	return &realDriverFactory{driversPath, remoteClientFactory, &system.SystemOs{}}
+	return &realDriverFactory{driversPath, remoteClientFactory, &system.SystemOs{}, nil}
 }
 
 func NewDriverFactoryWithOs(driversPath string, useOs system.Os) DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
-	return &realDriverFactory{driversPath, remoteClientFactory, useOs}
+	return &realDriverFactory{driversPath, remoteClientFactory, useOs, nil}
+}
+func (r *realDriverFactory) DriversDir() string {
+	return r.DriversPath
 }
 
-func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]string, error) {
+func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
 	logger = logger.Session("discover")
 	logger.Debug("start")
 	defer logger.Debug("end")
+
 	//precedence order: sock -> spec -> json
 	spec_types := [3]string{"sock", "spec", "json"}
-	endpoints := make(map[string]string)
+	endpoints := make(map[string]voldriver.Driver)
 	for _, spec_type := range spec_types {
 		matchingDriverSpecs, err := r.getMatchingDriverSpecs(logger, spec_type)
 		if err != nil { // untestable on linux, does glob work differently on windows???
-			return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", r.DriversPath, err.Error())
+			return map[string]voldriver.Driver{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", r.DriversPath, err.Error())
 		}
 		logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
 		endpoints = r.insertIfNotFound(logger, endpoints, matchingDriverSpecs)
 	}
-	logger.Debug("found-specs", lager.Data{"endpoints": endpoints})
+	logger.Debug("found-specs")
 	return endpoints, nil
 }
 
-func (*realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[string]string, specs []string) map[string]string {
+func (r *realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, specs []string) map[string]voldriver.Driver {
+	logger = logger.Session("insert-if-not-found")
+	logger.Debug("start")
+	defer logger.Debug("end")
+
 	for _, spec := range specs {
-		split := strings.Split(spec, "/")
-		specFileName := split[len(split)-1]
-		specName := strings.Split(specFileName, ".")[0]
-		logger.Debug("insert-unique-specs", lager.Data{"specname": specName, "specFileName": specFileName})
+		re := regexp.MustCompile("([^/]*/)?([^/]*)\\.(sock|spec|json)$")
+
+		segs2 := re.FindAllStringSubmatch(spec, 1)
+		if len(segs2) <= 0 {
+			continue
+		}
+		specName := segs2[0][2]
+		specFile := segs2[0][2] + "." + segs2[0][3]
+		logger.Debug("insert-unique-spec", lager.Data{"specname": specName})
 		_, ok := endpoints[specName]
 		if ok == false {
-			endpoints[specName] = specFileName
+			driver, err := r.Driver(logger, specName, specFile)
+			if err != nil {
+				logger.Error("error-creating-driver", err)
+				continue
+			}
+
+			endpoints[specName] = driver
 		}
 	}
-	logger.Debug("insert-if-unique", lager.Data{"endpoints": endpoints})
 	return endpoints
 }
 
-func (r *realDriverFactory) Driver(logger lager.Logger, driverId string) (voldriver.Driver, error) {
-	logger = logger.Session("driver-factory")
+func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverFileName string) (voldriver.Driver, error) {
+	logger = logger.Session("driver", lager.Data{"driverId": driverId, "driverFileName": driverFileName})
 	logger.Info("start")
 	defer logger.Info("end")
-	drivers, err := r.Discover(logger)
 
-	if err != nil { //untestable as it depends on another untestable error: discovery error
-		return nil, fmt.Errorf("Volman cannot find any drivers", err.Error())
-	}
 	var driver voldriver.Driver
-	for driverName, driverFileName := range drivers {
-		if driverName == driverId {
-			var address string
-			if strings.Contains(driverFileName, ".") {
-				extension := strings.Split(driverFileName, ".")[1]
-				switch extension {
-				case "sock":
-					address = path.Join(r.DriversPath, driverFileName)
-				case "spec":
-					configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
-					if err != nil {
-						logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
-						return nil, err
-					}
-					reader := bufio.NewReader(configFile)
-					addressBytes, _, err := reader.ReadLine()
-					if err != nil { // no real value in faking this as bigger problems exist when this fails
-						logger.Error(fmt.Sprintf("error-reading-%s", driverFileName), err)
-						return nil, err
-					}
-					address = string(addressBytes)
-				case "json":
-					// extract url from json file
-					var driverJsonSpec voldriver.DriverSpec
-					configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
-					if err != nil {
-						logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
-						return nil, err
-					}
-					jsonParser := json.NewDecoder(configFile)
-					if err = jsonParser.Decode(&driverJsonSpec); err != nil {
-						logger.Error("parsing-config-file-error", err)
-						return nil, err
-					}
-					address = driverJsonSpec.Address
-				}
 
-				logger.Info("getting-driver", lager.Data{"address": address})
-				driver, err = r.Factory.NewRemoteClient(address)
-				if err != nil {
-					logger.Error(fmt.Sprintf("error-building-driver-attached-to-%s", address), err)
-					return nil, err
-				}
-
-				return driver, nil
+	var address string
+	if strings.Contains(driverFileName, ".") {
+		extension := strings.Split(driverFileName, ".")[1]
+		switch extension {
+		case "sock":
+			address = path.Join(r.DriversPath, driverFileName)
+		case "spec":
+			configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
+			if err != nil {
+				logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
+				return nil, err
 			}
+			reader := bufio.NewReader(configFile)
+			addressBytes, _, err := reader.ReadLine()
+			if err != nil { // no real value in faking this as bigger problems exist when this fails
+				logger.Error(fmt.Sprintf("error-reading-%s", driverFileName), err)
+				return nil, err
+			}
+			address = string(addressBytes)
+		case "json":
+			// extract url from json file
+			var driverJsonSpec voldriver.DriverSpec
+			configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
+			if err != nil {
+				logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
+				return nil, err
+			}
+			jsonParser := json.NewDecoder(configFile)
+			if err = jsonParser.Decode(&driverJsonSpec); err != nil {
+				logger.Error("parsing-config-file-error", err)
+				return nil, err
+			}
+			address = driverJsonSpec.Address
+		default:
+			msg := fmt.Sprintf("unknown-driver-extension: %s", extension)
+			err := fmt.Errorf(msg)
+			logger.Error(msg, err)
+			return nil, err
+
 		}
+		var err error
+		logger.Info("getting-driver", lager.Data{"address": address})
+		driver, err = r.Factory.NewRemoteClient(address)
+		if err != nil {
+			logger.Error(fmt.Sprintf("error-building-driver-attached-to-%s", address), err)
+			return nil, err
+		}
+
+		return driver, nil
 	}
+
 	return nil, fmt.Errorf("Driver '%s' not found in list of known drivers", driverId)
 }
 
@@ -141,7 +162,7 @@ func (r *realDriverFactory) getMatchingDriverSpecs(logger lager.Logger, pattern 
 	if err != nil { // untestable on linux, does glob work differently on windows???
 		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", r.DriversPath, err.Error())
 	}
-	logger.Debug("binaries", lager.Data{"binaries": matchingDriverSpecs})
+	logger.Debug("binaries", lager.Data{"pattern": pattern, "binaries": matchingDriverSpecs})
 	return matchingDriverSpecs, nil
 
 }
