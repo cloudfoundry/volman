@@ -66,7 +66,7 @@ func (df *DriverFixture) Reset() error {
 }
 
 func (df *DriverFixture) CreateRunner() {
-	portOffset := rand.Intn(100)
+	portOffset := rand.Intn(30)
 	df.Config.ServerPort = df.Config.ServerPort + portOffset + GinkgoParallelNode()
 
 	switch df.Transport {

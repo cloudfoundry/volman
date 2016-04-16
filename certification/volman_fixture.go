@@ -45,7 +45,7 @@ func (vf *VolmanFixture) Create(pathToVolman string) VolmanFixture {
 }
 
 func (vf *VolmanFixture) CreateRunner() {
-	portOffset := rand.Intn(100)
+	portOffset := rand.Intn(30)
 	vf.Config.ServerPort = vf.Config.ServerPort + portOffset + GinkgoParallelNode()
 
 	vf.Config.ListenAddress = fmt.Sprintf("0.0.0.0:%d", vf.Config.ServerPort)

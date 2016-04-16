@@ -34,9 +34,6 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 
 			volmanFixture.CreateRunner()
 			volmanProcess = ginkgomon.Invoke(volmanFixture.Runner)
-
-			fmt.Printf("volmanFixture: %#v\n\n", volmanFixture)
-			fmt.Printf("volmanProcess: %#v\n\n", volmanProcess)
 		})
 
 		AfterEach(func() {
@@ -75,9 +72,6 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 
 					driverFixture.CreateRunner()
 					driverProcess = ginkgomon.Invoke(driverFixture.Runner)
-
-					fmt.Printf("driverFixture: %#v\n\n", driverFixture)
-					fmt.Printf("driverProcess: %#v\n\n", driverProcess)
 				})
 
 				AfterEach(func() {
@@ -98,22 +92,24 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 
 				Context("when mounting given a driver name, volume id, and opaque blob of configuration", func() {
 					var (
-						err        error
-						mountPoint volman.MountResponse
-						client     volman.Manager
+						client volman.Manager
 					)
 
 					JustBeforeEach(func() {
+						driverFixture.UpdateVolumeData()
+
 						client = volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", volmanFixture.Config.ServerPort))
 
 						testLogger.Info(fmt.Sprintf("Mounting volume: %s", driverFixture.VolumeData.Name))
-						mountPoint, err = client.Mount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name, driverFixture.VolumeData.Config)
-						Expect(err).NotTo(HaveOccurred())
+
 					})
 
 					It("should mount a volume", func() {
+						mountPoint, err := client.Mount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name, driverFixture.VolumeData.Config)
+						Expect(err).NotTo(HaveOccurred())
 						Expect(mountPoint.Path).NotTo(Equal(""))
-						defer os.Remove(mountPoint.Path)
+
+						defer client.Unmount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name)
 
 						matches, err := filepath.Glob(mountPoint.Path)
 						Expect(err).NotTo(HaveOccurred())
@@ -121,8 +117,11 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 					})
 
 					It("should be possible to write to the mountPoint", func() {
+						mountPoint, err := client.Mount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name, driverFixture.VolumeData.Config)
+						Expect(err).NotTo(HaveOccurred())
+						defer client.Unmount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name)
 						testFile := path.Join(mountPoint.Path, "test.txt")
-						err := ioutil.WriteFile(testFile, []byte("hello persi"), 0644)
+						err = ioutil.WriteFile(testFile, []byte("hello persi"), 0644)
 						Expect(err).NotTo(HaveOccurred())
 
 						err = os.Remove(testFile)
@@ -134,7 +133,10 @@ var CertifyWith = func(described string, volmanFixture VolmanFixture, driverFixt
 					})
 
 					It("should unmount a volume given same volume ID", func() {
-						err := client.Unmount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name)
+						mountPoint, err := client.Mount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name, driverFixture.VolumeData.Config)
+						Expect(err).NotTo(HaveOccurred())
+
+						err = client.Unmount(testLogger, driverFixture.Config.Name, driverFixture.VolumeData.Name)
 						Expect(err).NotTo(HaveOccurred())
 
 						matches, err := filepath.Glob(mountPoint.Path)

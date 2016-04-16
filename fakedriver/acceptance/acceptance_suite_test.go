@@ -53,9 +53,35 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	path := string(pathsByte)
 	volmanPath = strings.Split(path, ",")[0]
 	driverPath = strings.Split(path, ",")[1]
+
+	createDefaultCertificationFixtures([]string{"tcp", "tcp-json", "unix"})
 })
 
 var _ = BeforeEach(func() {
+})
+
+var _ = SynchronizedAfterSuite(func() {
+}, func() {
+	//gexec.CleanupBuildArtifacts()
+})
+
+func GetOrCreateFixturesPath() (string, error) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	fixturesPath := filepath.Join(workingDir, "..", "..", "fixtures", "auto")
+
+	err = os.MkdirAll(fixturesPath, 0700)
+	if err != nil {
+		return "", err
+	}
+
+	return fixturesPath, nil
+}
+
+func createDefaultCertificationFixtures(transports []string) {
 	var err error
 
 	tmpDriversPath, err = ioutil.TempDir(os.TempDir(), "volman-cert-test")
@@ -71,7 +97,6 @@ var _ = BeforeEach(func() {
 	fixturesPath, err := GetOrCreateFixturesPath()
 	Expect(err).NotTo(HaveOccurred())
 
-	transports := []string{"tcp", "tcp-json", "unix"}
 	ports := []int{driverServerPort, driverServerPortJson, 0}
 	for i, transport := range transports {
 		certificationFixture := certification.CertificationFixture{
@@ -107,25 +132,4 @@ var _ = BeforeEach(func() {
 		err := certification.SaveCertificationFixture(certificationFixture, fileName)
 		Expect(err).NotTo(HaveOccurred())
 	}
-})
-
-var _ = SynchronizedAfterSuite(func() {
-}, func() {
-	//gexec.CleanupBuildArtifacts()
-})
-
-func GetOrCreateFixturesPath() (string, error) {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	fixturesPath := filepath.Join(workingDir, "..", "..", "fixtures", "auto")
-
-	err = os.MkdirAll(fixturesPath, 0700)
-	if err != nil {
-		return "", err
-	}
-
-	return fixturesPath, nil
 }
