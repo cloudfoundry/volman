@@ -3,6 +3,7 @@ package driverhttp
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -17,6 +18,25 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 	logger.Info("start")
 	defer logger.Info("end")
 	var handlers = rata.Handlers{
+
+		"activate": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			serverlogger := logger
+			logger = logger.Session("activate")
+			logger.Info("start")
+			defer logger.Info("end")
+			defer func() { logger = serverlogger }()
+
+			activateResponse := client.Activate(logger)
+			// ok to eat error as we should be removing error from the Info func signature
+			if activateResponse.Err != "" {
+				logger.Error("failed-activating-driver", fmt.Errorf(activateResponse.Err))
+				cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, activateResponse)
+				return
+			}
+
+			logger.Debug("activate-response", lager.Data{"activation": activateResponse})
+			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, activateResponse)
+		}),
 
 		"get": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger

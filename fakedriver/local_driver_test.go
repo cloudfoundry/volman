@@ -29,7 +29,15 @@ var _ = Describe("Local Driver", func() {
 		localDriver = fakedriver.NewLocalDriver(fakeFileSystem, mountDir)
 	})
 
+	Describe("#Activate", func() {
+		It("returns Implements: VolumeDriver", func() {
+			activateResponse := localDriver.Activate(logger)
+			Expect(activateResponse.Implements).To(Equal("VolumeDriver"))
+		})
+	})
+
 	Describe("Mount", func() {
+
 		Context("when the volume has been created", func() {
 			const volumeName = "test-volume-name"
 

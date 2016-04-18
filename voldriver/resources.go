@@ -6,11 +6,13 @@ import (
 )
 
 const (
-	CreateRoute  = "create"
-	MountRoute   = "mount"
-	UnmountRoute = "unmount"
-	RemoveRoute  = "remove"
-	GetRoute     = "get"
+	CreateRoute   = "create"
+	MountRoute    = "mount"
+	UnmountRoute  = "unmount"
+	RemoveRoute   = "remove"
+	GetRoute      = "get"
+	InfoRoute     = "info"
+	ActivateRoute = "activate"
 )
 
 var Routes = rata.Routes{
@@ -19,12 +21,13 @@ var Routes = rata.Routes{
 	{Path: "/unmount", Method: "POST", Name: UnmountRoute},
 	{Path: "/remove", Method: "POST", Name: RemoveRoute},
 	{Path: "/get", Method: "GET", Name: GetRoute},
+	{Path: "/Plugin.Activate", Method: "POST", Name: ActivateRoute},
 }
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_client.go . Driver
 
 type Driver interface {
-	Info(logger lager.Logger) (InfoResponse, error)
+	Activate(logger lager.Logger) ActivateResponse
 	Create(logger lager.Logger, createRequest CreateRequest) ErrorResponse
 	Mount(logger lager.Logger, mountRequest MountRequest) MountResponse
 	Unmount(logger lager.Logger, unmountRequest UnmountRequest) ErrorResponse
@@ -32,9 +35,9 @@ type Driver interface {
 	Get(logger lager.Logger, getRequest GetRequest) GetResponse
 }
 
-type InfoResponse struct {
-	Name string `json:"name,omitempty"`
-	Path string `json:"path,omitempty"`
+type ActivateResponse struct {
+	Err        string
+	Implements string
 }
 
 type CreateRequest struct {

@@ -22,6 +22,28 @@ var _ = Describe("Volman Driver Handlers", func() {
 	Context("when generating http handlers", func() {
 		var testLogger = lagertest.NewTestLogger("HandlersTest")
 
+		It("should produce a handler with an activate route", func() {
+			By("faking out the driver")
+			driver := &volmanfakes.FakeDriver{}
+			driver.ActivateReturns(voldriver.ActivateResponse{Implements: "VolumeDriver"})
+			handler, _ := driverhttp.NewHandler(testLogger, driver)
+			httpResponseRecorder := httptest.NewRecorder()
+
+			By("then fake serving the response using the handler")
+			httpRequest, _ := http.NewRequest("POST", "http://0.0.0.0/Plugin.Activate", bytes.NewReader([]byte{}))
+			testLogger.Info(fmt.Sprintf("%#v", httpResponseRecorder.Body))
+			handler.ServeHTTP(httpResponseRecorder, httpRequest)
+
+			By("then deserialing the HTTP response")
+			activateResponse := voldriver.ActivateResponse{}
+			body, err := ioutil.ReadAll(httpResponseRecorder.Body)
+			err = json.Unmarshal(body, &activateResponse)
+
+			By("then expecting correct JSON conversion")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(activateResponse.Implements).Should(Equal("VolumeDriver"))
+		})
+
 		It("should produce a handler with a mount route", func() {
 			By("faking out the driver")
 			driver := &volmanfakes.FakeDriver{}

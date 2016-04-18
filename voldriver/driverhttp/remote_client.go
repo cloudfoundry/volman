@@ -40,11 +40,39 @@ func NewRemoteClientWithClient(socketPath string, client http.Client) *remoteCli
 	}
 }
 
-func (r *remoteClient) Info(logger lager.Logger) (voldriver.InfoResponse, error) {
-	logger = logger.Session("info")
+func (r *remoteClient) Activate(logger lager.Logger) voldriver.ActivateResponse {
+	logger = logger.Session("activate")
 	logger.Info("start")
 	defer logger.Info("end")
-	return voldriver.InfoResponse{}, nil
+
+	request, err := r.reqGen.CreateRequest(voldriver.ActivateRoute, nil, nil)
+	if err != nil {
+		logger.Error("failed-creating-request", err)
+		return voldriver.ActivateResponse{Err: err.Error()}
+	}
+
+	response, err := r.HttpClient.Do(request)
+	if err != nil {
+		logger.Error("failed-activate", err)
+		return voldriver.ActivateResponse{Err: err.Error()}
+	}
+
+	if response.StatusCode == 500 {
+		var remoteError voldriver.ActivateResponse
+		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.ActivateResponse{Err: err.Error()}
+		}
+		return remoteError
+	}
+
+	var activate voldriver.ActivateResponse
+	if err := unmarshallJSON(logger, response.Body, &activate); err != nil {
+		logger.Error("failed-parsing-info-response", err)
+		return voldriver.ActivateResponse{Err: err.Error()}
+	}
+
+	return activate
 }
 
 func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {

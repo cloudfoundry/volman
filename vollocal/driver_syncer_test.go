@@ -25,7 +25,7 @@ var _ = Describe("Driver Syncer", func() {
 		fakeClock         *fakeclock.FakeClock
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 
-		syncer  *vollocal.DriverSyncer
+		syncer  vollocal.DriverSyncer
 		process ifrit.Process
 	)
 
@@ -41,28 +41,37 @@ var _ = Describe("Driver Syncer", func() {
 		syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, scanInterval, fakeClock)
 	})
 
-	Describe("Run", func() {
+	Describe("#Runner", func() {
+		It("has a non-nil runner", func() {
+			Expect(syncer.Runner()).NotTo(BeNil())
+		})
+	})
 
+	Describe("#Runner", func() {
+		It("has a non-nil and empty driver registry", func() {
+			Expect(syncer.DriverRegistry()).NotTo(BeNil())
+			Expect(len(syncer.DriverRegistry().Drivers())).To(Equal(0))
+		})
+	})
+
+	Describe("#Run", func() {
 		Context("when there are no drivers", func() {
-
 			It("should have no drivers in registry map", func() {
 				drivers := syncer.Drivers()
 				Expect(len(drivers)).To(Equal(0))
 				Expect(fakeDriverFactory.DiscoverCallCount()).To(Equal(0))
 				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(0))
 			})
-
 		})
 
 		Context("when there are drivers", func() {
-
 			BeforeEach(func() {
 				fakeDriver := new(volmanfakes.FakeDriver)
 				fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"fakedriver": fakeDriver}, nil)
 
 				syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, scanInterval, fakeClock)
 
-				process = ginkgomon.Invoke(syncer)
+				process = ginkgomon.Invoke(syncer.Runner())
 			})
 
 			AfterEach(func() {
@@ -76,16 +85,13 @@ var _ = Describe("Driver Syncer", func() {
 			})
 
 			Context("when drivers are added", func() {
-
 				BeforeEach(func() {
 					fakeDriver := new(volmanfakes.FakeDriver)
 					fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"anotherfakedriver": fakeDriver, "fakedriver": fakeDriver}, nil)
-
 				})
 
 				It("should find them!", func() {
 					fakeClock.Increment(scanInterval * 2)
-
 					Eventually(syncer.Drivers).Should(HaveLen(2))
 					Expect(fakeDriverFactory.DiscoverCallCount()).To(Equal(2))
 				})

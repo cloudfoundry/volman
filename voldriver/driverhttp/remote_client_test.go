@@ -19,12 +19,13 @@ import (
 var _ = Describe("RemoteClient", func() {
 
 	var (
-		testLogger              = lagertest.NewTestLogger("FakeDriver Server Test")
-		httpClient              *volmanfakes.FakeClient
-		driver                  voldriver.Driver
-		validHttpMountResponse  *http.Response
-		validHttpCreateResponse *http.Response
-		invalidHttpResponse     *http.Response
+		testLogger                = lagertest.NewTestLogger("FakeDriver Server Test")
+		httpClient                *volmanfakes.FakeClient
+		driver                    voldriver.Driver
+		validHttpMountResponse    *http.Response
+		validHttpCreateResponse   *http.Response
+		validHttpActivateResponse *http.Response
+		invalidHttpResponse       *http.Response
 	)
 
 	BeforeEach(func() {
@@ -37,6 +38,11 @@ var _ = Describe("RemoteClient", func() {
 		validHttpMountResponse = &http.Response{
 			StatusCode: 200,
 			Body:       stringCloser{bytes.NewBufferString("{\"Mountpoint\":\"somePath\"}")},
+		}
+
+		validHttpActivateResponse = &http.Response{
+			StatusCode: 200,
+			Body:       stringCloser{bytes.NewBufferString("{\"Implements\":\"VolumeDriver\"}")},
 		}
 	})
 
@@ -110,6 +116,15 @@ var _ = Describe("RemoteClient", func() {
 			Expect(unmountResponse.Err).To(Equal(""))
 		})
 
+		It("should be able to activate", func() {
+			httpClient.DoReturns(validHttpActivateResponse, nil)
+
+			activateResponse := driver.Activate(testLogger)
+
+			By("giving back a path with no error")
+			Expect(activateResponse.Err).To(Equal(""))
+			Expect(activateResponse.Implements).To(Equal("VolumeDriver"))
+		})
 	})
 
 	Context("when the driver is malicious and the transport is TCP", func() {
@@ -209,6 +224,16 @@ var _ = Describe("RemoteClient", func() {
 
 			Expect(unmountResponse.Err).NotTo(Equal(""))
 		})
+
+		It("should fail to activate", func() {
+			httpClient.DoReturns(nil, fmt.Errorf("connection failed"))
+
+			activateResponse := driver.Activate(testLogger)
+
+			By("signaling an error")
+			Expect(activateResponse.Err).NotTo(Equal(""))
+		})
+
 	})
 
 	Context("when the transport is unix", func() {
@@ -251,6 +276,16 @@ var _ = Describe("RemoteClient", func() {
 			unmountResponse := driver.Unmount(testLogger, voldriver.UnmountRequest{Name: volumeId})
 
 			Expect(unmountResponse.Err).To(Equal(""))
+		})
+
+		It("should be able to activate", func() {
+			httpClient.DoReturns(validHttpActivateResponse, nil)
+
+			activateResponse := driver.Activate(testLogger)
+
+			By("giving back a path with no error")
+			Expect(activateResponse.Err).To(Equal(""))
+			Expect(activateResponse.Implements).To(Equal("VolumeDriver"))
 		})
 
 	})

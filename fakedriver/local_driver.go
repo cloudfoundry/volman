@@ -32,11 +32,10 @@ func NewLocalDriver(fileSystem FileSystem, mountDir string) *LocalDriver {
 	}
 }
 
-func (d *LocalDriver) Info(logger lager.Logger) (voldriver.InfoResponse, error) {
-	return voldriver.InfoResponse{
-		Name: "fakedriver",
-		Path: "/fake/path",
-	}, nil
+func (d *LocalDriver) Activate(logger lager.Logger) voldriver.ActivateResponse {
+	return voldriver.ActivateResponse{
+		Implements: "VolumeDriver",
+	}
 }
 
 func (d *LocalDriver) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {

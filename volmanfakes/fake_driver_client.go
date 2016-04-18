@@ -9,14 +9,13 @@ import (
 )
 
 type FakeDriver struct {
-	InfoStub        func(logger lager.Logger) (voldriver.InfoResponse, error)
-	infoMutex       sync.RWMutex
-	infoArgsForCall []struct {
+	ActivateStub        func(logger lager.Logger) voldriver.ActivateResponse
+	activateMutex       sync.RWMutex
+	activateArgsForCall []struct {
 		logger lager.Logger
 	}
-	infoReturns struct {
-		result1 voldriver.InfoResponse
-		result2 error
+	activateReturns struct {
+		result1 voldriver.ActivateResponse
 	}
 	CreateStub        func(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse
 	createMutex       sync.RWMutex
@@ -65,37 +64,36 @@ type FakeDriver struct {
 	}
 }
 
-func (fake *FakeDriver) Info(logger lager.Logger) (voldriver.InfoResponse, error) {
-	fake.infoMutex.Lock()
-	fake.infoArgsForCall = append(fake.infoArgsForCall, struct {
+func (fake *FakeDriver) Activate(logger lager.Logger) voldriver.ActivateResponse {
+	fake.activateMutex.Lock()
+	fake.activateArgsForCall = append(fake.activateArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.infoMutex.Unlock()
-	if fake.InfoStub != nil {
-		return fake.InfoStub(logger)
+	fake.activateMutex.Unlock()
+	if fake.ActivateStub != nil {
+		return fake.ActivateStub(logger)
 	} else {
-		return fake.infoReturns.result1, fake.infoReturns.result2
+		return fake.activateReturns.result1
 	}
 }
 
-func (fake *FakeDriver) InfoCallCount() int {
-	fake.infoMutex.RLock()
-	defer fake.infoMutex.RUnlock()
-	return len(fake.infoArgsForCall)
+func (fake *FakeDriver) ActivateCallCount() int {
+	fake.activateMutex.RLock()
+	defer fake.activateMutex.RUnlock()
+	return len(fake.activateArgsForCall)
 }
 
-func (fake *FakeDriver) InfoArgsForCall(i int) lager.Logger {
-	fake.infoMutex.RLock()
-	defer fake.infoMutex.RUnlock()
-	return fake.infoArgsForCall[i].logger
+func (fake *FakeDriver) ActivateArgsForCall(i int) lager.Logger {
+	fake.activateMutex.RLock()
+	defer fake.activateMutex.RUnlock()
+	return fake.activateArgsForCall[i].logger
 }
 
-func (fake *FakeDriver) InfoReturns(result1 voldriver.InfoResponse, result2 error) {
-	fake.InfoStub = nil
-	fake.infoReturns = struct {
-		result1 voldriver.InfoResponse
-		result2 error
-	}{result1, result2}
+func (fake *FakeDriver) ActivateReturns(result1 voldriver.ActivateResponse) {
+	fake.ActivateStub = nil
+	fake.activateReturns = struct {
+		result1 voldriver.ActivateResponse
+	}{result1}
 }
 
 func (fake *FakeDriver) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
