@@ -103,7 +103,9 @@ func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDi
 	logger.Info("writing-spec-file", lager.Data{"location": driversPath, "name": "fakedriver", "address": advertisedUrl})
 	if jsonSpec {
 		driverJsonSpec := voldriver.DriverSpec{Name: "fakedriver", Address: advertisedUrl}
+
 		jsonBytes, err := json.Marshal(driverJsonSpec)
+
 		exitOnFailure(logger, err)
 		err = voldriver.WriteDriverJSONSpec(logger, driversPath, "fakedriver", jsonBytes)
 		exitOnFailure(logger, err)
@@ -131,7 +133,7 @@ func newLogger() (lager.Logger, *lager.ReconfigurableSink) {
 }
 
 func newUnixLogger() (lager.Logger, *lager.ReconfigurableSink) {
-	logger, reconfigurableSink := cf_lager.New("fakedriverUnixServer")
+	logger, reconfigurableSink := cf_lager.New("fakedriverServer")
 	return logger, reconfigurableSink
 }
 

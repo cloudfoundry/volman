@@ -25,7 +25,12 @@ func WriteDriverSpec(logger lager.Logger, pluginsDirectory string, driver string
 }
 
 func WriteDriverJSONSpec(logger lager.Logger, pluginsDirectory string, driver string, contents []byte) error {
-	os.MkdirAll(pluginsDirectory, 0666)
+	err := os.MkdirAll(pluginsDirectory, 0666)
+	if err != nil {
+		logger.Error("Error creating directory "+err.Error(), err)
+		return err
+	}
+
 	f, err := os.Create(pluginsDirectory + "/" + driver + ".json")
 	if err != nil {
 		logger.Error("Error creating file "+err.Error(), err)
