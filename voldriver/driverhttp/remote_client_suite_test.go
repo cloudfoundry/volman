@@ -57,7 +57,7 @@ var _ = BeforeEach(func() {
 			"-listenAddr", socketPath,
 			"-transport", "unix",
 		),
-		StartCheck: "fakedriverUnixServer.started",
+		StartCheck: "fakedriverServer.started",
 	})
 })
 

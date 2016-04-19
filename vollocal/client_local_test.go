@@ -14,10 +14,10 @@ import (
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 
-	"github.com/cloudfoundry/gorouter/Godeps/_workspace/src/github.com/tedsuo/ifrit"
 	"github.com/pivotal-golang/clock/fakeclock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 

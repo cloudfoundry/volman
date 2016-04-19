@@ -45,6 +45,7 @@ var CertifyWith = func(described string, certificationFixture CertificationFixtu
 			err := cmd.Run()
 			Expect(err).NotTo(HaveOccurred())
 
+			volmanRunner = certificationFixture.CreateVolmanRunner()
 			volmanProcess = ginkgomon.Invoke(volmanRunner)
 
 			client = volhttp.NewRemoteClient(fmt.Sprintf("http://0.0.0.0:%d", serverPort))
@@ -80,6 +81,9 @@ var CertifyWith = func(described string, certificationFixture CertificationFixtu
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mountPoint.Path).NotTo(Equal(""))
 
+				matches, err := filepath.Glob(mountPoint.Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(matches)).To(Equal(1))
 
 				err = client.Unmount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name)
 				Expect(err).NotTo(HaveOccurred())

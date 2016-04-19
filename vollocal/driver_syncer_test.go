@@ -12,7 +12,7 @@ import (
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	volmanfakes "github.com/cloudfoundry-incubator/volman/volmanfakes"
-	"github.com/cloudfoundry/gorouter/Godeps/_workspace/src/github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
