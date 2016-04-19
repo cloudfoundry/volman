@@ -17,7 +17,6 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
 	"github.com/tedsuo/ifrit/sigmon"
-	"fmt"
 )
 
 var atAddress = flag.String(
@@ -104,12 +103,8 @@ func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDi
 	logger.Info("writing-spec-file", lager.Data{"location": driversPath, "name": "fakedriver", "address": advertisedUrl})
 	if jsonSpec {
 		driverJsonSpec := voldriver.DriverSpec{Name: "fakedriver", Address: advertisedUrl}
-		fmt.Printf("====>driverJsonSpec: %#v\n\n", driverJsonSpec)
-		fmt.Printf("====>driversPath: %#v\n\n", driversPath)
 
 		jsonBytes, err := json.Marshal(driverJsonSpec)
-		fmt.Printf("====>jsonBytes: %#v\n\n", jsonBytes)
-		fmt.Printf("====>jsonBytes:err: %#v\n\n", err)
 
 		exitOnFailure(logger, err)
 		err = voldriver.WriteDriverJSONSpec(logger, driversPath, "fakedriver", jsonBytes)
