@@ -39,18 +39,16 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	logger.Debug("listing-drivers")
 	var infoResponses []voldriver.InfoResponse
 	drivers := client.Registry.Drivers()
 
-	for _, driver := range drivers {
-
-		info, err := driver.Info(logger)
-		if err != nil {
-			return volman.ListDriversResponse{}, err
+	for name, _ := range drivers {
+		info := voldriver.InfoResponse{
+			Name: name,
 		}
 		infoResponses = append(infoResponses, info)
 	}
+	logger.Debug("listing-drivers", lager.Data{"drivers": infoResponses})
 	return volman.ListDriversResponse{infoResponses}, nil
 }
 

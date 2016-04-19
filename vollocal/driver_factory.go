@@ -50,6 +50,7 @@ func (r *realDriverFactory) DriversDir() string {
 func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
 	logger = logger.Session("discover")
 	logger.Debug("start")
+	logger.Info(fmt.Sprintf("Discovering drivers in %s", r.DriversPath))
 	defer logger.Debug("end")
 
 	//precedence order: sock -> spec -> json
