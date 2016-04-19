@@ -14,11 +14,6 @@ import (
 )
 
 type DriverSyncer interface {
-	DriverRegistry() DriverRegistry
-
-	Drivers() map[string]voldriver.Driver
-	Driver(driverId string) (voldriver.Driver, bool)
-
 	Runner() ifrit.Runner
 }
 
@@ -32,37 +27,19 @@ type driverSyncer struct {
 	driverRegistry DriverRegistry
 }
 
-func NewDriverSyncer(logger lager.Logger, driverFactory DriverFactory, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
+func NewDriverSyncer(logger lager.Logger, driverFactory DriverFactory, driverRegistry DriverRegistry, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
 	return &driverSyncer{
 		logger:        logger,
 		driverFactory: driverFactory,
 		scanInterval:  scanInterval,
 		clock:         clock,
 
-		driverRegistry: NewDriverRegistry(),
+		driverRegistry: driverRegistry,
 	}
-}
-
-func (d *driverSyncer) DriverRegistry() DriverRegistry {
-	return d.driverRegistry
 }
 
 func (d *driverSyncer) Runner() ifrit.Runner {
 	return d
-}
-
-func (d *driverSyncer) Drivers() map[string]voldriver.Driver {
-	d.RLock()
-	defer d.RUnlock()
-
-	return d.driverRegistry.Drivers()
-}
-
-func (d *driverSyncer) Driver(driverId string) (voldriver.Driver, bool) {
-	d.RLock()
-	defer d.RUnlock()
-
-	return d.driverRegistry.Driver(driverId)
 }
 
 func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {

@@ -16,7 +16,8 @@ import (
 )
 
 type localClient struct {
-	driverSyncer DriverSyncer
+	driverRegistry DriverRegistry
+	driverSyncer   DriverSyncer
 }
 
 func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifrit.Runner) {
@@ -25,15 +26,19 @@ func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifri
 	scanInterval := 30 * time.Second
 	clock := clock.NewClock()
 
-	return NewLocalClientWithDriverFactory(logger, driversPath, driverFactory, NewDriverSyncer(logger, driverFactory, scanInterval, clock))
+	registry := NewDriverRegistry()
+	syncer := NewDriverSyncer(logger, driverFactory, registry, scanInterval, clock)
+
+	return NewLocalClientWithDriverFactory(logger, driversPath, driverFactory, syncer, registry)
 }
 
-func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory, driverSyncer DriverSyncer) (*localClient, ifrit.Runner) {
+func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory, driverSyncer DriverSyncer, driverRegistry DriverRegistry) (*localClient, ifrit.Runner) {
 	cf_lager.AddFlags(flag.NewFlagSet("", flag.PanicOnError))
 	flag.Parse()
 
 	return &localClient{
-		driverSyncer: driverSyncer,
+		driverSyncer:   driverSyncer,
+		driverRegistry: driverRegistry,
 	}, driverSyncer.Runner()
 }
 
@@ -43,13 +48,10 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	defer logger.Debug("end")
 
 	var infoResponses []volman.InfoResponse
-	drivers := client.driverSyncer.Drivers()
+	drivers := client.driverRegistry.Drivers()
 
 	for name, _ := range drivers {
-		info := volman.InfoResponse{
-			Name: name,
-		}
-		infoResponses = append(infoResponses, info)
+		infoResponses = append(infoResponses, volman.InfoResponse{Name: name})
 	}
 	logger.Debug("listing-drivers", lager.Data{"drivers": infoResponses})
 	return volman.ListDriversResponse{infoResponses}, nil
@@ -61,7 +63,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	logger.Info("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
 	defer logger.Info("end")
 
-	driver, found := client.driverSyncer.Driver(driverId)
+	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
@@ -96,7 +98,7 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 	logger.Info("unmounting-volume", lager.Data{"volumeName": volumeName})
 	defer logger.Info("end")
 
-	driver, found := client.driverSyncer.Driver(driverId)
+	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
@@ -129,7 +131,7 @@ func (client *localClient) activate(logger lager.Logger, driverId string, driver
 	logger.Info("start")
 	defer logger.Info("end")
 
-	activated, err := client.driverSyncer.DriverRegistry().Activated(driverId)
+	activated, err := client.driverRegistry.Activated(driverId)
 	if err != nil {
 		logger.Error("activate-driver-lookup-error", err)
 		return err
@@ -142,7 +144,7 @@ func (client *localClient) activate(logger lager.Logger, driverId string, driver
 			return errors.New(activateResponse.Err)
 		}
 
-		err := client.driverSyncer.DriverRegistry().Activate(driverId)
+		err := client.driverRegistry.Activate(driverId)
 		if err != nil {
 			logger.Error("driver-registry-activate-error", err)
 			return err
@@ -157,7 +159,7 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 	logger = logger.Session("create")
 	logger.Info("start")
 	defer logger.Info("end")
-	driver, found := client.driverSyncer.Driver(driverId)
+	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
