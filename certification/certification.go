@@ -76,25 +76,23 @@ var CertifyWith = func(described string, certificationFixture CertificationFixtu
 			})
 
 			It("should mount a volume", func() {
-				volumeId := "fake-volume"
-				mountPoint, err := client.Mount(testLogger, certificationFixture.DriverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+
+				mountPoint, err := client.Mount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name, certificationFixture.CreateConfig.Opts)
 				Expect(err).NotTo(HaveOccurred())
-				fmt.Printf("mount path:%s\n", mountPoint.Path)
 				Expect(mountPoint.Path).NotTo(Equal(""))
 
 				matches, err := filepath.Glob(mountPoint.Path)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(matches)).To(Equal(1))
 
-				err = client.Unmount(testLogger, certificationFixture.DriverName, volumeId)
+				err = client.Unmount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should be possible to write to the mountPoint", func() {
-				volumeId := "fake-volume"
-				mountPoint, err := client.Mount(testLogger, certificationFixture.DriverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+				mountPoint, err := client.Mount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name, certificationFixture.CreateConfig.Opts)
 				Expect(err).NotTo(HaveOccurred())
-				defer client.Unmount(testLogger, certificationFixture.DriverName, volumeId)
+				defer client.Unmount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name)
 
 				testFile := path.Join(mountPoint.Path, "test.txt")
 				err = ioutil.WriteFile(testFile, []byte("hello persi"), 0644)
@@ -107,16 +105,15 @@ var CertifyWith = func(described string, certificationFixture CertificationFixtu
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(matches)).To(Equal(0))
 
-				err = client.Unmount(testLogger, certificationFixture.DriverName, volumeId)
+				err = client.Unmount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should unmount a volume given same volume ID", func() {
-				volumeId := "fake-volume"
-				mountPoint, err := client.Mount(testLogger, certificationFixture.DriverName, volumeId, map[string]interface{}{"volume_id": volumeId})
+				mountPoint, err := client.Mount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name, certificationFixture.CreateConfig.Opts)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = client.Unmount(testLogger, certificationFixture.DriverName, volumeId)
+				err = client.Unmount(testLogger, certificationFixture.DriverName, certificationFixture.CreateConfig.Name)
 				Expect(err).NotTo(HaveOccurred())
 
 				matches, err := filepath.Glob(mountPoint.Path)

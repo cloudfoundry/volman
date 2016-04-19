@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/cloudfoundry-incubator/volman/certification"
+	"github.com/cloudfoundry-incubator/volman/voldriver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -37,34 +38,14 @@ var _ = Describe("certification/fixture.go", func() {
 	Context("#LoadCertificationFixture", func() {
 		BeforeEach(func() {
 			certificationFixtureContent := `{
-				"VolmanFixture": {
-					"PathToVolman": "fake-path-to-volman",
-					"VolmanConfig":{
-						"ServerPort": 8888,
-						"DebugServerAddress": "fake-address",
-						"DriversPath": "fake-drivers-path",
-						"ListenAddress": "fake-listen-address"
-					}
-				},
-				"DriverFixture": {
-					"PathToDriver": "fake-path-to-driver",
-					"MountDir": "fake-mount-dir",
-					"Transport": "fake-transport",
-					"DriverConfig": {
-						"Name": "fake-name",
-						"Path": "fake-path",
-						"ServerPort": 5565,
-						"ListenAddress": "fake-listen-address"
-					},
-					"VolumeData":{
-						"Name": "fake-volume-name",
-						"Config": {
-							"fake-key0": 0,
-							"fake-key1": "fake-value1"
-						}
-					}
-				}
-			}`
+ 						"volman_driver_path": "fake-path-to-driver",
+  						"driver_name": "fakedriver",
+  						"reset_driver_script": "fake-path",
+						"create_config": {
+						    "Name": "fake-request",
+						    "Opts": {"key":"value"}
+ 								 }
+							}`
 
 			err = ioutil.WriteFile(tmpFileName, []byte(certificationFixtureContent), 0666)
 			Expect(err).NotTo(HaveOccurred())
@@ -74,47 +55,20 @@ var _ = Describe("certification/fixture.go", func() {
 			certificationFixture, err = certification.LoadCertificationFixture(tmpFileName)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(certificationFixture.VolmanFixture.PathToVolman).To(Equal("fake-path-to-volman"))
-			Expect(certificationFixture.VolmanFixture.Config.ServerPort).To(Equal(8888))
-			Expect(certificationFixture.VolmanFixture.Config.ListenAddress).To(Equal("fake-listen-address"))
-
-			Expect(certificationFixture.DriverFixture.PathToDriver).To(Equal("fake-path-to-driver"))
-			Expect(certificationFixture.DriverFixture.MountDir).To(Equal("fake-mount-dir"))
-			Expect(certificationFixture.DriverFixture.Transport).To(Equal("fake-transport"))
-			Expect(certificationFixture.DriverFixture.Config.Name).To(Equal("fake-name"))
-			Expect(certificationFixture.DriverFixture.VolumeData.Name).To(Equal("fake-volume-name"))
+			Expect(certificationFixture.VolmanDriverPath).To(Equal("fake-path-to-driver"))
+			Expect(certificationFixture.CreateConfig.Name).To(Equal("fake-request"))
 		})
 	})
 
 	Context("#SaveCertificationFixture", func() {
 		BeforeEach(func() {
 			certificationFixture = certification.CertificationFixture{
-				VolmanFixture: certification.VolmanFixture{
-					PathToVolman: "fake-path-to-volman",
-					Config: certification.VolmanConfig{
-						ServerPort:         8888,
-						DebugServerAddress: "fake-address",
-						DriversPath:        "fake-drivers-path",
-						ListenAddress:      "fake-listen-address",
-					},
-				},
-				DriverFixture: certification.DriverFixture{
-					PathToDriver: "fake-path-to-driver",
-					MountDir:     "fake-mount-dir",
-					Transport:    "fake-transport",
-					Config: certification.DriverConfig{
-						Name:          "fake-name",
-						Path:          "fake-path",
-						ServerPort:    5565,
-						ListenAddress: "fake-listen-address",
-					},
-					VolumeData: certification.VolumeData{
-						Name: "fake-volume-name",
-						Config: map[string]interface{}{
-							"fake-key0": 0,
-							"fake-key1": "fake-value1",
-						},
-					},
+				VolmanDriverPath:  "fake-path-to-driver",
+				DriverName:        "fakedriver",
+				ResetDriverScript: "fake-path",
+				CreateConfig: voldriver.CreateRequest{
+					Name: "fake-request",
+					Opts: map[string]interface{}{"key": "value"},
 				},
 			}
 		})
@@ -129,24 +83,9 @@ var _ = Describe("certification/fixture.go", func() {
 			readFixture := certification.CertificationFixture{}
 			json.Unmarshal(bytes, &readFixture)
 
-			Expect(readFixture.VolmanFixture.PathToVolman).To(Equal("fake-path-to-volman"))
-			Expect(readFixture.VolmanFixture.Config.ServerPort).To(Equal(8888))
-			Expect(certificationFixture.VolmanFixture.Config.ListenAddress).To(Equal("fake-listen-address"))
-
-			Expect(readFixture.DriverFixture.PathToDriver).To(Equal("fake-path-to-driver"))
-			Expect(readFixture.DriverFixture.MountDir).To(Equal("fake-mount-dir"))
-			Expect(readFixture.DriverFixture.Transport).To(Equal("fake-transport"))
-			Expect(readFixture.DriverFixture.Config.Name).To(Equal("fake-name"))
-			Expect(readFixture.DriverFixture.VolumeData.Name).To(Equal("fake-volume-name"))
+			Expect(readFixture.VolmanDriverPath).To(Equal("fake-path-to-driver"))
+			Expect(readFixture.CreateConfig.Name).To(Equal("fake-request"))
 		})
 	})
 
-	Context("#CreateRunners", func() {
-		It("creates a ifrit.Runner for the VolmanFixture and DriverFixture", func() {
-			certification.CreateRunners(&certificationFixture)
-
-			Expect(certificationFixture.VolmanFixture.Runner).ToNot(BeNil())
-			Expect(certificationFixture.DriverFixture.Runner).ToNot(BeNil())
-		})
-	})
 })

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/volman/voldriver"
@@ -12,20 +13,18 @@ import (
 )
 
 type CertificationFixture struct {
-	VolmanBinPath      string                  `json:"volman_bin_path"`
-	VolmanDriverPath   string                  `json:"volman_driver_path"`
-	DriverName         string                  `json:"driver_name"`
-	ResetDriverScript  string                  `json:"reset_driver_script"`
-	ValidCreateRequest voldriver.CreateRequest `json:"valid_create_request"`
+	VolmanDriverPath  string                  `json:"volman_driver_path"`
+	DriverName        string                  `json:"driver_name"`
+	ResetDriverScript string                  `json:"reset_driver_script"`
+	CreateConfig      voldriver.CreateRequest `json:"create_config"`
 }
 
-func NewCertificationFixture(volmanBinPath string, volmanDriverPath string, driverName string, resetDriverScript string, validCreateRequest voldriver.CreateRequest) *CertificationFixture {
+func NewCertificationFixture(volmanDriverPath string, driverName string, resetDriverScript string, createConfig voldriver.CreateRequest) *CertificationFixture {
 	return &CertificationFixture{
-		VolmanBinPath:      volmanBinPath,
-		VolmanDriverPath:   volmanDriverPath,
-		DriverName:         driverName,
-		ResetDriverScript:  resetDriverScript,
-		ValidCreateRequest: validCreateRequest,
+		VolmanDriverPath:  volmanDriverPath,
+		DriverName:        driverName,
+		ResetDriverScript: resetDriverScript,
+		CreateConfig:      createConfig,
 	}
 }
 func LoadCertificationFixture(fileName string) (CertificationFixture, error) {
@@ -53,10 +52,11 @@ func SaveCertificationFixture(fixture CertificationFixture, fileName string) err
 }
 
 func (cf *CertificationFixture) CreateVolmanRunner() ifrit.Runner {
+	volmanBinPath := os.Getenv("VOLMAN_PATH")
 	return ginkgomon.New(ginkgomon.Config{
 		Name: "volman",
 		Command: exec.Command(
-			cf.VolmanBinPath,
+			volmanBinPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", 8750),
 			"-driversPath", cf.VolmanDriverPath,
 		),
