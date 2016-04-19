@@ -69,3 +69,13 @@ View results for a package as HTML:
 cd <package-dir>
 go tool cover -html=<package>.coverprofile
 ```
+
+## Setting up Intellij
+
+Configure your project to run `gofmt` and go imports using the following regex:-
+
+```
+file[diego-release]:src/github.com/cloudfoundry-incubator/inigo/*.go||file[diego-bosh-release]:src/github.com/cloudfoundry-incubator/inigo/**/*||file[diego-release]:src/github.com/cloudfoundry-incubator/volman/*.go||file[diego-release]:src/github.com/cloudfoundry-incubator/volman/**/*
+```
+
+This is so that Intellij does not `go fmt` dependent packages which may result in source changes.
