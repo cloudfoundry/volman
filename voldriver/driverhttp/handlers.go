@@ -19,7 +19,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 	defer logger.Info("end")
 	var handlers = rata.Handlers{
 
-		"activate": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		voldriver.ActivateRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
 			logger = logger.Session("activate")
 			logger.Info("start")
@@ -38,7 +38,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, activateResponse)
 		}),
 
-		"get": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		voldriver.GetRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
 			logger = logger.Session("get-mount")
 			logger.Info("start")
@@ -69,7 +69,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, getResponse)
 		}),
 
-		"create": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		voldriver.CreateRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
 			logger = logger.Session("handle-create")
 			logger.Info("start")
@@ -100,7 +100,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, createResponse)
 		}),
 
-		"mount": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		voldriver.MountRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
 			logger = logger.Session("handle-mount")
 			logger.Info("start")
@@ -131,7 +131,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, mountResponse)
 		}),
 
-		"unmount": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		voldriver.UnmountRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
 			logger = logger.Session("handle-unmount")
 			logger.Info("start")
@@ -162,7 +162,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, unmountResponse)
 		}),
 
-		"remove": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		voldriver.RemoveRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
 			logger = logger.Session("handle-remove")
 			logger.Info("start")
