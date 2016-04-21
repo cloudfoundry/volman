@@ -34,7 +34,7 @@ func NewLocalDriver(fileSystem FileSystem, mountDir string) *LocalDriver {
 
 func (d *LocalDriver) Activate(logger lager.Logger) voldriver.ActivateResponse {
 	return voldriver.ActivateResponse{
-		Implements: "VolumeDriver",
+		Implements: []string{"VolumeDriver"},
 	}
 }
 

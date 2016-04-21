@@ -25,7 +25,7 @@ var _ = Describe("Volman Driver Handlers", func() {
 		It("should produce a handler with an activate route", func() {
 			By("faking out the driver")
 			driver := &volmanfakes.FakeDriver{}
-			driver.ActivateReturns(voldriver.ActivateResponse{Implements: "VolumeDriver"})
+			driver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 			handler, err := driverhttp.NewHandler(testLogger, driver)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -47,7 +47,7 @@ var _ = Describe("Volman Driver Handlers", func() {
 
 			By("then expecting correct JSON conversion")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(activateResponse.Implements).Should(Equal("VolumeDriver"))
+			Expect(activateResponse.Implements).Should(Equal([]string{"VolumeDriver"}))
 		})
 
 		It("should produce a handler with a mount route", func() {

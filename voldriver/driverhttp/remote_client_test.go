@@ -42,7 +42,7 @@ var _ = Describe("RemoteClient", func() {
 
 		validHttpActivateResponse = &http.Response{
 			StatusCode: 200,
-			Body:       stringCloser{bytes.NewBufferString("{\"Implements\":\"VolumeDriver\"}")},
+			Body:       stringCloser{bytes.NewBufferString("{\"Implements\":[\"VolumeDriver\"]}")},
 		}
 	})
 
@@ -123,7 +123,7 @@ var _ = Describe("RemoteClient", func() {
 
 			By("giving back a path with no error")
 			Expect(activateResponse.Err).To(Equal(""))
-			Expect(activateResponse.Implements).To(Equal("VolumeDriver"))
+			Expect(activateResponse.Implements).To(Equal([]string{"VolumeDriver"}))
 		})
 	})
 
@@ -283,9 +283,9 @@ var _ = Describe("RemoteClient", func() {
 
 			activateResponse := driver.Activate(testLogger)
 
-			By("giving back a path with no error")
+			By("giving back a activation response with no error")
 			Expect(activateResponse.Err).To(Equal(""))
-			Expect(activateResponse.Implements).To(Equal("VolumeDriver"))
+			Expect(activateResponse.Implements).To(Equal([]string{"VolumeDriver"}))
 		})
 
 	})

@@ -12,6 +12,8 @@ import (
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 
+	"fmt"
+
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 )
 
@@ -144,12 +146,23 @@ func (client *localClient) activate(logger lager.Logger, driverId string, driver
 			return errors.New(activateResponse.Err)
 		}
 
-		err := client.driverRegistry.Activate(driverId)
-		if err != nil {
-			logger.Error("driver-registry-activate-error", err)
-			return err
+		driverImplementsErr := errors.New(fmt.Sprintf("driver-implements: %#v", activateResponse.Implements))
+		if len(activateResponse.Implements) == 0 {
+			logger.Error("driver-incorrect", driverImplementsErr)
+			return driverImplementsErr
 		}
-		logger.Info("driver-activated", lager.Data{"driver": driverId})
+
+		if !client.driverImplements("VolumeDriver", activateResponse.Implements) {
+			logger.Error("driver-incorrect", driverImplementsErr)
+			return driverImplementsErr
+		} else {
+			err := client.driverRegistry.Activate(driverId)
+			if err != nil {
+				logger.Error("driver-registry-activate-error", err)
+				return err
+			}
+			logger.Info("driver-activated", lager.Data{"driver": driverId})
+		}
 	}
 
 	return nil
@@ -172,4 +185,13 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 		return errors.New(response.Err)
 	}
 	return nil
+}
+
+func (client *localClient) driverImplements(protocol string, activateResponseProtocols []string) bool {
+	for _, nextProtocol := range activateResponseProtocols {
+		if protocol == nextProtocol {
+			return true
+		}
+	}
+	return false
 }

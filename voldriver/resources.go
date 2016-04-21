@@ -36,7 +36,7 @@ type Driver interface {
 
 type ActivateResponse struct {
 	Err        string
-	Implements string
+	Implements []string
 }
 
 type CreateRequest struct {

@@ -109,7 +109,6 @@ var _ = Describe("Volman", func() {
 			})
 
 			Context("after running drivers discovery", func() {
-
 				BeforeEach(func() {
 					fakeDriver := new(volmanfakes.FakeDriver)
 					fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"fakedriver": fakeDriver}, nil)
@@ -158,6 +157,8 @@ var _ = Describe("Volman", func() {
 
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", fmt.Sprintf("http://0.0.0.0:%d", localDriverServerPort))
 				Expect(err).NotTo(HaveOccurred())
+
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
 				driverSyncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, driverRegistry, scanInterval, fakeClock)
 				client, runner = vollocal.NewLocalClientWithDriverFactory(logger, defaultPluginsDirectory, fakeDriverFactory, driverSyncer, driverRegistry)
@@ -221,27 +222,97 @@ var _ = Describe("Volman", func() {
 				localDriverProcess = ginkgomon.Invoke(localDriverRunner)
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
 				fakeDriver = new(volmanfakes.FakeDriver)
-
-				fakeDriverFactory.DriverReturns(fakeDriver, nil)
-				fakeDriverFactory.DriverReturns(nil, fmt.Errorf("driver not found"))
-
-				driverSyncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, driverRegistry, scanInterval, fakeClock)
-				client, runner = vollocal.NewLocalClientWithDriverFactory(logger, defaultPluginsDirectory, fakeDriverFactory, driverSyncer, driverRegistry)
-				process = ginkgomon.Invoke(runner)
 			})
 
 			AfterEach(func() {
 				ginkgomon.Kill(process)
 			})
 
-			It("should not be able to mount", func() {
-				_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
-				Expect(err).To(HaveOccurred())
+			Context("when driver is not found", func() {
+				BeforeEach(func() {
+					fakeDriverFactory.DriverReturns(fakeDriver, nil)
+					fakeDriverFactory.DriverReturns(nil, fmt.Errorf("driver not found"))
+
+					driverSyncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, driverRegistry, scanInterval, fakeClock)
+					client, runner = vollocal.NewLocalClientWithDriverFactory(logger, defaultPluginsDirectory, fakeDriverFactory, driverSyncer, driverRegistry)
+					process = ginkgomon.Invoke(runner)
+				})
+
+				It("should not be able to mount", func() {
+					_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should not be able to unmount", func() {
+					err := client.Unmount(logger, "fakedriver", "fake-volume")
+					Expect(err).To(HaveOccurred())
+				})
 			})
 
-			It("should not be able to unmount", func() {
-				err := client.Unmount(logger, "fakedriver", "fake-volume")
-				Expect(err).To(HaveOccurred())
+			Context("when driver does not implement VolumeDriver", func() {
+				BeforeEach(func() {
+					drivers := make(map[string]voldriver.Driver)
+					drivers["fakedriver"] = fakeDriver
+
+					fakeDriverFactory.DiscoverReturns(drivers, nil)
+
+					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", fmt.Sprintf("http://0.0.0.0:%d", localDriverServerPort))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				Context("when driver implements nothing", func() {
+					BeforeEach(func() {
+						fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{}})
+						driverSyncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, driverRegistry, scanInterval, fakeClock)
+						client, runner = vollocal.NewLocalClientWithDriverFactory(logger, defaultPluginsDirectory, fakeDriverFactory, driverSyncer, driverRegistry)
+						process = ginkgomon.Invoke(runner)
+					})
+
+					It("should not be able to mount", func() {
+						_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
+						Expect(err).To(HaveOccurred())
+
+						activated, err := driverRegistry.Activated("fakedriver")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(activated).To(BeFalse())
+					})
+
+					It("should not be able to unmount", func() {
+						err := client.Unmount(logger, "fakedriver", "fake-volume")
+						Expect(err).To(HaveOccurred())
+
+						activated, err := driverRegistry.Activated("fakedriver")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(activated).To(BeFalse())
+					})
+				})
+
+				Context("when driver implements other protocols", func() {
+					BeforeEach(func() {
+						fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"authz", "NetworkDriver"}})
+						driverSyncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, driverRegistry, scanInterval, fakeClock)
+						client, runner = vollocal.NewLocalClientWithDriverFactory(logger, defaultPluginsDirectory, fakeDriverFactory, driverSyncer, driverRegistry)
+						process = ginkgomon.Invoke(runner)
+					})
+
+					It("should not be able to mount", func() {
+						_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
+						Expect(err).To(HaveOccurred())
+
+						activated, err := driverRegistry.Activated("fakedriver")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(activated).To(BeFalse())
+					})
+
+					It("should not be able to unmount", func() {
+						err := client.Unmount(logger, "fakedriver", "fake-volume")
+						Expect(err).To(HaveOccurred())
+
+						activated, err := driverRegistry.Activated("fakedriver")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(activated).To(BeFalse())
+					})
+				})
 			})
 		})
 
