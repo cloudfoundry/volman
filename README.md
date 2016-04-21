@@ -9,24 +9,7 @@ go install <TBD>
 ```
 
 # Quality checks
-## Cyclomatic Complexity
-Note good number for Cyclomatic Complexity is under 9
-```
-cd volman
-cd ~
-go get github.com/fzipp/gocyclo
-cd -
-gocyclo -top 10 .
-```
-## Duplication
-Note good number is 5 for duplicate symbols (somewhere around 5-lines)
-```
-cd ~
-brew instal pmd
-cd -
-pmd cpd --minimum-tokens 5 --files . --language go --exclude <file path> --format xml
 
-```
 ## Unit Tests
 Note: to run tests, you'll need to be in a containing project (eg. diego_release).
 This will set the correct go environment.
@@ -37,12 +20,11 @@ go get github.com/onsi/ginkgo/ginkgo
 go get github.com/onsi/gomega
 cd -
 
-# generate fakes (not will only catch decorated interfaces:
-# //go:generate counterfeiter -o ../volmanfakes/fake_<interface_name>.go . InterfaceName
+# generate fakes
 go generate ./...
 
 # run tests
-ginkgo -r
+ginkgo -r -p -race
 ```
 ## Coverage
 ```
