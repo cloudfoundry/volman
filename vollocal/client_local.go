@@ -2,7 +2,6 @@ package vollocal
 
 import (
 	"errors"
-	"flag"
 	"time"
 
 	"github.com/tedsuo/ifrit"
@@ -11,8 +10,6 @@ import (
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
-
-	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 )
 
 type localClient struct {
@@ -29,9 +26,6 @@ func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifri
 }
 
 func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory, driverSyncer DriverSyncer) (*localClient, ifrit.Runner) {
-	cf_lager.AddFlags(flag.NewFlagSet("", flag.PanicOnError))
-	flag.Parse()
-
 	return &localClient{
 		driverSyncer: driverSyncer,
 	}, driverSyncer.Runner()
@@ -39,8 +33,8 @@ func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, dr
 
 func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
 	logger = logger.Session("list-drivers")
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	var infoResponses []volman.InfoResponse
 	drivers := client.driverSyncer.Drivers()
@@ -58,8 +52,8 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
-	logger.Info("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
 	defer logger.Info("end")
+	logger.Debug("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
 
 	driver, found := client.driverSyncer.Driver(driverId)
 	if !found {
@@ -80,9 +74,9 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	}
 
 	mountRequest := voldriver.MountRequest{Name: volumeId}
-	logger.Info("calling-driver-with-mount-request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
+	logger.Debug("calling-driver-with-mount-request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
 	mountResponse := driver.Mount(logger, mountRequest)
-	logger.Info("response-from-driver", lager.Data{"response": mountResponse})
+	logger.Debug("response-from-driver", lager.Data{"response": mountResponse})
 	if mountResponse.Err != "" {
 		return volman.MountResponse{}, errors.New(mountResponse.Err)
 	}
@@ -93,8 +87,8 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeName string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
-	logger.Info("unmounting-volume", lager.Data{"volumeName": volumeName})
 	defer logger.Info("end")
+	logger.Debug("unmounting-volume", lager.Data{"volumeName": volumeName})
 
 	driver, found := client.driverSyncer.Driver(driverId)
 	if !found {
@@ -147,7 +141,7 @@ func (client *localClient) activate(logger lager.Logger, driverId string, driver
 			logger.Error("driver-registry-activate-error", err)
 			return err
 		}
-		logger.Info("driver-activated", lager.Data{"driver": driverId})
+		logger.Debug("driver-activated", lager.Data{"driver": driverId})
 	}
 
 	return nil
@@ -164,7 +158,7 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 		return err
 	}
 
-	logger.Info("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId, "opts": opts})
+	logger.Debug("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId, "opts": opts})
 	response := driver.Create(logger, voldriver.CreateRequest{Name: volumeName, Opts: opts})
 	if response.Err != "" {
 		return errors.New(response.Err)

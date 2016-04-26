@@ -6,17 +6,16 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
+	"testing"
 
-	"github.com/cloudfoundry-incubator/volman"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/onsi/gomega/gexec"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
-
-	"testing"
+	"github.com/cloudfoundry-incubator/volman"
 )
 
 var client volman.Manager
@@ -30,12 +29,6 @@ var localDriverProcess ifrit.Process
 var localDriverRunner *ginkgomon.Runner
 
 var tmpDriversPath string
-
-var fakedriverServerPath string
-
-var unixRunner *ginkgomon.Runner
-var fakedriverUnixServerProcess ifrit.Process
-var socketPath string
 
 func TestDriver(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -74,17 +67,6 @@ var _ = BeforeEach(func() {
 		),
 		StartCheck: "fakedriverServer.started",
 	})
-	socketPath = path.Join(defaultPluginsDirectory, "fakedriver.sock")
-	unixRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "fakedriverUnixServer",
-		Command: exec.Command(
-			fakeDriverPath,
-			"-listenAddr", socketPath,
-			"-transport", "unix",
-		),
-		StartCheck: "fakedriverUnixServer.started",
-	})
-
 })
 
 var _ = AfterEach(func() {

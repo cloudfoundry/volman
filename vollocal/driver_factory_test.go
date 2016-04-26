@@ -3,14 +3,14 @@ package vollocal_test
 import (
 	"os"
 	"path"
-
 	"fmt"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -23,6 +23,7 @@ var _ = Describe("DriverFactory", func() {
 	BeforeEach(func() {
 		testLogger = lagertest.NewTestLogger("ClientTest")
 	})
+
 	Context("when given driverspath with no drivers", func() {
 		It("no drivers are found", func() {
 			fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
@@ -32,11 +33,12 @@ var _ = Describe("DriverFactory", func() {
 			Expect(len(drivers)).To(Equal(0))
 		})
 	})
+
 	Context("when given driverspath with a single driver", func() {
 
 		BeforeEach(func() {
 			driverName = "some-driver-name"
-			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
+			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -49,13 +51,14 @@ var _ = Describe("DriverFactory", func() {
 			Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(1))
 		})
 	})
+
 	Context("when given driverspath with hetergeneous driver specifications", func() {
 
 		BeforeEach(func() {
 			driverName = "some-driver-name"
-			err := voldriver.WriteDriverJSONSpec(testLogger, defaultPluginsDirectory, driverName, []byte("{\"url\":\"http://0.0.0.0:8080\"}"))
+			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName,"json", []byte("{\"url\":\"http://0.0.0.0:8080\"}"))
 			Expect(err).NotTo(HaveOccurred())
-			err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:9090")
+			err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -69,6 +72,7 @@ var _ = Describe("DriverFactory", func() {
 		})
 
 	})
+
 	Context("when a valid driver spec is discovered", func() {
 		var (
 			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
@@ -87,7 +91,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when a json driver spec is discovered", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverJSONSpec(testLogger, defaultPluginsDirectory, driverName, []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName,"json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 				Expect(err).NotTo(HaveOccurred())
 				driver, err = driverFactory.Driver(testLogger, driverName, driverName+".json")
 				Expect(err).ToNot(HaveOccurred())
@@ -107,7 +111,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when an invalid json spec is discovered", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverJSONSpec(testLogger, defaultPluginsDirectory, driverName, []byte("{\"invalid\"}"))
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"invalid\"}"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("should error", func() {
@@ -118,7 +122,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when a spec driver spec is discovered", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "http://0.0.0.0:8080")
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 				driver, err = driverFactory.Driver(testLogger, driverName, driverName+".spec")
 				Expect(err).ToNot(HaveOccurred())
@@ -163,6 +167,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 		})
 	})
+
 	Context("when valid driver spec is not discovered", func() {
 		var (
 			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory

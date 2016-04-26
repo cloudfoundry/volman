@@ -33,9 +33,9 @@ func (sw specWriter) WriteJson(driverSpec DriverSpec) error {
 		return err
 	}
 
-	return WriteDriverJSONSpec(sw.logger, sw.path, sw.driverName, contents)
+	return WriteDriverSpec(sw.logger, sw.path, sw.driverName, "json", contents)
 }
 
 func (sw specWriter) WriteSpec(address string) error {
-	return WriteDriverSpec(sw.logger, sw.path, sw.driverName, address)
+	return WriteDriverSpec(sw.logger, sw.path, sw.driverName, "spec", []byte(address))
 }

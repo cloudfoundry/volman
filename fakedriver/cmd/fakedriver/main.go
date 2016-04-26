@@ -107,10 +107,10 @@ func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDi
 		jsonBytes, err := json.Marshal(driverJsonSpec)
 
 		exitOnFailure(logger, err)
-		err = voldriver.WriteDriverJSONSpec(logger, driversPath, "fakedriver", jsonBytes)
+		err = voldriver.WriteDriverSpec(logger, driversPath, "fakedriver", "json", jsonBytes)
 		exitOnFailure(logger, err)
 	} else {
-		err := voldriver.WriteDriverSpec(logger, driversPath, "fakedriver", advertisedUrl)
+		err := voldriver.WriteDriverSpec(logger, driversPath, "fakedriver", "spec", []byte(advertisedUrl))
 		exitOnFailure(logger, err)
 	}
 	client := fakedriver.NewLocalDriver(&fileSystem, mountDir)
