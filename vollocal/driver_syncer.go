@@ -27,10 +27,21 @@ type driverSyncer struct {
 	driverRegistry DriverRegistry
 }
 
-func NewDriverSyncer(logger lager.Logger, driverFactory DriverFactory, driverRegistry DriverRegistry, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
+func NewDriverSyncer(logger lager.Logger, driverRegistry DriverRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
 	return &driverSyncer{
 		logger:        logger,
-		driverFactory: driverFactory,
+		driverFactory: NewDriverFactory(driverPaths[0]),
+		scanInterval:  scanInterval,
+		clock:         clock,
+
+		driverRegistry: driverRegistry,
+	}
+}
+
+func NewDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry DriverRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DriverFactory) *driverSyncer {
+	return &driverSyncer{
+		logger:        logger,
+		driverFactory: factory,
 		scanInterval:  scanInterval,
 		clock:         clock,
 

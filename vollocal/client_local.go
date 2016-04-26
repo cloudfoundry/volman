@@ -14,28 +14,25 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+type DriverConfig struct {
+	DriverPaths  []string
+	SyncInterval time.Duration
+}
+
 type localClient struct {
 	driverRegistry DriverRegistry
-	driverSyncer   DriverSyncer
 }
 
-func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifrit.Runner) {
-	driverFactory := NewDriverFactory(driversPath)
-
-	scanInterval := 30 * time.Second
+func NewServer(logger lager.Logger, config DriverConfig) (volman.Manager, ifrit.Runner) {
 	clock := clock.NewClock()
-
 	registry := NewDriverRegistry()
-	syncer := NewDriverSyncer(logger, driverFactory, registry, scanInterval, clock)
-
-	return NewLocalClientWithDriverFactory(logger, driversPath, driverFactory, syncer, registry)
+	return NewLocalClient(logger, registry), NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock).Runner()
 }
 
-func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory, driverSyncer DriverSyncer, driverRegistry DriverRegistry) (*localClient, ifrit.Runner) {
+func NewLocalClient(logger lager.Logger, registry DriverRegistry) volman.Manager {
 	return &localClient{
-		driverSyncer:   driverSyncer,
-		driverRegistry: driverRegistry,
-	}, driverSyncer.Runner()
+		driverRegistry: registry,
+	}
 }
 
 func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {

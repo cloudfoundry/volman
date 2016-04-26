@@ -40,16 +40,14 @@ var _ = Describe("Driver Syncer", func() {
 		scanInterval = 10 * time.Second
 
 		registry = vollocal.NewDriverRegistry()
-		syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, registry, scanInterval, fakeClock)
+		syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{"/some/path"}, scanInterval, fakeClock, fakeDriverFactory)
 	})
 
 	Describe("#Runner", func() {
 		It("has a non-nil runner", func() {
 			Expect(syncer.Runner()).NotTo(BeNil())
 		})
-	})
 
-	Describe("#Runner", func() {
 		It("has a non-nil and empty driver registry", func() {
 			Expect(registry).NotTo(BeNil())
 			Expect(len(registry.Drivers())).To(Equal(0))
@@ -71,7 +69,7 @@ var _ = Describe("Driver Syncer", func() {
 				fakeDriver := new(volmanfakes.FakeDriver)
 				fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"fakedriver": fakeDriver}, nil)
 
-				syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, registry, scanInterval, fakeClock)
+				syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{"/some/path"}, scanInterval, fakeClock, fakeDriverFactory)
 
 				process = ginkgomon.Invoke(syncer.Runner())
 			})

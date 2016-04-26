@@ -18,7 +18,6 @@ import (
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory
 
 type DriverFactory interface {
-	DriversDir() string
 	Discover(logger lager.Logger) (map[string]voldriver.Driver, error)
 	Driver(logger lager.Logger, driverId string, driverFileName string) (voldriver.Driver, error)
 }
@@ -42,9 +41,6 @@ func NewDriverFactoryWithRemoteClientFactory(driversPath string, remoteClientFac
 func NewDriverFactoryWithOs(driversPath string, useOs os_wrap.Os) DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
 	return &realDriverFactory{driversPath, remoteClientFactory, useOs, nil}
-}
-func (r *realDriverFactory) DriversDir() string {
-	return r.DriversPath
 }
 
 func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
