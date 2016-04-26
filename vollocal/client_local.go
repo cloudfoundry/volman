@@ -13,7 +13,8 @@ import (
 )
 
 type localClient struct {
-	driverSyncer DriverSyncer
+	driverRegistry DriverRegistry
+	driverSyncer   DriverSyncer
 }
 
 func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifrit.Runner) {
@@ -22,12 +23,16 @@ func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifri
 	scanInterval := 30 * time.Second
 	clock := clock.NewClock()
 
-	return NewLocalClientWithDriverFactory(logger, driversPath, driverFactory, NewDriverSyncer(logger, driverFactory, scanInterval, clock))
+	registry := NewDriverRegistry()
+	syncer := NewDriverSyncer(logger, driverFactory, registry, scanInterval, clock)
+
+	return NewLocalClientWithDriverFactory(logger, driversPath, driverFactory, syncer, registry)
 }
 
 func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory, driverSyncer DriverSyncer) (*localClient, ifrit.Runner) {
 	return &localClient{
-		driverSyncer: driverSyncer,
+		driverSyncer:   driverSyncer,
+		driverRegistry: driverRegistry,
 	}, driverSyncer.Runner()
 }
 
@@ -37,13 +42,10 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	defer logger.Info("end")
 
 	var infoResponses []volman.InfoResponse
-	drivers := client.driverSyncer.Drivers()
+	drivers := client.driverRegistry.Drivers()
 
 	for name, _ := range drivers {
-		info := volman.InfoResponse{
-			Name: name,
-		}
-		infoResponses = append(infoResponses, info)
+		infoResponses = append(infoResponses, volman.InfoResponse{Name: name})
 	}
 	logger.Debug("listing-drivers", lager.Data{"drivers": infoResponses})
 	return volman.ListDriversResponse{infoResponses}, nil
@@ -55,7 +57,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	defer logger.Info("end")
 	logger.Debug("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
 
-	driver, found := client.driverSyncer.Driver(driverId)
+	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
@@ -90,7 +92,7 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 	defer logger.Info("end")
 	logger.Debug("unmounting-volume", lager.Data{"volumeName": volumeName})
 
-	driver, found := client.driverSyncer.Driver(driverId)
+	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
@@ -123,7 +125,7 @@ func (client *localClient) activate(logger lager.Logger, driverId string, driver
 	logger.Info("start")
 	defer logger.Info("end")
 
-	activated, err := client.driverSyncer.DriverRegistry().Activated(driverId)
+	activated, err := client.driverRegistry.Activated(driverId)
 	if err != nil {
 		logger.Error("activate-driver-lookup-error", err)
 		return err
@@ -136,12 +138,23 @@ func (client *localClient) activate(logger lager.Logger, driverId string, driver
 			return errors.New(activateResponse.Err)
 		}
 
-		err := client.driverSyncer.DriverRegistry().Activate(driverId)
-		if err != nil {
-			logger.Error("driver-registry-activate-error", err)
-			return err
+		driverImplementsErr := errors.New(fmt.Sprintf("driver-implements: %#v", activateResponse.Implements))
+		if len(activateResponse.Implements) == 0 {
+			logger.Error("driver-incorrect", driverImplementsErr)
+			return driverImplementsErr
 		}
-		logger.Debug("driver-activated", lager.Data{"driver": driverId})
+
+		if !client.driverImplements("VolumeDriver", activateResponse.Implements) {
+			logger.Error("driver-incorrect", driverImplementsErr)
+			return driverImplementsErr
+		} else {
+			err := client.driverRegistry.Activate(driverId)
+			if err != nil {
+				logger.Error("driver-registry-activate-error", err)
+				return err
+			}
+			logger.Debug("driver-activated", lager.Data{"driver": driverId})
+		}
 	}
 
 	return nil
@@ -151,7 +164,7 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 	logger = logger.Session("create")
 	logger.Info("start")
 	defer logger.Info("end")
-	driver, found := client.driverSyncer.Driver(driverId)
+	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
@@ -164,4 +177,13 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 		return errors.New(response.Err)
 	}
 	return nil
+}
+
+func (client *localClient) driverImplements(protocol string, activateResponseProtocols []string) bool {
+	for _, nextProtocol := range activateResponseProtocols {
+		if protocol == nextProtocol {
+			return true
+		}
+	}
+	return false
 }

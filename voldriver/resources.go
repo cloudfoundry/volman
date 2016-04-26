@@ -11,16 +11,15 @@ const (
 	UnmountRoute  = "unmount"
 	RemoveRoute   = "remove"
 	GetRoute      = "get"
-	InfoRoute     = "info"
 	ActivateRoute = "activate"
 )
 
 var Routes = rata.Routes{
-	{Path: "/create", Method: "POST", Name: CreateRoute},
-	{Path: "/mount", Method: "POST", Name: MountRoute},
-	{Path: "/unmount", Method: "POST", Name: UnmountRoute},
-	{Path: "/remove", Method: "POST", Name: RemoveRoute},
-	{Path: "/get", Method: "GET", Name: GetRoute},
+	{Path: "/VolumeDriver.Create", Method: "POST", Name: CreateRoute},
+	{Path: "/VolumeDriver.Mount", Method: "POST", Name: MountRoute},
+	{Path: "/VolumeDriver.Unmount", Method: "POST", Name: UnmountRoute},
+	{Path: "/VolumeDriver.Remove", Method: "POST", Name: RemoveRoute},
+	{Path: "/VolumeDriver.Get", Method: "GET", Name: GetRoute},
 	{Path: "/Plugin.Activate", Method: "POST", Name: ActivateRoute},
 }
 
@@ -37,7 +36,7 @@ type Driver interface {
 
 type ActivateResponse struct {
 	Err        string
-	Implements string
+	Implements []string
 }
 
 type CreateRequest struct {

@@ -32,7 +32,8 @@ var _ = Describe("Local Driver", func() {
 	Describe("#Activate", func() {
 		It("returns Implements: VolumeDriver", func() {
 			activateResponse := localDriver.Activate(logger)
-			Expect(activateResponse.Implements).To(Equal("VolumeDriver"))
+			Expect(len(activateResponse.Implements)).To(BeNumerically(">", 0))
+			Expect(activateResponse.Implements[0]).To(Equal("VolumeDriver"))
 		})
 	})
 

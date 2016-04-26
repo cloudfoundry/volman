@@ -11,7 +11,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
-	volmanfakes "github.com/cloudfoundry-incubator/volman/volmanfakes"
+	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
@@ -25,8 +25,9 @@ var _ = Describe("Driver Syncer", func() {
 		fakeClock         *fakeclock.FakeClock
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 
-		syncer  vollocal.DriverSyncer
-		process ifrit.Process
+		registry vollocal.DriverRegistry
+		syncer   vollocal.DriverSyncer
+		process  ifrit.Process
 	)
 
 	BeforeEach(func() {
@@ -38,7 +39,8 @@ var _ = Describe("Driver Syncer", func() {
 
 		scanInterval = 10 * time.Second
 
-		syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, scanInterval, fakeClock)
+		registry = vollocal.NewDriverRegistry()
+		syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, registry, scanInterval, fakeClock)
 	})
 
 	Describe("#Runner", func() {
@@ -49,15 +51,15 @@ var _ = Describe("Driver Syncer", func() {
 
 	Describe("#Runner", func() {
 		It("has a non-nil and empty driver registry", func() {
-			Expect(syncer.DriverRegistry()).NotTo(BeNil())
-			Expect(len(syncer.DriverRegistry().Drivers())).To(Equal(0))
+			Expect(registry).NotTo(BeNil())
+			Expect(len(registry.Drivers())).To(Equal(0))
 		})
 	})
 
 	Describe("#Run", func() {
 		Context("when there are no drivers", func() {
 			It("should have no drivers in registry map", func() {
-				drivers := syncer.Drivers()
+				drivers := registry.Drivers()
 				Expect(len(drivers)).To(Equal(0))
 				Expect(fakeDriverFactory.DiscoverCallCount()).To(Equal(0))
 				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(0))
@@ -69,7 +71,7 @@ var _ = Describe("Driver Syncer", func() {
 				fakeDriver := new(volmanfakes.FakeDriver)
 				fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"fakedriver": fakeDriver}, nil)
 
-				syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, scanInterval, fakeClock)
+				syncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, registry, scanInterval, fakeClock)
 
 				process = ginkgomon.Invoke(syncer.Runner())
 			})
@@ -79,7 +81,7 @@ var _ = Describe("Driver Syncer", func() {
 			})
 
 			It("should have fake driver in registry map", func() {
-				drivers := syncer.Drivers()
+				drivers := registry.Drivers()
 				Expect(len(drivers)).To(Equal(1))
 				Expect(fakeDriverFactory.DiscoverCallCount()).To(Equal(1))
 			})
@@ -92,7 +94,7 @@ var _ = Describe("Driver Syncer", func() {
 
 				It("should find them!", func() {
 					fakeClock.Increment(scanInterval * 2)
-					Eventually(syncer.Drivers).Should(HaveLen(2))
+					Eventually(registry.Drivers).Should(HaveLen(2))
 					Expect(fakeDriverFactory.DiscoverCallCount()).To(Equal(2))
 				})
 			})
