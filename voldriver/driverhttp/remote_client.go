@@ -15,11 +15,18 @@ import (
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
+
+	os_http "net/http"
+
+	"time"
+
+	"github.com/pivotal-golang/clock"
 )
 
 type remoteClient struct {
 	HttpClient http.Client
 	reqGen     *rata.RequestGenerator
+	clock      clock.Clock
 }
 
 func NewRemoteClient(url string) *remoteClient {
@@ -30,13 +37,14 @@ func NewRemoteClient(url string) *remoteClient {
 		url = fmt.Sprintf("unix://%s", url)
 	}
 
-	return NewRemoteClientWithClient(url, httpClient)
+	return NewRemoteClientWithClient(url, httpClient, clock.NewClock())
 }
 
-func NewRemoteClientWithClient(socketPath string, client http.Client) *remoteClient {
+func NewRemoteClientWithClient(socketPath string, client http.Client, clock clock.Clock) *remoteClient {
 	return &remoteClient{
 		HttpClient: client,
 		reqGen:     rata.NewRequestGenerator(socketPath, voldriver.Routes),
+		clock:      clock,
 	}
 }
 
@@ -51,7 +59,7 @@ func (r *remoteClient) Activate(logger lager.Logger) voldriver.ActivateResponse 
 		return voldriver.ActivateResponse{Err: err.Error()}
 	}
 
-	response, err := r.HttpClient.Do(request)
+	response, err := r.do(logger, request)
 	if err != nil {
 		logger.Error("failed-activate", err)
 		return voldriver.ActivateResponse{Err: err.Error()}
@@ -91,7 +99,7 @@ func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.Creat
 		logger.Error("failed-creating-request", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
-	response, err := r.HttpClient.Do(request)
+	response, err := r.do(logger, request)
 	if err != nil {
 		logger.Error("failed-creating-volume", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
@@ -127,7 +135,7 @@ func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRe
 		return voldriver.MountResponse{Err: err.Error()}
 	}
 
-	response, err := r.HttpClient.Do(request)
+	response, err := r.do(logger, request)
 	if err != nil {
 		logger.Error("failed-mounting-volume", err)
 		return voldriver.MountResponse{Err: err.Error()}
@@ -168,7 +176,7 @@ func (r *remoteClient) Unmount(logger lager.Logger, unmountRequest voldriver.Unm
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
-	response, err := r.HttpClient.Do(request)
+	response, err := r.do(logger, request)
 	if err != nil {
 		logger.Error("failed-unmounting-volume", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
@@ -203,7 +211,7 @@ func (r *remoteClient) Remove(logger lager.Logger, removeRequest voldriver.Remov
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
-	response, err := r.HttpClient.Do(request)
+	response, err := r.do(logger, request)
 	if err != nil {
 		logger.Error("failed-removing-volume", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
@@ -238,7 +246,7 @@ func (r *remoteClient) Get(logger lager.Logger, getRequest voldriver.GetRequest)
 		return voldriver.GetResponse{Err: err.Error()}
 	}
 
-	response, err := r.HttpClient.Do(request)
+	response, err := r.do(logger, request)
 	if err != nil {
 		logger.Error("failed-getting-volume", err)
 		return voldriver.GetResponse{Err: err.Error()}
@@ -269,4 +277,30 @@ func unmarshallJSON(logger lager.Logger, reader io.ReadCloser, jsonResponse inte
 func (r *remoteClient) clientError(logger lager.Logger, err error, msg string) string {
 	logger.Error(msg, err)
 	return err.Error()
+}
+func (r *remoteClient) do(logger lager.Logger, request *os_http.Request) (*os_http.Response, error) {
+	var response *os_http.Response
+
+	// NewExponentialBackOff creates an instance of ExponentialBackOff using default values.
+	customBackoff := NewExponentialBackOff(r.clock)
+	customBackoff.MaxElapsedTime = 30 * time.Second
+
+	count := 0
+	err := Retry(func() error {
+		var err error
+		logger.Info("Trying to contact", lager.Data{"count": count})
+		response, err = r.HttpClient.Do(request)
+		count = count + 1
+
+		if response == nil {
+			logger.Info("response-nil")
+		} else {
+
+			logger.Info("response", lager.Data{"response": response.Status})
+		}
+		logger.Error("Retry", err)
+		return err
+	}, customBackoff)
+
+	return response, err
 }

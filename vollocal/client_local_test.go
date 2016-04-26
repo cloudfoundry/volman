@@ -87,7 +87,7 @@ var _ = Describe("Volman", func() {
 
 		Context("has driver in location", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec",[]byte("http://0.0.0.0:8080"))
+				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
 				driverSyncer = vollocal.NewDriverSyncer(logger, fakeDriverFactory, driverRegistry, scanInterval, fakeClock)

@@ -6,11 +6,12 @@ import (
 
 	"github.com/tedsuo/ifrit"
 
+	"fmt"
+
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
-	"fmt"
 )
 
 type localClient struct {

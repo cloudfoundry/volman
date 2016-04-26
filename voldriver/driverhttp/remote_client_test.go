@@ -7,11 +7,14 @@ import (
 	"bytes"
 	"fmt"
 
+	os_http "net/http"
+
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/clock/fakeclock"
 	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
@@ -26,11 +29,13 @@ var _ = Describe("RemoteClient", func() {
 		validHttpCreateResponse   *http.Response
 		validHttpActivateResponse *http.Response
 		invalidHttpResponse       *http.Response
+		fakeClock                 *fakeclock.FakeClock
 	)
 
 	BeforeEach(func() {
 		httpClient = new(volmanfakes.FakeClient)
-		driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient)
+		fakeClock = fakeclock.NewFakeClock(time.Now())
+		driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient, fakeClock)
 		validHttpCreateResponse = &http.Response{
 			StatusCode: 200,
 		}
@@ -49,8 +54,9 @@ var _ = Describe("RemoteClient", func() {
 	Context("when the driver returns as error and the transport is TCP", func() {
 
 		BeforeEach(func() {
+			fakeClock = fakeclock.NewFakeClock(time.Now())
 			httpClient = new(volmanfakes.FakeClient)
-			driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient)
+			driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient, fakeClock)
 			invalidHttpResponse = &http.Response{
 				StatusCode: 500,
 				Body:       stringCloser{bytes.NewBufferString("{\"Err\":\"some error string\"}")},
@@ -186,6 +192,9 @@ var _ = Describe("RemoteClient", func() {
 	Context("when the http transport fails and the transport is TCP", func() {
 
 		BeforeEach(func() {
+			// all of the tests in this context will perform retry logic over 30 seconds, so we need to
+			// simulate time passing.
+			go fastForward(fakeClock, 40)
 		})
 
 		It("should fail to mount", func() {
@@ -247,7 +256,8 @@ var _ = Describe("RemoteClient", func() {
 
 			time.Sleep(time.Millisecond * 1000)
 
-			driver = driverhttp.NewRemoteClientWithClient(socketPath, httpClient)
+			fakeClock = fakeclock.NewFakeClock(time.Now())
+			driver = driverhttp.NewRemoteClientWithClient(socketPath, httpClient, fakeClock)
 			validHttpMountResponse = &http.Response{
 				StatusCode: 200,
 				Body:       stringCloser{bytes.NewBufferString("{\"Mountpoint\":\"somePath\"}")},
@@ -289,4 +299,70 @@ var _ = Describe("RemoteClient", func() {
 		})
 
 	})
+
+	Context("when the transport fails", func() {
+
+		var (
+			retryCount int
+		)
+
+		It("when it fails first time and then succeeds", func() {
+
+			httpClient.DoStub = func(req *os_http.Request) (resp *os_http.Response, err error) {
+
+				defer func() {
+					retryCount = retryCount + 1
+				}()
+
+				if retryCount == 0 {
+					return nil, fmt.Errorf("connection failed")
+				}
+				return validHttpMountResponse, nil
+
+			}
+
+			go fastForward(fakeClock, 10)
+
+			volumeId := "fake-volume"
+			mountResponse := driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
+
+			Expect(mountResponse.Err).To(Equal(""))
+			Expect(mountResponse.Mountpoint).NotTo(Equal(""))
+			Expect(retryCount).To(Equal(2))
+
+		})
+
+		It("when it fails and timeout exceeds", func() {
+
+			httpClient.DoStub = func(req *os_http.Request) (resp *os_http.Response, err error) {
+				defer func() {
+					retryCount = retryCount + 1
+					//fakeClock.IncrementBySeconds(10)
+				}()
+				//timestamp := fakeClock.Now()
+				//fmt.Printf("Ts: %d:%d:%d\n", timestamp.Minute(), timestamp.Second(), timestamp.Nanosecond()/(1000*1000))
+				return nil, fmt.Errorf("connection failed")
+			}
+
+			go fastForward(fakeClock, 40)
+
+			timestamp := fakeClock.Now()
+			volumeId := "fake-volume"
+			mountResponse := driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
+
+			Expect(mountResponse.Err).NotTo(Equal(""))
+
+			elapsed := fakeClock.Now().Sub(timestamp)
+			//fmt.Printf("Retries: %d\n", retryCount)
+			Expect(elapsed.Seconds()).To(BeNumerically(">", 30))
+
+		})
+	})
 })
+
+func fastForward(fakeClock *fakeclock.FakeClock, seconds int) {
+	for i := 0; i < seconds; i++ {
+		time.Sleep(time.Millisecond * 1)
+		fakeClock.IncrementBySeconds(1)
+	}
+}

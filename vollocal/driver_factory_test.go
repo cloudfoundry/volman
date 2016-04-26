@@ -1,9 +1,9 @@
 package vollocal_test
 
 import (
+	"fmt"
 	"os"
 	"path"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -56,7 +56,7 @@ var _ = Describe("DriverFactory", func() {
 
 		BeforeEach(func() {
 			driverName = "some-driver-name"
-			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName,"json", []byte("{\"url\":\"http://0.0.0.0:8080\"}"))
+			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"url\":\"http://0.0.0.0:8080\"}"))
 			Expect(err).NotTo(HaveOccurred())
 			err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
 			Expect(err).NotTo(HaveOccurred())
@@ -91,7 +91,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when a json driver spec is discovered", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName,"json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 				Expect(err).NotTo(HaveOccurred())
 				driver, err = driverFactory.Driver(testLogger, driverName, driverName+".json")
 				Expect(err).ToNot(HaveOccurred())
