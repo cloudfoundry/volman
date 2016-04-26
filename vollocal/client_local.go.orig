@@ -10,7 +10,13 @@ import (
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
+<<<<<<< HEAD
+=======
+
 	"fmt"
+
+	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
+>>>>>>> 861fe6a4b1ad34b9f214cb7449a03c6451d2ba83
 )
 
 type localClient struct {
@@ -30,7 +36,14 @@ func NewLocalClient(logger lager.Logger, driversPath string) (*localClient, ifri
 	return NewLocalClientWithDriverFactory(logger, driversPath, driverFactory, syncer, registry)
 }
 
+<<<<<<< HEAD
+func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory, driverSyncer DriverSyncer) (*localClient, ifrit.Runner) {
+=======
 func NewLocalClientWithDriverFactory(logger lager.Logger, driversPath string, driverFactory DriverFactory, driverSyncer DriverSyncer, driverRegistry DriverRegistry) (*localClient, ifrit.Runner) {
+	cf_lager.AddFlags(flag.NewFlagSet("", flag.PanicOnError))
+	flag.Parse()
+
+>>>>>>> 861fe6a4b1ad34b9f214cb7449a03c6451d2ba83
 	return &localClient{
 		driverSyncer:   driverSyncer,
 		driverRegistry: driverRegistry,
@@ -154,8 +167,12 @@ func (client *localClient) activate(logger lager.Logger, driverId string, driver
 				logger.Error("driver-registry-activate-error", err)
 				return err
 			}
-			logger.Debug("driver-activated", lager.Data{"driver": driverId})
+			logger.Info("driver-activated", lager.Data{"driver": driverId})
 		}
+<<<<<<< HEAD
+		logger.Debug("driver-activated", lager.Data{"driver": driverId})
+=======
+>>>>>>> 861fe6a4b1ad34b9f214cb7449a03c6451d2ba83
 	}
 
 	return nil
