@@ -69,7 +69,6 @@ var _ = Describe("Volman", func() {
 
 			BeforeEach(func() {
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
-				fakeDriverFactory.DriversDirReturns("")
 			})
 
 			It("should report empty list of drivers", func() {
@@ -339,7 +338,7 @@ var _ = Describe("Volman", func() {
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 
 				calls := 0
-				fakeDriverFactory.DriverStub = func(lager.Logger, string, string) (voldriver.Driver, error) {
+				fakeDriverFactory.DriverStub = func(lager.Logger, string, string, string) (voldriver.Driver, error) {
 					calls++
 					if calls > 1 {
 						return nil, fmt.Errorf("driver not found")

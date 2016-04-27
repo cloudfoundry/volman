@@ -21,6 +21,7 @@ import (
 var client volman.Manager
 
 var defaultPluginsDirectory string
+var secondPluginsDirectory string
 
 var fakeDriverPath string
 var localDriverServerPort int
@@ -52,6 +53,9 @@ var _ = BeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	defaultPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest")
+	Expect(err).ShouldNot(HaveOccurred())
+
+	secondPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest2")
 	Expect(err).ShouldNot(HaveOccurred())
 
 	localDriverServerPort = 9750 + GinkgoParallelNode()

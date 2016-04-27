@@ -10,12 +10,6 @@ import (
 )
 
 type FakeDriverFactory struct {
-	DriversDirStub        func() string
-	driversDirMutex       sync.RWMutex
-	driversDirArgsForCall []struct{}
-	driversDirReturns     struct {
-		result1 string
-	}
 	DiscoverStub        func(logger lager.Logger) (map[string]voldriver.Driver, error)
 	discoverMutex       sync.RWMutex
 	discoverArgsForCall []struct {
@@ -25,41 +19,18 @@ type FakeDriverFactory struct {
 		result1 map[string]voldriver.Driver
 		result2 error
 	}
-	DriverStub        func(logger lager.Logger, driverId string, driverFileName string) (voldriver.Driver, error)
+	DriverStub        func(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
 	driverMutex       sync.RWMutex
 	driverArgsForCall []struct {
 		logger         lager.Logger
 		driverId       string
+		driverPath     string
 		driverFileName string
 	}
 	driverReturns struct {
 		result1 voldriver.Driver
 		result2 error
 	}
-}
-
-func (fake *FakeDriverFactory) DriversDir() string {
-	fake.driversDirMutex.Lock()
-	fake.driversDirArgsForCall = append(fake.driversDirArgsForCall, struct{}{})
-	fake.driversDirMutex.Unlock()
-	if fake.DriversDirStub != nil {
-		return fake.DriversDirStub()
-	} else {
-		return fake.driversDirReturns.result1
-	}
-}
-
-func (fake *FakeDriverFactory) DriversDirCallCount() int {
-	fake.driversDirMutex.RLock()
-	defer fake.driversDirMutex.RUnlock()
-	return len(fake.driversDirArgsForCall)
-}
-
-func (fake *FakeDriverFactory) DriversDirReturns(result1 string) {
-	fake.DriversDirStub = nil
-	fake.driversDirReturns = struct {
-		result1 string
-	}{result1}
 }
 
 func (fake *FakeDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
@@ -95,16 +66,17 @@ func (fake *FakeDriverFactory) DiscoverReturns(result1 map[string]voldriver.Driv
 	}{result1, result2}
 }
 
-func (fake *FakeDriverFactory) Driver(logger lager.Logger, driverId string, driverFileName string) (voldriver.Driver, error) {
+func (fake *FakeDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
 	fake.driverMutex.Lock()
 	fake.driverArgsForCall = append(fake.driverArgsForCall, struct {
 		logger         lager.Logger
 		driverId       string
+		driverPath     string
 		driverFileName string
-	}{logger, driverId, driverFileName})
+	}{logger, driverId, driverPath, driverFileName})
 	fake.driverMutex.Unlock()
 	if fake.DriverStub != nil {
-		return fake.DriverStub(logger, driverId, driverFileName)
+		return fake.DriverStub(logger, driverId, driverPath, driverFileName)
 	} else {
 		return fake.driverReturns.result1, fake.driverReturns.result2
 	}
@@ -116,10 +88,10 @@ func (fake *FakeDriverFactory) DriverCallCount() int {
 	return len(fake.driverArgsForCall)
 }
 
-func (fake *FakeDriverFactory) DriverArgsForCall(i int) (lager.Logger, string, string) {
+func (fake *FakeDriverFactory) DriverArgsForCall(i int) (lager.Logger, string, string, string) {
 	fake.driverMutex.RLock()
 	defer fake.driverMutex.RUnlock()
-	return fake.driverArgsForCall[i].logger, fake.driverArgsForCall[i].driverId, fake.driverArgsForCall[i].driverFileName
+	return fake.driverArgsForCall[i].logger, fake.driverArgsForCall[i].driverId, fake.driverArgsForCall[i].driverPath, fake.driverArgsForCall[i].driverFileName
 }
 
 func (fake *FakeDriverFactory) DriverReturns(result1 voldriver.Driver, result2 error) {

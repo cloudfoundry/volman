@@ -35,43 +35,50 @@ var _ = Describe("DriverFactory", func() {
 		})
 	})
 
-	Context("when given driverspath with a single driver", func() {
+	Context("when given a simple driverspath", func() {
+		var (
+			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
+			driverFactory           vollocal.DriverFactory
+		)
 
-		BeforeEach(func() {
-			driverName = "some-driver-name"
-			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
-			Expect(err).NotTo(HaveOccurred())
+		JustBeforeEach(func() {
+			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
 		})
 
-		It("should find drivers", func() {
-			fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
-			driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
-			drivers, err := driverFactory.Discover(testLogger)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(drivers)).To(Equal(1))
-			Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(1))
-		})
-	})
+		Context("with a single driver", func() {
 
-	Context("when given driverspath with hetergeneous driver specifications", func() {
+			BeforeEach(func() {
+				driverName = "some-driver-name"
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
+				Expect(err).NotTo(HaveOccurred())
+			})
 
-		BeforeEach(func() {
-			driverName = "some-driver-name"
-			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"url\":\"http://0.0.0.0:8080\"}"))
-			Expect(err).NotTo(HaveOccurred())
-			err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
-			Expect(err).NotTo(HaveOccurred())
+			It("should find drivers", func() {
+				drivers, err := driverFactory.Discover(testLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(drivers)).To(Equal(1))
+				Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(1))
+			})
 		})
 
-		It("should preferentially select spec over json specification", func() {
-			fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
-			driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
-			_, err := driverFactory.Discover(testLogger)
-			Expect(err).ToNot(HaveOccurred())
-			actualAddress := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
-			Expect(actualAddress).To(Equal("http://0.0.0.0:9090"))
-		})
+		Context("with hetergeneous driver specifications", func() {
 
+			BeforeEach(func() {
+				driverName = "some-driver-name"
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+				Expect(err).NotTo(HaveOccurred())
+				err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should preferentially select spec over json specification", func() {
+				_, err := driverFactory.Discover(testLogger)
+				Expect(err).ToNot(HaveOccurred())
+				actualAddress := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
+				Expect(actualAddress).To(Equal("http://0.0.0.0:9090"))
+			})
+		})
 	})
 
 	Context("when a valid driver spec is discovered", func() {
@@ -94,7 +101,7 @@ var _ = Describe("DriverFactory", func() {
 			BeforeEach(func() {
 				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 				Expect(err).NotTo(HaveOccurred())
-				driver, err = driverFactory.Driver(testLogger, driverName, driverName+".json")
+				driver, err = driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".json")
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
@@ -105,7 +112,7 @@ var _ = Describe("DriverFactory", func() {
 				fakeOs := new(osfakes.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
-				_, err := driverFactory.Driver(testLogger, driverName, driverName+".json")
+				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".json")
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -116,7 +123,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("should error", func() {
-				_, err := driverFactory.Driver(testLogger, driverName, driverName+".json")
+				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".json")
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -125,7 +132,7 @@ var _ = Describe("DriverFactory", func() {
 			BeforeEach(func() {
 				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
-				driver, err = driverFactory.Driver(testLogger, driverName, driverName+".spec")
+				driver, err = driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".spec")
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
@@ -136,14 +143,14 @@ var _ = Describe("DriverFactory", func() {
 				fakeOs := new(osfakes.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
-				_, err := driverFactory.Driver(testLogger, driverName, driverName+".spec")
+				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".spec")
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should error if driver id doesn't match found driver", func() {
 				fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
 				driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
-				_, err := driverFactory.Driver(testLogger, "garbage", "garbage.garbage")
+				_, err := driverFactory.Driver(testLogger, "garbage", defaultPluginsDirectory, "garbage.garbage")
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -155,7 +162,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
-				driver, err := driverFactory.Driver(testLogger, driverName, driverName+".sock")
+				driver, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(driver).To(Equal(fakeDriver))
 				address := path.Join(defaultPluginsDirectory, driverName+".sock")
@@ -163,7 +170,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 			It("should error for invalid sock endpoint address", func() {
 				fakeRemoteClientFactory.NewRemoteClientReturns(nil, fmt.Errorf("invalid address"))
-				_, err := driverFactory.Driver(testLogger, driverName, driverName+".sock")
+				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -184,8 +191,75 @@ var _ = Describe("DriverFactory", func() {
 
 		})
 		It("should error", func() {
-			_, err := driverFactory.Driver(testLogger, driverName, driverName+".spec")
+			_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".spec")
 			Expect(err).To(HaveOccurred())
 		})
+	})
+
+	Context("when given a compound driverspath", func() {
+		var (
+			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
+			driverFactory           vollocal.DriverFactory
+		)
+
+		JustBeforeEach(func() {
+			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory+string(os.PathListSeparator)+secondPluginsDirectory, fakeRemoteClientFactory)
+		})
+
+		Context("with a single driver", func() {
+
+			BeforeEach(func() {
+				driverName = "some-driver-name"
+				err := voldriver.WriteDriverSpec(testLogger, secondPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should find drivers", func() {
+				drivers, err := driverFactory.Discover(testLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(drivers)).To(Equal(1))
+				Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(1))
+			})
+
+		})
+
+		Context("with multiple drivers in multiple directories", func() {
+
+			BeforeEach(func() {
+				driverName = "some-driver-name"
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+				Expect(err).NotTo(HaveOccurred())
+				err = voldriver.WriteDriverSpec(testLogger, secondPluginsDirectory, "some-other-driver-name", "json", []byte("{\"Addr\":\"http://0.0.0.0:9090\"}"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should find both drivers", func() {
+				drivers, err := driverFactory.Discover(testLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(drivers)).To(Equal(2))
+			})
+
+		})
+
+		Context("with the same driver but in multiple directories", func() {
+
+			BeforeEach(func() {
+				driverName = "some-driver-name"
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+				Expect(err).NotTo(HaveOccurred())
+				err = voldriver.WriteDriverSpec(testLogger, secondPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should preferentially select the driver in the first directory", func() {
+				_, err := driverFactory.Discover(testLogger)
+				Expect(err).ToNot(HaveOccurred())
+				actualAddress := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
+				Expect(actualAddress).To(Equal("http://0.0.0.0:8080"))
+			})
+
+		})
+
 	})
 })

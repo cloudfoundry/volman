@@ -17,9 +17,16 @@ import (
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory
 
+// DriverFactories are responsible for instantiating remote client implementations of the voldriver.Driver interface.
 type DriverFactory interface {
+
+	// Discover will compile a list of drivers from the path list in DriversPath.  If the same driver id is found in
+	// multiple directories, it will favor the directory found first in the path.
+	// if 2 specs are found within the *same* directory, it will choose .sock files first, then .spec files, then .json
 	Discover(logger lager.Logger) (map[string]voldriver.Driver, error)
-	Driver(logger lager.Logger, driverId string, driverFileName string) (voldriver.Driver, error)
+
+	// Given a driver id, path and config filename returns a remote client implementation of the voldriver.Driver interface
+	Driver(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
 }
 
 type realDriverFactory struct {
@@ -49,22 +56,29 @@ func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.
 	logger.Info(fmt.Sprintf("Discovering drivers in %s", r.DriversPath))
 	defer logger.Debug("end")
 
-	//precedence order: sock -> spec -> json
-	spec_types := [3]string{"sock", "spec", "json"}
+	paths := filepath.SplitList(r.DriversPath)
+
 	endpoints := make(map[string]voldriver.Driver)
-	for _, spec_type := range spec_types {
-		matchingDriverSpecs, err := r.getMatchingDriverSpecs(logger, spec_type)
-		if err != nil { // untestable on linux, does glob work differently on windows???
-			return map[string]voldriver.Driver{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", r.DriversPath, err.Error())
+	for _, driverPath := range paths {
+		//precedence order: sock -> spec -> json
+		spec_types := [3]string{"sock", "spec", "json"}
+		for _, spec_type := range spec_types {
+			matchingDriverSpecs, err := r.getMatchingDriverSpecs(logger, driverPath, spec_type)
+
+			if err != nil {
+				// untestable on linux, does glob work differently on windows???
+				return map[string]voldriver.Driver{}, fmt.Errorf("Volman cocd vollovnfigured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
+			}
+			if len(matchingDriverSpecs) > 0 {
+				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
+				endpoints = r.insertIfNotFound(logger, endpoints, driverPath, matchingDriverSpecs)
+			}
 		}
-		logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
-		endpoints = r.insertIfNotFound(logger, endpoints, matchingDriverSpecs)
 	}
-	logger.Debug("found-specs")
 	return endpoints, nil
 }
 
-func (r *realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, specs []string) map[string]voldriver.Driver {
+func (r *realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, driverPath string, specs []string) map[string]voldriver.Driver {
 	logger = logger.Session("insert-if-not-found")
 	logger.Debug("start")
 	defer logger.Debug("end")
@@ -81,7 +95,7 @@ func (r *realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[
 		logger.Debug("insert-unique-spec", lager.Data{"specname": specName})
 		_, ok := endpoints[specName]
 		if ok == false {
-			driver, err := r.Driver(logger, specName, specFile)
+			driver, err := r.Driver(logger, specName, driverPath, specFile)
 			if err != nil {
 				logger.Error("error-creating-driver", err)
 				continue
@@ -93,7 +107,7 @@ func (r *realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[
 	return endpoints
 }
 
-func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverFileName string) (voldriver.Driver, error) {
+func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
 	logger = logger.Session("driver", lager.Data{"driverId": driverId, "driverFileName": driverFileName})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -105,9 +119,9 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverF
 		extension := strings.Split(driverFileName, ".")[1]
 		switch extension {
 		case "sock":
-			address = path.Join(r.DriversPath, driverFileName)
+			address = path.Join(driverPath, driverFileName)
 		case "spec":
-			configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
+			configFile, err := r.useOs.Open(path.Join(driverPath, driverFileName))
 			if err != nil {
 				logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
 				return nil, err
@@ -122,7 +136,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverF
 		case "json":
 			// extract url from json file
 			var driverJsonSpec voldriver.DriverSpec
-			configFile, err := r.useOs.Open(path.Join(r.DriversPath, driverFileName))
+			configFile, err := r.useOs.Open(path.Join(driverPath, driverFileName))
 			if err != nil {
 				logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
 				return nil, err
@@ -153,12 +167,12 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverF
 	return nil, fmt.Errorf("Driver '%s' not found in list of known drivers", driverId)
 }
 
-func (r *realDriverFactory) getMatchingDriverSpecs(logger lager.Logger, pattern string) ([]string, error) {
-	matchingDriverSpecs, err := filepath.Glob(r.DriversPath + "/*." + pattern)
+func (r *realDriverFactory) getMatchingDriverSpecs(logger lager.Logger, path string, pattern string) ([]string, error) {
+	logger.Debug("binaries", lager.Data{"path": path, "pattern": pattern})
+	matchingDriverSpecs, err := filepath.Glob(path + "/*." + pattern)
 	if err != nil { // untestable on linux, does glob work differently on windows???
-		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", r.DriversPath, err.Error())
+		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", path, err.Error())
 	}
-	logger.Debug("binaries", lager.Data{"pattern": pattern, "binaries": matchingDriverSpecs})
 	return matchingDriverSpecs, nil
 
 }
