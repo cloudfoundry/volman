@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cloudfoundry-incubator/volman/system"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
+	"github.com/cloudfoundry/gunk/os_wrap"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -26,7 +26,7 @@ type DriverFactory interface {
 type realDriverFactory struct {
 	DriversPath     string
 	Factory         driverhttp.RemoteClientFactory
-	useOs           system.Os
+	useOs           os_wrap.Os
 	DriversRegistry map[string]voldriver.Driver
 }
 
@@ -36,10 +36,10 @@ func NewDriverFactory(driversPath string) DriverFactory {
 }
 
 func NewDriverFactoryWithRemoteClientFactory(driversPath string, remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
-	return &realDriverFactory{driversPath, remoteClientFactory, &system.SystemOs{}, nil}
+	return &realDriverFactory{driversPath, remoteClientFactory, os_wrap.NewOs(), nil}
 }
 
-func NewDriverFactoryWithOs(driversPath string, useOs system.Os) DriverFactory {
+func NewDriverFactoryWithOs(driversPath string, useOs os_wrap.Os) DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
 	return &realDriverFactory{driversPath, remoteClientFactory, useOs, nil}
 }
@@ -138,9 +138,8 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverF
 			}
 			address = driverJsonSpec.Address
 		default:
-			msg := fmt.Sprintf("unknown-driver-extension: %s", extension)
-			err := fmt.Errorf(msg)
-			logger.Error(msg, err)
+			err := fmt.Errorf("unknown-driver-extension: %s", extension)
+			logger.Error("driver", err)
 			return nil, err
 
 		}

@@ -11,7 +11,6 @@ import (
 	"fmt"
 
 	"github.com/cloudfoundry-incubator/cf_http"
-	"github.com/cloudfoundry-incubator/volman/system/http"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
@@ -20,17 +19,18 @@ import (
 
 	"time"
 
+	"github.com/cloudfoundry/gunk/http_wrap"
 	"github.com/pivotal-golang/clock"
 )
 
 type remoteClient struct {
-	HttpClient http.Client
+	HttpClient http_wrap.Client
 	reqGen     *rata.RequestGenerator
 	clock      clock.Clock
 }
 
 func NewRemoteClient(url string) *remoteClient {
-	httpClient := http.NewClientFrom(cf_http.NewClient())
+	httpClient := http_wrap.NewClientFrom(cf_http.NewClient())
 
 	if strings.Contains(url, ".sock") {
 		httpClient = cf_http.NewUnixClient(url)
@@ -40,7 +40,7 @@ func NewRemoteClient(url string) *remoteClient {
 	return NewRemoteClientWithClient(url, httpClient, clock.NewClock())
 }
 
-func NewRemoteClientWithClient(socketPath string, client http.Client, clock clock.Clock) *remoteClient {
+func NewRemoteClientWithClient(socketPath string, client http_wrap.Client, clock clock.Clock) *remoteClient {
 	return &remoteClient{
 		HttpClient: client,
 		reqGen:     rata.NewRequestGenerator(socketPath, voldriver.Routes),

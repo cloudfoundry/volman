@@ -11,7 +11,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
-	"github.com/cloudfoundry-incubator/volman/volmanfakes"
+	"github.com/cloudfoundry/gunk/http_wrap/httpfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/clock/fakeclock"
@@ -23,7 +23,7 @@ var _ = Describe("RemoteClient", func() {
 
 	var (
 		testLogger                = lagertest.NewTestLogger("FakeDriver Server Test")
-		httpClient                *volmanfakes.FakeClient
+		httpClient                *httpfakes.FakeClient
 		driver                    voldriver.Driver
 		validHttpMountResponse    *http.Response
 		validHttpCreateResponse   *http.Response
@@ -33,7 +33,7 @@ var _ = Describe("RemoteClient", func() {
 	)
 
 	BeforeEach(func() {
-		httpClient = new(volmanfakes.FakeClient)
+		httpClient = new(httpfakes.FakeClient)
 		fakeClock = fakeclock.NewFakeClock(time.Now())
 		driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient, fakeClock)
 		validHttpCreateResponse = &http.Response{
@@ -55,7 +55,7 @@ var _ = Describe("RemoteClient", func() {
 
 		BeforeEach(func() {
 			fakeClock = fakeclock.NewFakeClock(time.Now())
-			httpClient = new(volmanfakes.FakeClient)
+			httpClient = new(httpfakes.FakeClient)
 			driver = driverhttp.NewRemoteClientWithClient("http://127.0.0.1:8080", httpClient, fakeClock)
 			invalidHttpResponse = &http.Response{
 				StatusCode: 500,
@@ -250,7 +250,7 @@ var _ = Describe("RemoteClient", func() {
 
 		BeforeEach(func() {
 
-			httpClient = new(volmanfakes.FakeClient)
+			httpClient = new(httpfakes.FakeClient)
 			volumeId = "fake-volume"
 			fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
 

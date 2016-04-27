@@ -11,6 +11,7 @@ import (
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
+	"github.com/cloudfoundry/gunk/os_wrap/osfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -101,7 +102,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal("http://0.0.0.0:8080"))
 			})
 			It("should fail if unable to open file", func() {
-				fakeOs := new(volmanfakes.FakeOs)
+				fakeOs := new(osfakes.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.Driver(testLogger, driverName, driverName+".json")
@@ -132,7 +133,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal("http://0.0.0.0:8080"))
 			})
 			It("should fail if unable to open file", func() {
-				fakeOs := new(volmanfakes.FakeOs)
+				fakeOs := new(osfakes.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.Driver(testLogger, driverName, driverName+".spec")
