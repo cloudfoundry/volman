@@ -69,7 +69,9 @@ func createVolmanServer(logger lager.Logger, atAddress string, driversPath strin
 		panic("'-driversPath' must be provided")
 	}
 
-	client, runner := vollocal.NewLocalClient(logger, driversPath)
+	cfg := vollocal.NewDriverConfig()
+	cfg.DriverPath = driversPath
+	client, runner := vollocal.NewServer(logger, cfg)
 
 	handler, err := volhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)
