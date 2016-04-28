@@ -19,7 +19,7 @@ var Routes = rata.Routes{
 	{Path: "/VolumeDriver.Mount", Method: "POST", Name: MountRoute},
 	{Path: "/VolumeDriver.Unmount", Method: "POST", Name: UnmountRoute},
 	{Path: "/VolumeDriver.Remove", Method: "POST", Name: RemoveRoute},
-	{Path: "/VolumeDriver.Get", Method: "GET", Name: GetRoute},
+	{Path: "/VolumeDriver.Get", Method: "POST", Name: GetRoute},
 	{Path: "/Plugin.Activate", Method: "POST", Name: ActivateRoute},
 }
 

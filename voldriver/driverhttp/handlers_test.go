@@ -126,7 +126,57 @@ var _ = Describe("Volman Driver Handlers", func() {
 			Expect(found).To(BeTrue())
 
 			path := fmt.Sprintf("http://0.0.0.0%s", route.Path)
-			httpRequest, err := http.NewRequest("GET", path, bytes.NewReader(getJSONRequest))
+			httpRequest, err := http.NewRequest("POST", path, bytes.NewReader(getJSONRequest))
+			Expect(err).NotTo(HaveOccurred())
+			handler.ServeHTTP(httpResponseRecorder, httpRequest)
+
+			By("then expecting correct HTTP status code")
+			Expect(httpResponseRecorder.Code).To(Equal(200))
+		})
+
+		It("should produce a handler with a create route", func() {
+			By("faking out the driver")
+			driver := &volmanfakes.FakeDriver{}
+			driver.CreateReturns(voldriver.ErrorResponse{})
+			handler, err := driverhttp.NewHandler(testLogger, driver)
+			Expect(err).NotTo(HaveOccurred())
+
+			httpResponseRecorder := httptest.NewRecorder()
+			createRequest := voldriver.CreateRequest{Name: "some-volume"}
+			createJSONRequest, err := json.Marshal(createRequest)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("then fake serving the response using the handler")
+			route, found := voldriver.Routes.FindRouteByName(voldriver.CreateRoute)
+			Expect(found).To(BeTrue())
+
+			path := fmt.Sprintf("http://0.0.0.0%s", route.Path)
+			httpRequest, err := http.NewRequest("POST", path, bytes.NewReader(createJSONRequest))
+			Expect(err).NotTo(HaveOccurred())
+			handler.ServeHTTP(httpResponseRecorder, httpRequest)
+
+			By("then expecting correct HTTP status code")
+			Expect(httpResponseRecorder.Code).To(Equal(200))
+		})
+
+		It("should produce a handler with a remove route", func() {
+			By("faking out the driver")
+			driver := &volmanfakes.FakeDriver{}
+			driver.RemoveReturns(voldriver.ErrorResponse{})
+			handler, err := driverhttp.NewHandler(testLogger, driver)
+			Expect(err).NotTo(HaveOccurred())
+
+			httpResponseRecorder := httptest.NewRecorder()
+			removeRequest := voldriver.RemoveRequest{Name: "some-volume"}
+			removeJSONRequest, err := json.Marshal(removeRequest)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("then fake serving the response using the handler")
+			route, found := voldriver.Routes.FindRouteByName(voldriver.RemoveRoute)
+			Expect(found).To(BeTrue())
+
+			path := fmt.Sprintf("http://0.0.0.0%s", route.Path)
+			httpRequest, err := http.NewRequest("POST", path, bytes.NewReader(removeJSONRequest))
 			Expect(err).NotTo(HaveOccurred())
 			handler.ServeHTTP(httpResponseRecorder, httpRequest)
 
