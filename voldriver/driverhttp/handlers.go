@@ -21,7 +21,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 
 		voldriver.ActivateRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
-			logger = logger.Session("activate")
+			logger = logger.Session("handle-activate")
 			logger.Info("start")
 			defer logger.Info("end")
 			defer func() { logger = serverlogger }()
@@ -40,7 +40,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 
 		voldriver.GetRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			serverlogger := logger
-			logger = logger.Session("get-mount")
+			logger = logger.Session("handle-get")
 			logger.Info("start")
 			defer logger.Info("end")
 			defer func() { logger = serverlogger }()

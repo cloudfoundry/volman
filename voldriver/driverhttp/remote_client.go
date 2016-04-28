@@ -23,6 +23,24 @@ import (
 	"github.com/pivotal-golang/clock"
 )
 
+type reqFactory struct {
+	reqGen  *rata.RequestGenerator
+	route   string
+	payload []byte
+}
+
+func newReqFactory(reqGen *rata.RequestGenerator, route string, payload []byte) *reqFactory {
+	return &reqFactory{
+		reqGen:  reqGen,
+		route:   route,
+		payload: payload,
+	}
+}
+
+func (r *reqFactory) Request() (*os_http.Request, error) {
+	return r.reqGen.CreateRequest(r.route, nil, bytes.NewBuffer(r.payload))
+}
+
 type remoteClient struct {
 	HttpClient http_wrap.Client
 	reqGen     *rata.RequestGenerator
@@ -53,11 +71,7 @@ func (r *remoteClient) Activate(logger lager.Logger) voldriver.ActivateResponse 
 	logger.Info("start")
 	defer logger.Info("end")
 
-	request, err := r.reqGen.CreateRequest(voldriver.ActivateRoute, nil, nil)
-	if err != nil {
-		logger.Error("failed-creating-request", err)
-		return voldriver.ActivateResponse{Err: err.Error()}
-	}
+	request := newReqFactory(r.reqGen, voldriver.ActivateRoute, nil)
 
 	response, err := r.do(logger, request)
 	if err != nil {
@@ -94,11 +108,8 @@ func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.Creat
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
-	request, err := r.reqGen.CreateRequest(voldriver.CreateRoute, nil, bytes.NewReader(payload))
-	if err != nil {
-		logger.Error("failed-creating-request", err)
-		return voldriver.ErrorResponse{Err: err.Error()}
-	}
+	request := newReqFactory(r.reqGen, voldriver.CreateRoute, payload)
+
 	response, err := r.do(logger, request)
 	if err != nil {
 		logger.Error("failed-creating-volume", err)
@@ -128,12 +139,7 @@ func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRe
 		return voldriver.MountResponse{Err: err.Error()}
 	}
 
-	request, err := r.reqGen.CreateRequest(voldriver.MountRoute, nil, bytes.NewReader(sendingJson))
-
-	if err != nil {
-		logger.Error("failed-creating-request", err)
-		return voldriver.MountResponse{Err: err.Error()}
-	}
+	request := newReqFactory(r.reqGen, voldriver.MountRoute, sendingJson)
 
 	response, err := r.do(logger, request)
 	if err != nil {
@@ -170,11 +176,7 @@ func (r *remoteClient) Unmount(logger lager.Logger, unmountRequest voldriver.Unm
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
-	request, err := r.reqGen.CreateRequest(voldriver.UnmountRoute, nil, bytes.NewReader(payload))
-	if err != nil {
-		logger.Error("failed-creating-request", err)
-		return voldriver.ErrorResponse{Err: err.Error()}
-	}
+	request := newReqFactory(r.reqGen, voldriver.UnmountRoute, payload)
 
 	response, err := r.do(logger, request)
 	if err != nil {
@@ -205,11 +207,7 @@ func (r *remoteClient) Remove(logger lager.Logger, removeRequest voldriver.Remov
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
 
-	request, err := r.reqGen.CreateRequest(voldriver.RemoveRoute, nil, bytes.NewReader(payload))
-	if err != nil {
-		logger.Error("failed-creating-request", err)
-		return voldriver.ErrorResponse{Err: err.Error()}
-	}
+	request := newReqFactory(r.reqGen, voldriver.RemoveRoute, payload)
 
 	response, err := r.do(logger, request)
 	if err != nil {
@@ -240,11 +238,7 @@ func (r *remoteClient) Get(logger lager.Logger, getRequest voldriver.GetRequest)
 		return voldriver.GetResponse{Err: err.Error()}
 	}
 
-	request, err := r.reqGen.CreateRequest(voldriver.GetRoute, nil, bytes.NewReader(payload))
-	if err != nil {
-		logger.Error("failed-creating-request", err)
-		return voldriver.GetResponse{Err: err.Error()}
-	}
+	request := newReqFactory(r.reqGen, voldriver.GetRoute, payload)
 
 	response, err := r.do(logger, request)
 	if err != nil {
@@ -278,29 +272,33 @@ func (r *remoteClient) clientError(logger lager.Logger, err error, msg string) s
 	logger.Error(msg, err)
 	return err.Error()
 }
-func (r *remoteClient) do(logger lager.Logger, request *os_http.Request) (*os_http.Response, error) {
+
+func (r *remoteClient) do(logger lager.Logger, requestFactory *reqFactory) (*os_http.Response, error) {
 	var response *os_http.Response
 
-	// NewExponentialBackOff creates an instance of ExponentialBackOff using default values.
-	customBackoff := NewExponentialBackOff(r.clock)
-	customBackoff.MaxElapsedTime = 30 * time.Second
+	backoff := newExponentialBackOff(30*time.Second, r.clock)
 
-	count := 0
-	err := Retry(func() error {
-		var err error
-		logger.Info("Trying to contact", lager.Data{"count": count})
-		response, err = r.HttpClient.Do(request)
-		count = count + 1
+	err := backoff.Retry(func() error {
+		var (
+			err     error
+			request *os_http.Request
+		)
 
-		if response == nil {
-			logger.Info("response-nil")
-		} else {
-
-			logger.Info("response", lager.Data{"response": response.Status})
+		request, err = requestFactory.Request()
+		if err != nil {
+			logger.Error("request-gen-failed", err)
+			return err
 		}
-		logger.Error("Retry", err)
+
+		response, err = r.HttpClient.Do(request)
+		if err != nil {
+			logger.Error("request-failed", err)
+			return err
+		}
+		logger.Debug("response", lager.Data{"response": response.Status})
+
 		return err
-	}, customBackoff)
+	})
 
 	return response, err
 }

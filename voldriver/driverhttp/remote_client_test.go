@@ -9,6 +9,10 @@ import (
 
 	os_http "net/http"
 
+	"io/ioutil"
+
+	"encoding/json"
+
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/cloudfoundry/gunk/http_wrap/httpfakes"
@@ -300,62 +304,85 @@ var _ = Describe("RemoteClient", func() {
 
 	})
 
-	Context("when the transport fails", func() {
+	Context("when the transport fails and back off is required", func() {
 
 		var (
-			retryCount int
+			retryCount    int
+			mountResponse voldriver.MountResponse
+			volumeId      string
 		)
 
-		It("when it fails first time and then succeeds", func() {
+		Context("when it fails first time and then succeeds", func() {
 
-			httpClient.DoStub = func(req *os_http.Request) (resp *os_http.Response, err error) {
+			var (
+				requestBody []byte
+				err         error
+			)
 
-				defer func() {
-					retryCount = retryCount + 1
-				}()
+			BeforeEach(func() {
+				httpClient.DoStub = func(req *os_http.Request) (resp *os_http.Response, err error) {
 
-				if retryCount == 0 {
-					return nil, fmt.Errorf("connection failed")
+					defer func() {
+						retryCount = retryCount + 1
+					}()
+
+					requestBody, err = ioutil.ReadAll(req.Body)
+					Expect(err).NotTo(HaveOccurred())
+
+					if retryCount == 0 {
+						return nil, fmt.Errorf("connection failed but read body")
+					}
+
+					return validHttpMountResponse, nil
 				}
-				return validHttpMountResponse, nil
 
-			}
+				go fastForward(fakeClock, 10)
 
-			go fastForward(fakeClock, 10)
+				volumeId = "fake-volume"
+				mountResponse = driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
+			})
 
-			volumeId := "fake-volume"
-			mountResponse := driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
+			It("should have the correct number of retries and the correct response", func() {
+				Expect(retryCount).To(Equal(2))
+			})
 
-			Expect(mountResponse.Err).To(Equal(""))
-			Expect(mountResponse.Mountpoint).NotTo(Equal(""))
-			Expect(retryCount).To(Equal(2))
+			It("should submit the correct request each time", func() {
+				var expectedRequestBody []byte
+				expectedRequestBody, err = json.Marshal(voldriver.MountRequest{Name: volumeId})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(requestBody).To(Equal(expectedRequestBody))
+			})
+
+			It("should have the correct response", func() {
+				Expect(mountResponse.Err).To(Equal(""))
+				Expect(mountResponse.Mountpoint).NotTo(Equal(""))
+			})
 
 		})
 
-		It("when it fails and timeout exceeds", func() {
+		Context("when it fails and timeout exceeds", func() {
 
-			httpClient.DoStub = func(req *os_http.Request) (resp *os_http.Response, err error) {
-				defer func() {
-					retryCount = retryCount + 1
-					//fakeClock.IncrementBySeconds(10)
-				}()
-				//timestamp := fakeClock.Now()
-				//fmt.Printf("Ts: %d:%d:%d\n", timestamp.Minute(), timestamp.Second(), timestamp.Nanosecond()/(1000*1000))
-				return nil, fmt.Errorf("connection failed")
-			}
+			var timestamp time.Time
 
-			go fastForward(fakeClock, 40)
+			BeforeEach(func() {
+				httpClient.DoStub = func(req *os_http.Request) (resp *os_http.Response, err error) {
+					return nil, fmt.Errorf("connection failed")
+				}
 
-			timestamp := fakeClock.Now()
-			volumeId := "fake-volume"
-			mountResponse := driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
+				go fastForward(fakeClock, 40)
 
-			Expect(mountResponse.Err).NotTo(Equal(""))
+				timestamp = fakeClock.Now()
+				volumeId = "fake-volume"
+				mountResponse = driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
+			})
 
-			elapsed := fakeClock.Now().Sub(timestamp)
-			//fmt.Printf("Retries: %d\n", retryCount)
-			Expect(elapsed.Seconds()).To(BeNumerically(">", 30))
+			It("should return an error after 30 seconds have passed", func() {
+				Expect(mountResponse.Err).NotTo(Equal(""))
 
+				elapsed := fakeClock.Now().Sub(timestamp)
+				Expect(elapsed.Seconds()).To(BeNumerically(">", 30))
+			})
 		})
 	})
 })
