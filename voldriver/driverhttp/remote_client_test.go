@@ -13,6 +13,10 @@ import (
 
 	"encoding/json"
 
+	"os"
+	"os/exec"
+	"path"
+
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/cloudfoundry/gunk/http_wrap/httpfakes"
@@ -20,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/clock/fakeclock"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
@@ -30,6 +35,7 @@ var _ = Describe("RemoteClient", func() {
 		httpClient                *httpfakes.FakeClient
 		driver                    voldriver.Driver
 		validHttpMountResponse    *http.Response
+		validHttpPathResponse     *http.Response
 		validHttpCreateResponse   *http.Response
 		validHttpActivateResponse *http.Response
 		invalidHttpResponse       *http.Response
@@ -45,6 +51,11 @@ var _ = Describe("RemoteClient", func() {
 		}
 
 		validHttpMountResponse = &http.Response{
+			StatusCode: 200,
+			Body:       stringCloser{bytes.NewBufferString("{\"Mountpoint\":\"somePath\"}")},
+		}
+
+		validHttpPathResponse = &http.Response{
 			StatusCode: 200,
 			Body:       stringCloser{bytes.NewBufferString("{\"Mountpoint\":\"somePath\"}")},
 		}
@@ -110,6 +121,16 @@ var _ = Describe("RemoteClient", func() {
 			By("giving back a path with no error")
 			Expect(mountResponse.Err).To(Equal(""))
 			Expect(mountResponse.Mountpoint).To(Equal("somePath"))
+		})
+
+		It("should return mount point", func() {
+			httpClient.DoReturns(validHttpPathResponse, nil)
+
+			volumeId := "fake-volume"
+			pathResponse := driver.Path(testLogger, voldriver.PathRequest{Name: volumeId})
+
+			Expect(pathResponse.Err).To(Equal(""))
+			Expect(pathResponse.Mountpoint).To(Equal("somePath"))
 		})
 
 		It("should be able to unmount", func() {
@@ -250,9 +271,28 @@ var _ = Describe("RemoteClient", func() {
 	})
 
 	Context("when the transport is unix", func() {
-		var volumeId string
+		var (
+			volumeId                    string
+			unixRunner                  *ginkgomon.Runner
+			fakedriverUnixServerProcess ifrit.Process
+			socketPath                  string
+		)
 
 		BeforeEach(func() {
+			tmpdir, err := ioutil.TempDir(os.TempDir(), "fake-driver-test")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			socketPath = path.Join(tmpdir, "fakedriver.sock")
+
+			unixRunner = ginkgomon.New(ginkgomon.Config{
+				Name: "fakedriverUnixServer",
+				Command: exec.Command(
+					fakeDriverPath,
+					"-listenAddr", socketPath,
+					"-transport", "unix",
+				),
+				StartCheck: "fakedriverServer.started",
+			})
 
 			httpClient = new(httpfakes.FakeClient)
 			volumeId = "fake-volume"
@@ -266,7 +306,10 @@ var _ = Describe("RemoteClient", func() {
 				StatusCode: 200,
 				Body:       stringCloser{bytes.NewBufferString("{\"Mountpoint\":\"somePath\"}")},
 			}
+		})
 
+		AfterEach(func() {
+			ginkgomon.Kill(fakedriverUnixServerProcess)
 		})
 
 		It("should be able to mount", func() {

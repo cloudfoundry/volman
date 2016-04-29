@@ -27,11 +27,9 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 	var handlers = rata.Handlers{
 
 		voldriver.ActivateRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			serverlogger := logger
-			logger = logger.Session("handle-activate")
+			logger := logger.Session("handle-activate")
 			logger.Info("start")
 			defer logger.Info("end")
-			defer func() { logger = serverlogger }()
 
 			activateResponse := client.Activate(logger)
 			// ok to eat error as we should be removing error from the Info func signature
@@ -46,11 +44,9 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 		}),
 
 		voldriver.GetRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			serverlogger := logger
-			logger = logger.Session("handle-get")
+			logger := logger.Session("handle-get")
 			logger.Info("start")
 			defer logger.Info("end")
-			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -76,12 +72,39 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 			cf_http_handlers.WriteJSONResponse(w, statusOK, getResponse)
 		}),
 
-		voldriver.CreateRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			serverlogger := logger
-			logger = logger.Session("handle-create")
+		voldriver.PathRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			logger := logger.Session("handle-path")
 			logger.Info("start")
 			defer logger.Info("end")
-			defer func() { logger = serverlogger }()
+
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				logger.Error("failed-reading-path-request-body", err)
+				cf_http_handlers.WriteJSONResponse(w, statusInternalServerError, voldriver.MountResponse{Err: err.Error()})
+				return
+			}
+
+			var pathRequest voldriver.PathRequest
+			if err = json.Unmarshal(body, &pathRequest); err != nil {
+				logger.Error("failed-unmarshalling-path-request-body", err)
+				cf_http_handlers.WriteJSONResponse(w, statusInternalServerError, voldriver.GetResponse{Err: err.Error()})
+				return
+			}
+
+			pathResponse := client.Path(logger, pathRequest)
+			if pathResponse.Err != "" {
+				logger.Error("failed-activating-driver", fmt.Errorf(pathResponse.Err))
+				cf_http_handlers.WriteJSONResponse(w, statusInternalServerError, pathResponse)
+				return
+			}
+
+			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, pathResponse)
+		}),
+
+		voldriver.CreateRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			logger := logger.Session("handle-create")
+			logger.Info("start")
+			defer logger.Info("end")
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -108,11 +131,9 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 		}),
 
 		voldriver.MountRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			serverlogger := logger
-			logger = logger.Session("handle-mount")
+			logger := logger.Session("handle-mount")
 			logger.Info("start")
 			defer logger.Info("end")
-			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -139,11 +160,9 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 		}),
 
 		voldriver.UnmountRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			serverlogger := logger
-			logger = logger.Session("handle-unmount")
+			logger := logger.Session("handle-unmount")
 			logger.Info("start")
 			defer logger.Info("end")
-			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
@@ -170,11 +189,9 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 		}),
 
 		voldriver.RemoveRoute: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			serverlogger := logger
-			logger = logger.Session("handle-remove")
+			logger := logger.Session("handle-remove")
 			logger.Info("start")
 			defer logger.Info("end")
-			defer func() { logger = serverlogger }()
 
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {

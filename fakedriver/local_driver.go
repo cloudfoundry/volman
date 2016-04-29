@@ -96,6 +96,29 @@ func (d *LocalDriver) Mount(logger lager.Logger, mountRequest voldriver.MountReq
 	return mountResponse
 }
 
+func (d *LocalDriver) Path(logger lager.Logger, pathRequest voldriver.PathRequest) voldriver.PathResponse {
+	logger = logger.Session("path", lager.Data{"volume": pathRequest.Name})
+
+	if pathRequest.Name == "" {
+		return voldriver.PathResponse{Err: "Missing mandatory 'volume_name'"}
+	}
+
+	mountPath, err := d.get(logger, pathRequest.Name)
+	if err != nil {
+		logger.Error("failed-no-such-volume-found", err, lager.Data{"mountpoint": mountPath})
+
+		return voldriver.PathResponse{Err: fmt.Sprintf("Volume '%s' not found", pathRequest.Name)}
+	}
+
+	if mountPath == "" {
+		errText := "Volume not previously mounted"
+		logger.Error("failed-mountpoint-not-assigned", errors.New(errText))
+		return voldriver.PathResponse{Err: errText}
+	}
+
+	return voldriver.PathResponse{Mountpoint: mountPath}
+}
+
 func (d *LocalDriver) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) voldriver.ErrorResponse {
 	logger = logger.Session("unmount", lager.Data{"volume": unmountRequest.Name})
 

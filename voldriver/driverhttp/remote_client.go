@@ -165,6 +165,43 @@ func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRe
 	return mountPoint
 }
 
+func (r *remoteClient) Path(logger lager.Logger, pathRequest voldriver.PathRequest) voldriver.PathResponse {
+	logger = logger.Session("path")
+	logger.Info("start")
+	defer logger.Info("end")
+
+	payload, err := json.Marshal(pathRequest)
+	if err != nil {
+		logger.Error("failed-marshalling-request", err)
+		return voldriver.PathResponse{Err: err.Error()}
+	}
+
+	request := newReqFactory(r.reqGen, voldriver.PathRoute, payload)
+
+	response, err := r.do(logger, request)
+	if err != nil {
+		logger.Error("failed-volume-path", err)
+		return voldriver.PathResponse{Err: err.Error()}
+	}
+
+	if response.StatusCode == 500 {
+		var remoteErrorResponse voldriver.PathResponse
+		if err := unmarshallJSON(logger, response.Body, &remoteErrorResponse); err != nil {
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.PathResponse{Err: err.Error()}
+		}
+		return remoteErrorResponse
+	}
+
+	var mountPoint voldriver.PathResponse
+	if err := unmarshallJSON(logger, response.Body, &mountPoint); err != nil {
+		logger.Error("failed-parsing-path-response", err)
+		return voldriver.PathResponse{Err: err.Error()}
+	}
+
+	return mountPoint
+}
+
 func (r *remoteClient) Unmount(logger lager.Logger, unmountRequest voldriver.UnmountRequest) voldriver.ErrorResponse {
 	logger = logger.Session("mount")
 	logger.Info("start")

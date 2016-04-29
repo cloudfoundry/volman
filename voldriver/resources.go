@@ -6,21 +6,23 @@ import (
 )
 
 const (
-	CreateRoute   = "create"
-	MountRoute    = "mount"
-	UnmountRoute  = "unmount"
-	RemoveRoute   = "remove"
-	GetRoute      = "get"
 	ActivateRoute = "activate"
+	CreateRoute   = "create"
+	GetRoute      = "get"
+	MountRoute    = "mount"
+	PathRoute     = "path"
+	RemoveRoute   = "remove"
+	UnmountRoute  = "unmount"
 )
 
 var Routes = rata.Routes{
-	{Path: "/VolumeDriver.Create", Method: "POST", Name: CreateRoute},
-	{Path: "/VolumeDriver.Mount", Method: "POST", Name: MountRoute},
-	{Path: "/VolumeDriver.Unmount", Method: "POST", Name: UnmountRoute},
-	{Path: "/VolumeDriver.Remove", Method: "POST", Name: RemoveRoute},
-	{Path: "/VolumeDriver.Get", Method: "POST", Name: GetRoute},
 	{Path: "/Plugin.Activate", Method: "POST", Name: ActivateRoute},
+	{Path: "/VolumeDriver.Create", Method: "POST", Name: CreateRoute},
+	{Path: "/VolumeDriver.Get", Method: "POST", Name: GetRoute},
+	{Path: "/VolumeDriver.Mount", Method: "POST", Name: MountRoute},
+	{Path: "/VolumeDriver.Path", Method: "POST", Name: PathRoute},
+	{Path: "/VolumeDriver.Remove", Method: "POST", Name: RemoveRoute},
+	{Path: "/VolumeDriver.Unmount", Method: "POST", Name: UnmountRoute},
 }
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_client.go . Driver
@@ -28,10 +30,11 @@ var Routes = rata.Routes{
 type Driver interface {
 	Activate(logger lager.Logger) ActivateResponse
 	Create(logger lager.Logger, createRequest CreateRequest) ErrorResponse
-	Mount(logger lager.Logger, mountRequest MountRequest) MountResponse
-	Unmount(logger lager.Logger, unmountRequest UnmountRequest) ErrorResponse
-	Remove(logger lager.Logger, removeRequest RemoveRequest) ErrorResponse
 	Get(logger lager.Logger, getRequest GetRequest) GetResponse
+	Mount(logger lager.Logger, mountRequest MountRequest) MountResponse
+	Path(logger lager.Logger, pathRequest PathRequest) PathResponse
+	Remove(logger lager.Logger, removeRequest RemoveRequest) ErrorResponse
+	Unmount(logger lager.Logger, unmountRequest UnmountRequest) ErrorResponse
 }
 
 type ActivateResponse struct {
@@ -49,6 +52,15 @@ type MountRequest struct {
 }
 
 type MountResponse struct {
+	Err        string
+	Mountpoint string
+}
+
+type PathRequest struct {
+	Name string
+}
+
+type PathResponse struct {
 	Err        string
 	Mountpoint string
 }

@@ -134,6 +134,31 @@ var _ = Describe("Volman Driver Handlers", func() {
 			Expect(httpResponseRecorder.Code).To(Equal(200))
 		})
 
+		It("should produce a handler with a path route", func() {
+			By("faking out the driver")
+			driver := &volmanfakes.FakeDriver{}
+			driver.PathReturns(voldriver.PathResponse{})
+			handler, err := driverhttp.NewHandler(testLogger, driver)
+			Expect(err).NotTo(HaveOccurred())
+
+			httpResponseRecorder := httptest.NewRecorder()
+			pathRequest := voldriver.PathRequest{Name: "some-volume"}
+			pathJSONRequest, err := json.Marshal(pathRequest)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("then fake serving the response using the handler")
+			route, found := voldriver.Routes.FindRouteByName(voldriver.PathRoute)
+			Expect(found).To(BeTrue())
+
+			path := fmt.Sprintf("http://0.0.0.0%s", route.Path)
+			httpRequest, err := http.NewRequest("POST", path, bytes.NewReader(pathJSONRequest))
+			Expect(err).NotTo(HaveOccurred())
+			handler.ServeHTTP(httpResponseRecorder, httpRequest)
+
+			By("then expecting correct HTTP status code")
+			Expect(httpResponseRecorder.Code).To(Equal(200))
+		})
+
 		It("should produce a handler with a create route", func() {
 			By("faking out the driver")
 			driver := &volmanfakes.FakeDriver{}

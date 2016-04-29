@@ -236,6 +236,55 @@ var _ = Describe("Local Driver", func() {
 		})
 	})
 
+	Describe("Path", func() {
+		Context("when a volume is mounted", func() {
+			var (
+				volumeName string
+			)
+			BeforeEach(func() {
+				volumeName = "my-volume"
+				createSuccessful(logger, localDriver, volumeName)
+				mountSuccessful(logger, localDriver, volumeName, fakeFileSystem)
+			})
+
+			It("returns the mount point on a /VolumeDriver.Path", func() {
+				pathResponse := localDriver.Path(logger, voldriver.PathRequest{
+					Name: volumeName,
+				})
+				Expect(pathResponse.Err).To(Equal(""))
+				Expect(pathResponse.Mountpoint).To(Equal("/some/temp/dir/_volumes/test-volume-id"))
+			})
+		})
+
+		Context("when a volume is not created", func() {
+			It("returns an error on /VolumeDriver.Path", func() {
+				pathResponse := localDriver.Path(logger, voldriver.PathRequest{
+					Name: "volume-that-does-not-exist",
+				})
+				Expect(pathResponse.Err).NotTo(Equal(""))
+				Expect(pathResponse.Mountpoint).To(Equal(""))
+			})
+		})
+
+		Context("when a volume is created but not mounted", func() {
+			var (
+				volumeName string
+			)
+			BeforeEach(func() {
+				volumeName = "my-volume"
+				createSuccessful(logger, localDriver, volumeName)
+			})
+
+			It("returns an error on /VolumeDriver.Path", func() {
+				pathResponse := localDriver.Path(logger, voldriver.PathRequest{
+					Name: "volume-that-does-not-exist",
+				})
+				Expect(pathResponse.Err).NotTo(Equal(""))
+				Expect(pathResponse.Mountpoint).To(Equal(""))
+			})
+		})
+	})
+
 	Describe("Remove", func() {
 		const volumeName = "test-volume"
 

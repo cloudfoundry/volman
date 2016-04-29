@@ -3,7 +3,6 @@ package driverhttp_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,9 +10,6 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 
-	"os"
-	"os/exec"
-	"path"
 	"testing"
 )
 
@@ -23,10 +19,6 @@ var fakeDriverPath string
 var fakedriverServerPort int
 var fakedriverProcess ifrit.Process
 var tcpRunner *ginkgomon.Runner
-
-var unixRunner *ginkgomon.Runner
-var fakedriverUnixServerProcess ifrit.Process
-var socketPath string
 
 func TestDriver(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -41,28 +33,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	return []byte(fakeDriverPath)
 }, func(pathsByte []byte) {
 	fakeDriverPath = string(pathsByte)
-})
-
-var _ = BeforeEach(func() {
-
-	tmpdir, err := ioutil.TempDir(os.TempDir(), "fake-driver-test")
-	Expect(err).ShouldNot(HaveOccurred())
-
-	socketPath = path.Join(tmpdir, "fakedriver.sock")
-
-	unixRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "fakedriverUnixServer",
-		Command: exec.Command(
-			fakeDriverPath,
-			"-listenAddr", socketPath,
-			"-transport", "unix",
-		),
-		StartCheck: "fakedriverServer.started",
-	})
-})
-
-var _ = AfterEach(func() {
-	ginkgomon.Kill(fakedriverUnixServerProcess)
 })
 
 var _ = SynchronizedAfterSuite(func() {
