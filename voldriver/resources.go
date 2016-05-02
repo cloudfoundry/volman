@@ -9,6 +9,7 @@ const (
 	ActivateRoute = "activate"
 	CreateRoute   = "create"
 	GetRoute      = "get"
+	ListRoute     = "list"
 	MountRoute    = "mount"
 	PathRoute     = "path"
 	RemoveRoute   = "remove"
@@ -19,6 +20,7 @@ var Routes = rata.Routes{
 	{Path: "/Plugin.Activate", Method: "POST", Name: ActivateRoute},
 	{Path: "/VolumeDriver.Create", Method: "POST", Name: CreateRoute},
 	{Path: "/VolumeDriver.Get", Method: "POST", Name: GetRoute},
+	{Path: "/VolumeDriver.List", Method: "POST", Name: ListRoute},
 	{Path: "/VolumeDriver.Mount", Method: "POST", Name: MountRoute},
 	{Path: "/VolumeDriver.Path", Method: "POST", Name: PathRoute},
 	{Path: "/VolumeDriver.Remove", Method: "POST", Name: RemoveRoute},
@@ -31,6 +33,7 @@ type Driver interface {
 	Activate(logger lager.Logger) ActivateResponse
 	Create(logger lager.Logger, createRequest CreateRequest) ErrorResponse
 	Get(logger lager.Logger, getRequest GetRequest) GetResponse
+	List(logger lager.Logger) ListResponse
 	Mount(logger lager.Logger, mountRequest MountRequest) MountResponse
 	Path(logger lager.Logger, pathRequest PathRequest) PathResponse
 	Remove(logger lager.Logger, removeRequest RemoveRequest) ErrorResponse
@@ -54,6 +57,11 @@ type MountRequest struct {
 type MountResponse struct {
 	Err        string
 	Mountpoint string
+}
+
+type ListResponse struct {
+	Volumes []VolumeInfo
+	Err     string
 }
 
 type PathRequest struct {

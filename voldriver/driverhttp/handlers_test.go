@@ -50,6 +50,43 @@ var _ = Describe("Volman Driver Handlers", func() {
 			Expect(activateResponse.Implements).Should(Equal([]string{"VolumeDriver"}))
 		})
 
+		It("should produce a handler with a list route", func() {
+			By("faking out the driver")
+			driver := &volmanfakes.FakeDriver{}
+			volume := voldriver.VolumeInfo{
+				Name:       "fake-volume",
+				Mountpoint: "fake-mountpoint",
+			}
+			listResponse := voldriver.ListResponse{
+				Volumes: []voldriver.VolumeInfo{volume},
+				Err:     "",
+			}
+
+			driver.ListReturns(listResponse)
+			handler, err := driverhttp.NewHandler(testLogger, driver)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("then fake serving the response using the handler")
+			route, found := voldriver.Routes.FindRouteByName(voldriver.ListRoute)
+			Expect(found).To(BeTrue())
+
+			path := fmt.Sprintf("http://0.0.0.0%s", route.Path)
+			httpRequest, err := http.NewRequest("POST", path, bytes.NewReader([]byte{}))
+			Expect(err).NotTo(HaveOccurred())
+
+			httpResponseRecorder := httptest.NewRecorder()
+			handler.ServeHTTP(httpResponseRecorder, httpRequest)
+
+			By("then deserialing the HTTP response")
+			listResponse = voldriver.ListResponse{}
+			body, err := ioutil.ReadAll(httpResponseRecorder.Body)
+			err = json.Unmarshal(body, &listResponse)
+
+			By("then expecting correct JSON conversion")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(listResponse.Volumes[0].Name).Should(Equal("fake-volume"))
+		})
+
 		It("should produce a handler with a mount route", func() {
 			By("faking out the driver")
 			driver := &volmanfakes.FakeDriver{}

@@ -285,6 +285,31 @@ var _ = Describe("Local Driver", func() {
 		})
 	})
 
+	Describe("List", func() {
+		Context("when there are volumes", func() {
+			var volumeName string
+			BeforeEach(func() {
+				volumeName = "test-volume-id"
+				createSuccessful(logger, localDriver, volumeName)
+			})
+
+			It("returns the list of volumes", func() {
+				listResponse := localDriver.List(logger)
+
+				Expect(listResponse.Err).To(Equal(""))
+				Expect(listResponse.Volumes[0].Name).To(Equal(volumeName))
+
+			})
+		})
+
+		Context("when the volume has not been created", func() {
+			It("returns an error", func() {
+				volumeName := "test-volume"
+				getUnsuccessful(logger, localDriver, volumeName)
+			})
+		})
+	})
+
 	Describe("Remove", func() {
 		const volumeName = "test-volume"
 

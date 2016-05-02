@@ -35,6 +35,14 @@ type FakeDriver struct {
 	getReturns struct {
 		result1 voldriver.GetResponse
 	}
+	ListStub        func(logger lager.Logger) voldriver.ListResponse
+	listMutex       sync.RWMutex
+	listArgsForCall []struct {
+		logger lager.Logger
+	}
+	listReturns struct {
+		result1 voldriver.ListResponse
+	}
 	MountStub        func(logger lager.Logger, mountRequest voldriver.MountRequest) voldriver.MountResponse
 	mountMutex       sync.RWMutex
 	mountArgsForCall []struct {
@@ -168,6 +176,38 @@ func (fake *FakeDriver) GetReturns(result1 voldriver.GetResponse) {
 	fake.GetStub = nil
 	fake.getReturns = struct {
 		result1 voldriver.GetResponse
+	}{result1}
+}
+
+func (fake *FakeDriver) List(logger lager.Logger) voldriver.ListResponse {
+	fake.listMutex.Lock()
+	fake.listArgsForCall = append(fake.listArgsForCall, struct {
+		logger lager.Logger
+	}{logger})
+	fake.listMutex.Unlock()
+	if fake.ListStub != nil {
+		return fake.ListStub(logger)
+	} else {
+		return fake.listReturns.result1
+	}
+}
+
+func (fake *FakeDriver) ListCallCount() int {
+	fake.listMutex.RLock()
+	defer fake.listMutex.RUnlock()
+	return len(fake.listArgsForCall)
+}
+
+func (fake *FakeDriver) ListArgsForCall(i int) lager.Logger {
+	fake.listMutex.RLock()
+	defer fake.listMutex.RUnlock()
+	return fake.listArgsForCall[i].logger
+}
+
+func (fake *FakeDriver) ListReturns(result1 voldriver.ListResponse) {
+	fake.ListStub = nil
+	fake.listReturns = struct {
+		result1 voldriver.ListResponse
 	}{result1}
 }
 

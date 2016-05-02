@@ -28,6 +28,7 @@ func NewHandler(logger lager.Logger, client voldriver.Driver) (http.Handler, err
 	var handlers = rata.Handlers{
 		voldriver.ActivateRoute: newActivateHandler(logger, client),
 		voldriver.GetRoute:      newGetHandler(logger, client),
+		voldriver.ListRoute:     newListHandler(logger, client),
 		voldriver.PathRoute:     newPathHandler(logger, client),
 		voldriver.CreateRoute:   newCreateHandler(logger, client),
 		voldriver.MountRoute:    newMountHandler(logger, client),
@@ -84,6 +85,23 @@ func newGetHandler(logger lager.Logger, client voldriver.Driver) http.HandlerFun
 		}
 
 		cf_http_handlers.WriteJSONResponse(w, statusOK, getResponse)
+	}
+}
+
+func newListHandler(logger lager.Logger, client voldriver.Driver) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		logger := logger.Session("handle-list")
+		logger.Info("start")
+		defer logger.Info("end")
+
+		listResponse := client.List(logger)
+		if listResponse.Err != "" {
+			logger.Error("failed-listing-volumes", fmt.Errorf("%s", listResponse.Err))
+			cf_http_handlers.WriteJSONResponse(w, statusInternalServerError, listResponse)
+			return
+		}
+
+		cf_http_handlers.WriteJSONResponse(w, statusOK, listResponse)
 	}
 }
 

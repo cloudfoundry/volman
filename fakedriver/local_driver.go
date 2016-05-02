@@ -14,19 +14,14 @@ import (
 const RootDir = "_volumes/"
 
 type LocalDriver struct { // see voldriver.resources.go
-	volumes    map[string]*volume
+	volumes    map[string]*voldriver.VolumeInfo
 	fileSystem FileSystem
 	mountDir   string
 }
 
-type volume struct {
-	volumeID   string
-	mountpoint string
-}
-
 func NewLocalDriver(fileSystem FileSystem, mountDir string) *LocalDriver {
 	return &LocalDriver{
-		volumes:    map[string]*volume{},
+		volumes:    map[string]*voldriver.VolumeInfo{},
 		fileSystem: fileSystem,
 		mountDir:   mountDir,
 	}
@@ -52,20 +47,29 @@ func (d *LocalDriver) Create(logger lager.Logger, createRequest voldriver.Create
 		return voldriver.ErrorResponse{Err: "Missing mandatory 'volume_id' field in 'Opts'"}
 	}
 
-	var existingVolume *volume
+	var existingVolume *voldriver.VolumeInfo
 	if existingVolume, ok = d.volumes[createRequest.Name]; !ok {
 		logger.Info("creating-volume", lager.Data{"volume_name": createRequest.Name, "volume_id": id.(string)})
-		d.volumes[createRequest.Name] = &volume{volumeID: id.(string)}
+		d.volumes[createRequest.Name] = &voldriver.VolumeInfo{Name: id.(string)}
 		return voldriver.ErrorResponse{}
 	}
 
 	// If a volume with the given name already exists, no-op unless the opts are different
-	if existingVolume.volumeID != id {
+	if existingVolume.Name != id {
 		logger.Info("duplicate-volume", lager.Data{"volume_name": createRequest.Name})
 		return voldriver.ErrorResponse{Err: fmt.Sprintf("Volume '%s' already exists with a different volume ID", createRequest.Name)}
 	}
 
 	return voldriver.ErrorResponse{}
+}
+
+func (d *LocalDriver) List(logger lager.Logger) voldriver.ListResponse {
+	listResponse := voldriver.ListResponse{}
+	for _, volume := range d.volumes {
+		listResponse.Volumes = append(listResponse.Volumes, *volume)
+	}
+	listResponse.Err = ""
+	return listResponse
 }
 
 func (d *LocalDriver) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) voldriver.MountResponse {
@@ -75,22 +79,22 @@ func (d *LocalDriver) Mount(logger lager.Logger, mountRequest voldriver.MountReq
 		return voldriver.MountResponse{Err: "Missing mandatory 'volume_name'"}
 	}
 
-	var vol *volume
+	var vol *voldriver.VolumeInfo
 	var ok bool
 	if vol, ok = d.volumes[mountRequest.Name]; !ok {
 		return voldriver.MountResponse{Err: fmt.Sprintf("Volume '%s' must be created before being mounted", mountRequest.Name)}
 	}
 
-	mountPath := d.mountPath(logger, vol.volumeID)
+	mountPath := d.mountPath(logger, vol.Name)
 
-	logger.Info("mounting-volume", lager.Data{"id": vol.volumeID, "mountpoint": mountPath})
+	logger.Info("mounting-volume", lager.Data{"id": vol.Name, "mountpoint": mountPath})
 	err := d.fileSystem.MkdirAll(mountPath, os.ModePerm)
 	if err != nil {
 		logger.Error("failed-creating-mountpoint", err)
 		return voldriver.MountResponse{Err: fmt.Sprintf("Error mounting volume: %s", err.Error())}
 	}
 
-	vol.mountpoint = mountPath
+	vol.Mountpoint = mountPath
 
 	mountResponse := voldriver.MountResponse{Mountpoint: mountPath}
 	return mountResponse
@@ -152,15 +156,15 @@ func (d *LocalDriver) Remove(logger lager.Logger, removeRequest voldriver.Remove
 	}
 
 	var response voldriver.ErrorResponse
-	var vol *volume
+	var vol *voldriver.VolumeInfo
 	var exists bool
 	if vol, exists = d.volumes[removeRequest.Name]; !exists {
 		logger.Error("failed-volume-removal", fmt.Errorf(fmt.Sprintf("Volume %s not found", removeRequest.Name)))
 		return voldriver.ErrorResponse{fmt.Sprintf("Volume '%s' not found", removeRequest.Name)}
 	}
 
-	if vol.mountpoint != "" {
-		response = d.unmount(logger, removeRequest.Name, vol.mountpoint)
+	if vol.Mountpoint != "" {
+		response = d.unmount(logger, removeRequest.Name, vol.Mountpoint)
 		if response.Err != "" {
 			return response
 		}
@@ -183,7 +187,7 @@ func (d *LocalDriver) Get(logger lager.Logger, getRequest voldriver.GetRequest) 
 func (d *LocalDriver) get(logger lager.Logger, volumeName string) (string, error) {
 	if vol, ok := d.volumes[volumeName]; ok {
 		logger.Info("getting-volume", lager.Data{"name": volumeName})
-		return vol.mountpoint, nil
+		return vol.Mountpoint, nil
 	}
 
 	return "", errors.New("Volume not found")
@@ -235,7 +239,7 @@ func (d *LocalDriver) unmount(logger lager.Logger, name string, mountPath string
 	logger.Info("unmounted-volume")
 
 	volume := d.volumes[name]
-	volume.mountpoint = ""
+	volume.Mountpoint = ""
 
 	return voldriver.ErrorResponse{}
 }

@@ -90,7 +90,7 @@ func (r *remoteClient) Activate(logger lager.Logger) voldriver.ActivateResponse 
 
 	var activate voldriver.ActivateResponse
 	if err := unmarshallJSON(logger, response.Body, &activate); err != nil {
-		logger.Error("failed-parsing-info-response", err)
+		logger.Error("failed-parsing-activate-response", err)
 		return voldriver.ActivateResponse{Err: err.Error()}
 	}
 
@@ -126,6 +126,37 @@ func (r *remoteClient) Create(logger lager.Logger, createRequest voldriver.Creat
 	}
 
 	return voldriver.ErrorResponse{}
+}
+
+func (r *remoteClient) List(logger lager.Logger) voldriver.ListResponse {
+	logger = logger.Session("remoteclient-list")
+	logger.Info("start")
+	defer logger.Info("end")
+
+	request := newReqFactory(r.reqGen, voldriver.ListRoute, nil)
+
+	response, err := r.do(logger, request)
+	if err != nil {
+		logger.Error("failed-list", err)
+		return voldriver.ListResponse{Err: err.Error()}
+	}
+
+	if response.StatusCode == 500 {
+		var remoteError voldriver.ListResponse
+		if err := unmarshallJSON(logger, response.Body, &remoteError); err != nil {
+			logger.Error("failed-parsing-error-response", err)
+			return voldriver.ListResponse{Err: err.Error()}
+		}
+		return remoteError
+	}
+
+	var list voldriver.ListResponse
+	if err := unmarshallJSON(logger, response.Body, &list); err != nil {
+		logger.Error("failed-parsing-list-response", err)
+		return voldriver.ListResponse{Err: err.Error()}
+	}
+
+	return list
 }
 
 func (r *remoteClient) Mount(logger lager.Logger, mountRequest voldriver.MountRequest) voldriver.MountResponse {
