@@ -15,7 +15,7 @@ import (
 )
 
 type DriverConfig struct {
-	DriverPath   string
+	DriverPaths  []string
 	SyncInterval time.Duration
 }
 
@@ -32,7 +32,7 @@ type localClient struct {
 func NewServer(logger lager.Logger, config DriverConfig) (volman.Manager, ifrit.Runner) {
 	clock := clock.NewClock()
 	registry := NewDriverRegistry()
-	return NewLocalClient(logger, registry), NewDriverSyncer(logger, registry, config.DriverPath, config.SyncInterval, clock).Runner()
+	return NewLocalClient(logger, registry), NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock).Runner()
 }
 
 func NewLocalClient(logger lager.Logger, registry DriverRegistry) volman.Manager {

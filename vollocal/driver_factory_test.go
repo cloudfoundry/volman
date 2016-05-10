@@ -28,7 +28,7 @@ var _ = Describe("DriverFactory", func() {
 	Context("when given driverspath with no drivers", func() {
 		It("no drivers are found", func() {
 			fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
-			driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory("some-invalid-drivers-path", fakeRemoteClientFactory)
+			driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory([]string{"some-invalid-drivers-path"}, fakeRemoteClientFactory)
 			drivers, err := driverFactory.Discover(testLogger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(drivers)).To(Equal(0))
@@ -43,7 +43,7 @@ var _ = Describe("DriverFactory", func() {
 
 		JustBeforeEach(func() {
 			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
-			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 		})
 
 		Context("with a single driver", func() {
@@ -93,7 +93,7 @@ var _ = Describe("DriverFactory", func() {
 			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
 			fakeDriver = new(volmanfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
-			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 
 		})
 
@@ -110,7 +110,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 			It("should fail if unable to open file", func() {
 				fakeOs := new(osfakes.FakeOs)
-				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
+				driverFactory := vollocal.NewDriverFactoryWithOs([]string{defaultPluginsDirectory}, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".json")
 				Expect(err).To(HaveOccurred())
@@ -141,7 +141,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 			It("should fail if unable to open file", func() {
 				fakeOs := new(osfakes.FakeOs)
-				driverFactory := vollocal.NewDriverFactoryWithOs(defaultPluginsDirectory, fakeOs)
+				driverFactory := vollocal.NewDriverFactoryWithOs([]string{defaultPluginsDirectory}, fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".spec")
 				Expect(err).To(HaveOccurred())
@@ -149,7 +149,7 @@ var _ = Describe("DriverFactory", func() {
 
 			It("should error if driver id doesn't match found driver", func() {
 				fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
-				driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
+				driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 				_, err := driverFactory.Driver(testLogger, "garbage", defaultPluginsDirectory, "garbage.garbage")
 				Expect(err).To(HaveOccurred())
 			})
@@ -187,7 +187,7 @@ var _ = Describe("DriverFactory", func() {
 			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
 			fakeDriver = new(volmanfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
-			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory, fakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 
 		})
 		It("should error", func() {
@@ -204,7 +204,7 @@ var _ = Describe("DriverFactory", func() {
 
 		JustBeforeEach(func() {
 			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
-			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory(defaultPluginsDirectory+string(os.PathListSeparator)+secondPluginsDirectory, fakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory, secondPluginsDirectory}, fakeRemoteClientFactory)
 		})
 
 		Context("with a single driver", func() {
@@ -261,5 +261,56 @@ var _ = Describe("DriverFactory", func() {
 
 		})
 
+	})
+
+	Context("when given a driver spec not in canonical form", func() {
+		var (
+			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
+			driverFactory           vollocal.DriverFactory
+		)
+
+		JustBeforeEach(func() {
+			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
+		})
+
+		TestCanonicalization := func(context, actual, it, expected string) {
+			Context(context, func() {
+				BeforeEach(func() {
+					driverName = "some-driver-name"
+					err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte(actual))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It(it, func() {
+					drivers, err := driverFactory.Discover(testLogger)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(drivers)).To(Equal(1))
+					Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(1))
+					Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal(expected))
+				})
+			})
+		}
+
+		TestCanonicalization("with an ip (and no port)", "127.0.0.1", "should return a canonicalized address", "http://127.0.0.1")
+		TestCanonicalization("with an ip and port", "127.0.0.1:8080", "should return a canonicalized address", "http://127.0.0.1:8080")
+		TestCanonicalization("with a tcp protocol uri with port", "tcp://127.0.0.1:8080", "should return a canonicalized address", "http://127.0.0.1:8080")
+		TestCanonicalization("with a tcp protocol uri without port", "tcp://127.0.0.1", "should return a canonicalized address", "http://127.0.0.1")
+		TestCanonicalization("with a unix address including protocol", "unix:///other.sock", "should return a canonicalized address", "unix:///other.sock")
+		TestCanonicalization("with a unix address missing its protocol", "/other.sock", "should return a canonicalized address", "/other.sock")
+
+		Context("with an invalid url", func() {
+			BeforeEach(func() {
+				driverName = "some-driver-name"
+				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("htt%p:\\\\"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("doesn't make a driver", func() {
+				_, err := driverFactory.Discover(testLogger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(0))
+			})
+		})
 	})
 })

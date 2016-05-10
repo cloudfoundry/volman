@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 
+	"net/url"
+
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
 	"github.com/cloudfoundry/gunk/os_wrap"
@@ -30,36 +32,34 @@ type DriverFactory interface {
 }
 
 type realDriverFactory struct {
-	DriversPath     string
+	DriverPaths     []string
 	Factory         driverhttp.RemoteClientFactory
 	useOs           os_wrap.Os
 	DriversRegistry map[string]voldriver.Driver
 }
 
-func NewDriverFactory(driversPath string) DriverFactory {
+func NewDriverFactory(driverPaths []string) DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
-	return NewDriverFactoryWithRemoteClientFactory(driversPath, remoteClientFactory)
+	return NewDriverFactoryWithRemoteClientFactory(driverPaths, remoteClientFactory)
 }
 
-func NewDriverFactoryWithRemoteClientFactory(driversPath string, remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
-	return &realDriverFactory{driversPath, remoteClientFactory, os_wrap.NewOs(), nil}
+func NewDriverFactoryWithRemoteClientFactory(driverPaths []string, remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
+	return &realDriverFactory{driverPaths, remoteClientFactory, os_wrap.NewOs(), nil}
 }
 
-func NewDriverFactoryWithOs(driversPath string, useOs os_wrap.Os) DriverFactory {
+func NewDriverFactoryWithOs(driverPaths []string, useOs os_wrap.Os) DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
-	return &realDriverFactory{driversPath, remoteClientFactory, useOs, nil}
+	return &realDriverFactory{driverPaths, remoteClientFactory, useOs, nil}
 }
 
 func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
 	logger = logger.Session("discover")
 	logger.Debug("start")
-	logger.Info(fmt.Sprintf("Discovering drivers in %s", r.DriversPath))
+	logger.Info(fmt.Sprintf("Discovering drivers in %s", r.DriverPaths))
 	defer logger.Debug("end")
 
-	paths := filepath.SplitList(r.DriversPath)
-
 	endpoints := make(map[string]voldriver.Driver)
-	for _, driverPath := range paths {
+	for _, driverPath := range r.DriverPaths {
 		//precedence order: sock -> spec -> json
 		spec_types := [3]string{"sock", "spec", "json"}
 		for _, spec_type := range spec_types {
@@ -154,6 +154,13 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 
 		}
 		var err error
+
+		address, err = r.canonicalize(logger, address)
+		if err != nil {
+			logger.Error(fmt.Sprintf("invalid-address: %s", address), err)
+			return nil, err
+		}
+
 		logger.Info("getting-driver", lager.Data{"address": address})
 		driver, err = r.Factory.NewRemoteClient(address)
 		if err != nil {
@@ -175,4 +182,29 @@ func (r *realDriverFactory) getMatchingDriverSpecs(logger lager.Logger, path str
 	}
 	return matchingDriverSpecs, nil
 
+}
+
+func (r *realDriverFactory) canonicalize(logger lager.Logger, address string) (string, error) {
+	logger = logger.Session("canonicalize", lager.Data{"address": address})
+	logger.Debug("start")
+	defer logger.Debug("end")
+
+	url, err := url.Parse(address)
+	if err != nil {
+		return address, err
+	}
+
+	switch url.Scheme {
+	case "http":
+		return address, nil
+	case "tcp":
+		return fmt.Sprintf("http://%s%s", url.Host, url.Path), nil
+	case "unix":
+		return address, nil
+	default:
+		if strings.HasSuffix(url.Path, ".sock") {
+			return fmt.Sprintf("%s%s", url.Host, url.Path), nil
+		}
+	}
+	return fmt.Sprintf("http://%s", address), nil
 }

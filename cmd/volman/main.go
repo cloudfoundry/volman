@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 
+	"path/filepath"
+
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
@@ -21,10 +23,10 @@ var atAddress = flag.String(
 	"host:port to serve volume management functions",
 )
 
-var driversPath = flag.String(
-	"driversPath",
+var driverPaths = flag.String(
+	"volmanDriverPaths",
 	"",
-	"Path to directory where drivers are installed",
+	"Path to the directory where drivers can be discovered.  Multiple paths may be specified using the OS-specific path separator; e.g. /path/to/somewhere:/path/to/somewhere-else",
 )
 
 func init() {
@@ -36,7 +38,7 @@ func main() {
 	withLogger, logTap := logger()
 	defer withLogger.Info("ends")
 
-	servers := createVolmanServer(withLogger, *atAddress, *driversPath)
+	servers := createVolmanServer(withLogger, *atAddress, *driverPaths)
 
 	if dbgAddr := cf_debug_server.DebugAddress(flag.CommandLine); dbgAddr != "" {
 		servers = append(grouper.Members{
@@ -64,13 +66,13 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
 }
 
-func createVolmanServer(logger lager.Logger, atAddress string, driversPath string) grouper.Members {
-	if driversPath == "" {
-		panic("'-driversPath' must be provided")
+func createVolmanServer(logger lager.Logger, atAddress string, driverPaths string) grouper.Members {
+	if driverPaths == "" {
+		panic("'-volmanDriverPaths' must be provided")
 	}
 
 	cfg := vollocal.NewDriverConfig()
-	cfg.DriverPath = driversPath
+	cfg.DriverPaths = filepath.SplitList(driverPaths)
 	client, runner := vollocal.NewServer(logger, cfg)
 
 	handler, err := volhttp.NewHandler(logger, client)
