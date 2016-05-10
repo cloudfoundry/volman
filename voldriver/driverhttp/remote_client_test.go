@@ -385,23 +385,20 @@ var _ = Describe("RemoteClient", func() {
 				mountResponse = driver.Mount(testLogger, voldriver.MountRequest{Name: volumeId})
 			})
 
-			It("should have the correct number of retries and the correct response", func() {
+			It("should have the correct number of retries, submit the same request each time and eventually recieve the correct response", func() {
+				// retries
 				Expect(retryCount).To(Equal(2))
-			})
 
-			It("should submit the correct request each time", func() {
+				// request
 				var expectedRequestBody []byte
 				expectedRequestBody, err = json.Marshal(voldriver.MountRequest{Name: volumeId})
 				Expect(err).NotTo(HaveOccurred())
-
 				Expect(requestBody).To(Equal(expectedRequestBody))
-			})
 
-			It("should have the correct response", func() {
+				// response
 				Expect(mountResponse.Err).To(Equal(""))
 				Expect(mountResponse.Mountpoint).NotTo(Equal(""))
 			})
-
 		})
 
 		Context("when it fails and timeout exceeds", func() {
