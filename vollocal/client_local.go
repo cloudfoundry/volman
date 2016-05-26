@@ -116,12 +116,6 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 		return err
 	}
 
-	if response := driver.Remove(logger, voldriver.RemoveRequest{Name: volumeName}); response.Err != "" {
-		err := errors.New(response.Err)
-		logger.Error("remove-failed", err)
-		return err
-	}
-
 	return nil
 }
 

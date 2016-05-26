@@ -198,7 +198,7 @@ var _ = Describe("Volman", func() {
 					err := client.Unmount(logger, "fakedriver", volumeId)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
-					Expect(fakeDriver.RemoveCallCount()).To(Equal(1))
+					Expect(fakeDriver.RemoveCallCount()).To(Equal(0))
 
 					activated, err := driverRegistry.Activated("fakedriver")
 					Expect(err).NotTo(HaveOccurred())
