@@ -96,6 +96,9 @@ func (d *LocalDriver) Mount(logger lager.Logger, mountRequest voldriver.MountReq
 
 	vol.Mountpoint = mountPath
 
+	vol.MountCount++
+	logger.Info("volume-mounted", lager.Data{"name": vol.Name, "count": vol.MountCount})
+
 	mountResponse := voldriver.MountResponse{Mountpoint: mountPath}
 	return mountResponse
 }
@@ -230,6 +233,12 @@ func (d *LocalDriver) unmount(logger lager.Logger, name string, mountPath string
 		return voldriver.ErrorResponse{Err: errText}
 	}
 
+	d.volumes[name].MountCount--
+	if d.volumes[name].MountCount > 0 {
+		logger.Info("volume-still-in-use", lager.Data{"name": name, "count": d.volumes[name].MountCount})
+		return voldriver.ErrorResponse{}
+	}
+
 	logger.Info("removing-volume-path", lager.Data{"mountpoint": mountPath})
 	err = d.fileSystem.RemoveAll(mountPath)
 	if err != nil {
@@ -238,8 +247,7 @@ func (d *LocalDriver) unmount(logger lager.Logger, name string, mountPath string
 	}
 	logger.Info("unmounted-volume")
 
-	volume := d.volumes[name]
-	volume.Mountpoint = ""
+	d.volumes[name].Mountpoint = ""
 
 	return voldriver.ErrorResponse{}
 }

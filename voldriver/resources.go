@@ -97,6 +97,7 @@ type GetResponse struct {
 type VolumeInfo struct {
 	Name       string
 	Mountpoint string
+	MountCount int
 }
 
 type Error struct {

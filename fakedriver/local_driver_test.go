@@ -95,6 +95,18 @@ var _ = Describe("Local Driver", func() {
 					Expect(fakeFileSystem.RemoveAllCallCount()).To(Equal(1))
 				})
 
+				Context("when the same volume is mounted a second time then unmounted", func() {
+					BeforeEach(func() {
+						mountSuccessful(logger, localDriver, volumeName, fakeFileSystem)
+						unmountSuccessful(logger, localDriver, volumeName)
+					})
+
+					It("should not remove the volume from the file system until unmount is called again", func() {
+						Expect(fakeFileSystem.RemoveAllCallCount()).To(Equal(0))
+						unmountSuccessful(logger, localDriver, volumeName)
+						Expect(fakeFileSystem.RemoveAllCallCount()).To(Equal(1))
+					})
+				})
 				Context("when the mountpath is not found on the filesystem", func() {
 					var unmountResponse voldriver.ErrorResponse
 
