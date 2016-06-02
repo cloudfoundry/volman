@@ -9,25 +9,30 @@ import (
 )
 
 type FakeRemoteClientFactory struct {
-	NewRemoteClientStub        func(url string) (voldriver.Driver, error)
+	NewRemoteClientStub        func(url string, tls *voldriver.TLSConfig) (voldriver.Driver, error)
 	newRemoteClientMutex       sync.RWMutex
 	newRemoteClientArgsForCall []struct {
 		url string
+		tls *voldriver.TLSConfig
 	}
 	newRemoteClientReturns struct {
 		result1 voldriver.Driver
 		result2 error
 	}
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRemoteClientFactory) NewRemoteClient(url string) (voldriver.Driver, error) {
+func (fake *FakeRemoteClientFactory) NewRemoteClient(url string, tls *voldriver.TLSConfig) (voldriver.Driver, error) {
 	fake.newRemoteClientMutex.Lock()
 	fake.newRemoteClientArgsForCall = append(fake.newRemoteClientArgsForCall, struct {
 		url string
-	}{url})
+		tls *voldriver.TLSConfig
+	}{url, tls})
+	fake.recordInvocation("NewRemoteClient", []interface{}{url, tls})
 	fake.newRemoteClientMutex.Unlock()
 	if fake.NewRemoteClientStub != nil {
-		return fake.NewRemoteClientStub(url)
+		return fake.NewRemoteClientStub(url, tls)
 	} else {
 		return fake.newRemoteClientReturns.result1, fake.newRemoteClientReturns.result2
 	}
@@ -39,10 +44,10 @@ func (fake *FakeRemoteClientFactory) NewRemoteClientCallCount() int {
 	return len(fake.newRemoteClientArgsForCall)
 }
 
-func (fake *FakeRemoteClientFactory) NewRemoteClientArgsForCall(i int) string {
+func (fake *FakeRemoteClientFactory) NewRemoteClientArgsForCall(i int) (string, *voldriver.TLSConfig) {
 	fake.newRemoteClientMutex.RLock()
 	defer fake.newRemoteClientMutex.RUnlock()
-	return fake.newRemoteClientArgsForCall[i].url
+	return fake.newRemoteClientArgsForCall[i].url, fake.newRemoteClientArgsForCall[i].tls
 }
 
 func (fake *FakeRemoteClientFactory) NewRemoteClientReturns(result1 voldriver.Driver, result2 error) {
@@ -51,6 +56,26 @@ func (fake *FakeRemoteClientFactory) NewRemoteClientReturns(result1 voldriver.Dr
 		result1 voldriver.Driver
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeRemoteClientFactory) Invocations() map[string][][]interface{} {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	fake.newRemoteClientMutex.RLock()
+	defer fake.newRemoteClientMutex.RUnlock()
+	return fake.invocations
+}
+
+func (fake *FakeRemoteClientFactory) recordInvocation(key string, args []interface{}) {
+	fake.invocationsMutex.Lock()
+	defer fake.invocationsMutex.Unlock()
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
+	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ driverhttp.RemoteClientFactory = new(FakeRemoteClientFactory)

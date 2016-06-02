@@ -75,7 +75,7 @@ var _ = Describe("DriverFactory", func() {
 			It("should preferentially select spec over json specification", func() {
 				_, err := driverFactory.Discover(testLogger)
 				Expect(err).ToNot(HaveOccurred())
-				actualAddress := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
+				actualAddress, _ := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
 				Expect(actualAddress).To(Equal("http://0.0.0.0:9090"))
 			})
 		})
@@ -255,7 +255,7 @@ var _ = Describe("DriverFactory", func() {
 			It("should preferentially select the driver in the first directory", func() {
 				_, err := driverFactory.Discover(testLogger)
 				Expect(err).ToNot(HaveOccurred())
-				actualAddress := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
+				actualAddress, _ := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
 				Expect(actualAddress).To(Equal("http://0.0.0.0:8080"))
 			})
 

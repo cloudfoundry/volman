@@ -67,7 +67,7 @@ func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.
 
 			if err != nil {
 				// untestable on linux, does glob work differently on windows???
-				return map[string]voldriver.Driver{}, fmt.Errorf("Volman cocd vollovnfigured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
+				return map[string]voldriver.Driver{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
 			}
 			if len(matchingDriverSpecs) > 0 {
 				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
@@ -115,6 +115,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 	var driver voldriver.Driver
 
 	var address string
+	var tls *voldriver.TLSConfig
 	if strings.Contains(driverFileName, ".") {
 		extension := strings.Split(driverFileName, ".")[1]
 		switch extension {
@@ -147,6 +148,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 				return nil, err
 			}
 			address = driverJsonSpec.Address
+			tls = driverJsonSpec.TLSConfig
 		default:
 			err := fmt.Errorf("unknown-driver-extension: %s", extension)
 			logger.Error("driver", err)
@@ -162,7 +164,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 		}
 
 		logger.Info("getting-driver", lager.Data{"address": address})
-		driver, err = r.Factory.NewRemoteClient(address)
+		driver, err = r.Factory.NewRemoteClient(address, tls)
 		if err != nil {
 			logger.Error(fmt.Sprintf("error-building-driver-attached-to-%s", address), err)
 			return nil, err
@@ -195,7 +197,7 @@ func (r *realDriverFactory) canonicalize(logger lager.Logger, address string) (s
 	}
 
 	switch url.Scheme {
-	case "http":
+	case "http", "https":
 		return address, nil
 	case "tcp":
 		return fmt.Sprintf("http://%s%s", url.Host, url.Path), nil

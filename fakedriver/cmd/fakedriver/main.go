@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"path/filepath"
 
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
@@ -17,6 +18,7 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
 	"github.com/tedsuo/ifrit/sigmon"
+	"github.com/cloudfoundry-incubator/cf_http"
 )
 
 var atAddress = flag.String(
@@ -41,6 +43,47 @@ var mountDir = flag.String(
 	"mountDir",
 	"/tmp/volumes",
 	"Path to directory where fake volumes are created",
+)
+
+var requireSSL = flag.Bool(
+	"requireSSL",
+	false,
+	"whether the fake driver should require ssl-secured communication",
+)
+
+var caFile = flag.String(
+	"caFile",
+	"",
+	"the certificate authority public key file to use with ssl authentication",
+)
+
+var certFile = flag.String(
+	"certFile",
+	"",
+	"the public key file to use with ssl authentication",
+)
+
+var keyFile = flag.String(
+	"keyFile",
+	"",
+	"the private key file to use with ssl authentication",
+)
+var clientCertFile = flag.String(
+	"clientCertFile",
+	"",
+	"the public key file to use with client ssl authentication",
+)
+
+var clientKeyFile = flag.String(
+	"clientKeyFile",
+	"",
+	"the private key file to use with client ssl authentication",
+)
+
+var insecureSkipVerify = flag.Bool(
+	"insecureSkipVerify",
+	false,
+	"whether SSL communication should skip verification of server IP addresses in the certificate",
 )
 
 func main() {
@@ -104,6 +147,17 @@ func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDi
 	if jsonSpec {
 		driverJsonSpec := voldriver.DriverSpec{Name: "fakedriver", Address: advertisedUrl}
 
+		if *requireSSL {
+			absCaFile, err := filepath.Abs(*caFile)
+			exitOnFailure(logger, err)
+			absClientCertFile, err := filepath.Abs(*clientCertFile)
+			exitOnFailure(logger, err)
+			absClientKeyFile, err := filepath.Abs(*clientKeyFile)
+			exitOnFailure(logger, err)
+			driverJsonSpec.TLSConfig = &voldriver.TLSConfig{InsecureSkipVerify: *insecureSkipVerify, CAFile: absCaFile, CertFile: absClientCertFile, KeyFile: absClientKeyFile}
+			driverJsonSpec.Address = "https://" + atAddress
+		}
+
 		jsonBytes, err := json.Marshal(driverJsonSpec)
 
 		exitOnFailure(logger, err)
@@ -116,7 +170,19 @@ func createFakeDriverServer(logger lager.Logger, atAddress, driversPath, mountDi
 	client := fakedriver.NewLocalDriver(&fileSystem, mountDir)
 	handler, err := driverhttp.NewHandler(logger, client)
 	exitOnFailure(logger, err)
-	return http_server.New(atAddress, handler)
+
+	var server ifrit.Runner
+	if *requireSSL {
+		tlsConfig, err := cf_http.NewTLSConfig(*certFile, *keyFile, *caFile)
+		if err != nil {
+			logger.Fatal("tls-configuration-failed", err)
+		}
+		server = http_server.NewTLSServer(atAddress, handler, tlsConfig)
+	} else {
+		server = http_server.New(atAddress, handler)
+	}
+
+	return server
 }
 
 func createFakeDriverUnixServer(logger lager.Logger, atAddress, driversPath, mountDir string) ifrit.Runner {

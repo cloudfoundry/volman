@@ -7,7 +7,7 @@ import (
 //go:generate counterfeiter -o ../../volmanfakes/fake_remote_client_factory.go . RemoteClientFactory
 
 type RemoteClientFactory interface {
-	NewRemoteClient(url string) (voldriver.Driver, error)
+	NewRemoteClient(url string, tls *voldriver.TLSConfig) (voldriver.Driver, error)
 }
 
 func NewRemoteClientFactory() RemoteClientFactory {
@@ -16,6 +16,6 @@ func NewRemoteClientFactory() RemoteClientFactory {
 
 type remoteClientFactory struct{}
 
-func (_ *remoteClientFactory) NewRemoteClient(url string) (voldriver.Driver, error) {
-	return NewRemoteClient(url), nil
+func (_ *remoteClientFactory) NewRemoteClient(url string, tls *voldriver.TLSConfig) (voldriver.Driver, error) {
+	return NewRemoteClient(url, tls)
 }

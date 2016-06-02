@@ -50,6 +50,8 @@ type FakeFileSystem struct {
 		result1 string
 		result2 error
 	}
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeFileSystem) MkdirAll(arg1 string, arg2 os.FileMode) error {
@@ -58,6 +60,7 @@ func (fake *FakeFileSystem) MkdirAll(arg1 string, arg2 os.FileMode) error {
 		arg1 string
 		arg2 os.FileMode
 	}{arg1, arg2})
+	fake.recordInvocation("MkdirAll", []interface{}{arg1, arg2})
 	fake.mkdirAllMutex.Unlock()
 	if fake.MkdirAllStub != nil {
 		return fake.MkdirAllStub(arg1, arg2)
@@ -88,6 +91,7 @@ func (fake *FakeFileSystem) MkdirAllReturns(result1 error) {
 func (fake *FakeFileSystem) TempDir() string {
 	fake.tempDirMutex.Lock()
 	fake.tempDirArgsForCall = append(fake.tempDirArgsForCall, struct{}{})
+	fake.recordInvocation("TempDir", []interface{}{})
 	fake.tempDirMutex.Unlock()
 	if fake.TempDirStub != nil {
 		return fake.TempDirStub()
@@ -114,6 +118,7 @@ func (fake *FakeFileSystem) Stat(arg1 string) (os.FileInfo, error) {
 	fake.statArgsForCall = append(fake.statArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	fake.recordInvocation("Stat", []interface{}{arg1})
 	fake.statMutex.Unlock()
 	if fake.StatStub != nil {
 		return fake.StatStub(arg1)
@@ -147,6 +152,7 @@ func (fake *FakeFileSystem) RemoveAll(arg1 string) error {
 	fake.removeAllArgsForCall = append(fake.removeAllArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	fake.recordInvocation("RemoveAll", []interface{}{arg1})
 	fake.removeAllMutex.Unlock()
 	if fake.RemoveAllStub != nil {
 		return fake.RemoveAllStub(arg1)
@@ -179,6 +185,7 @@ func (fake *FakeFileSystem) Abs(path string) (string, error) {
 	fake.absArgsForCall = append(fake.absArgsForCall, struct {
 		path string
 	}{path})
+	fake.recordInvocation("Abs", []interface{}{path})
 	fake.absMutex.Unlock()
 	if fake.AbsStub != nil {
 		return fake.AbsStub(path)
@@ -205,6 +212,34 @@ func (fake *FakeFileSystem) AbsReturns(result1 string, result2 error) {
 		result1 string
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeFileSystem) Invocations() map[string][][]interface{} {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	fake.mkdirAllMutex.RLock()
+	defer fake.mkdirAllMutex.RUnlock()
+	fake.tempDirMutex.RLock()
+	defer fake.tempDirMutex.RUnlock()
+	fake.statMutex.RLock()
+	defer fake.statMutex.RUnlock()
+	fake.removeAllMutex.RLock()
+	defer fake.removeAllMutex.RUnlock()
+	fake.absMutex.RLock()
+	defer fake.absMutex.RUnlock()
+	return fake.invocations
+}
+
+func (fake *FakeFileSystem) recordInvocation(key string, args []interface{}) {
+	fake.invocationsMutex.Lock()
+	defer fake.invocationsMutex.Unlock()
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
+	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ fakedriver.FileSystem = new(FakeFileSystem)
