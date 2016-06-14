@@ -84,15 +84,15 @@ var _ = Describe("DriverFactory", func() {
 	Context("when a valid driver spec is discovered", func() {
 		var (
 			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
-			fakeDriver              *volmanfakes.FakeDriver
+			localDriver              *volmanfakes.FakeDriver
 			driver                  voldriver.Driver
 			driverFactory           vollocal.DriverFactory
 		)
 		BeforeEach(func() {
 			driverName = "some-driver-name"
 			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
-			fakeDriver = new(volmanfakes.FakeDriver)
-			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
+			localDriver = new(volmanfakes.FakeDriver)
+			fakeRemoteClientFactory.NewRemoteClientReturns(localDriver, nil)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 
 		})
@@ -105,7 +105,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
-				Expect(driver).To(Equal(fakeDriver))
+				Expect(driver).To(Equal(localDriver))
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal("http://0.0.0.0:8080"))
 			})
 			It("should fail if unable to open file", func() {
@@ -136,7 +136,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should return the correct driver", func() {
-				Expect(driver).To(Equal(fakeDriver))
+				Expect(driver).To(Equal(localDriver))
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal("http://0.0.0.0:8080"))
 			})
 			It("should fail if unable to open file", func() {
@@ -164,7 +164,7 @@ var _ = Describe("DriverFactory", func() {
 			It("should return the correct driver", func() {
 				driver, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(driver).To(Equal(fakeDriver))
+				Expect(driver).To(Equal(localDriver))
 				address := path.Join(defaultPluginsDirectory, driverName+".sock")
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal(address))
 			})

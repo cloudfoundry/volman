@@ -31,7 +31,7 @@ import (
 var _ = Describe("RemoteClient", func() {
 
 	var (
-		testLogger                = lagertest.NewTestLogger("FakeDriver Server Test")
+		testLogger                = lagertest.NewTestLogger("LocalDriver Server Test")
 		httpClient                *httpfakes.FakeClient
 		driver                    voldriver.Driver
 		validHttpMountResponse    *http.Response
@@ -274,7 +274,7 @@ var _ = Describe("RemoteClient", func() {
 		var (
 			volumeId                    string
 			unixRunner                  *ginkgomon.Runner
-			fakedriverUnixServerProcess ifrit.Process
+			localDriverUnixServerProcess ifrit.Process
 			socketPath                  string
 		)
 
@@ -282,21 +282,21 @@ var _ = Describe("RemoteClient", func() {
 			tmpdir, err := ioutil.TempDir(os.TempDir(), "fake-driver-test")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			socketPath = path.Join(tmpdir, "fakedriver.sock")
+			socketPath = path.Join(tmpdir, "localdriver.sock")
 
 			unixRunner = ginkgomon.New(ginkgomon.Config{
-				Name: "fakedriverUnixServer",
+				Name: "local-driver",
 				Command: exec.Command(
-					fakeDriverPath,
+					localDriverPath,
 					"-listenAddr", socketPath,
 					"-transport", "unix",
 				),
-				StartCheck: "fakedriverServer.started",
+				StartCheck: "local-driver-server.started",
 			})
 
 			httpClient = new(httpfakes.FakeClient)
 			volumeId = "fake-volume"
-			fakedriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
+			localDriverUnixServerProcess = ginkgomon.Invoke(unixRunner)
 
 			time.Sleep(time.Millisecond * 1000)
 
@@ -309,7 +309,7 @@ var _ = Describe("RemoteClient", func() {
 		})
 
 		AfterEach(func() {
-			ginkgomon.Kill(fakedriverUnixServerProcess)
+			ginkgomon.Kill(localDriverUnixServerProcess)
 		})
 
 		It("should be able to mount", func() {

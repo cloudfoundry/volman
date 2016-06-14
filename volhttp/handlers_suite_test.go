@@ -11,7 +11,7 @@ import (
 )
 
 var tmpDriversPath string
-var fakeDriverPath string
+var localDriverPath string
 
 func TestHandlers(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -21,12 +21,12 @@ func TestHandlers(t *testing.T) {
 var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
 
-	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver", "-race")
+	localDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/localdriver", "-race")
 	Expect(err).NotTo(HaveOccurred())
-	return []byte(strings.Join([]string{fakeDriverPath}, ","))
+	return []byte(strings.Join([]string{localDriverPath}, ","))
 }, func(pathsByte []byte) {
 	path := string(pathsByte)
-	fakeDriverPath = strings.Split(path, ",")[0]
+	localDriverPath = strings.Split(path, ",")[0]
 })
 
 var _ = BeforeEach(func() {

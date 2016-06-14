@@ -14,7 +14,7 @@ import (
 )
 
 var debugServerAddress string
-var fakeDriverPath string
+var localDriverPath string
 
 var fakedriverServerPort int
 var fakedriverProcess ifrit.Process
@@ -28,11 +28,11 @@ func TestDriver(t *testing.T) {
 var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
 
-	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver/cmd/fakedriver", "-race")
+	localDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/localdriver/cmd/localdriver", "-race")
 	Expect(err).NotTo(HaveOccurred())
-	return []byte(fakeDriverPath)
+	return []byte(localDriverPath)
 }, func(pathsByte []byte) {
-	fakeDriverPath = string(pathsByte)
+	localDriverPath = string(pathsByte)
 })
 
 var _ = SynchronizedAfterSuite(func() {

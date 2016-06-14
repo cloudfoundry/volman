@@ -23,7 +23,7 @@ var client volman.Manager
 var defaultPluginsDirectory string
 var secondPluginsDirectory string
 
-var fakeDriverPath string
+var localDriverPath string
 var localDriverServerPort int
 var debugServerAddress string
 var localDriverProcess ifrit.Process
@@ -39,12 +39,12 @@ func TestDriver(t *testing.T) {
 var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
 
-	fakeDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/fakedriver/cmd/fakedriver", "-race")
+	localDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/localdriver/cmd/localdriver", "-race")
 	Expect(err).NotTo(HaveOccurred())
-	return []byte(fakeDriverPath)
+	return []byte(localDriverPath)
 }, func(pathsByte []byte) {
 	path := string(pathsByte)
-	fakeDriverPath = strings.Split(path, ",")[0]
+	localDriverPath = strings.Split(path, ",")[0]
 })
 
 var _ = BeforeEach(func() {
@@ -62,14 +62,14 @@ var _ = BeforeEach(func() {
 
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
 	localDriverRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "fakedriverServer",
+		Name: "local-driver",
 		Command: exec.Command(
-			fakeDriverPath,
+			localDriverPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", localDriverServerPort),
 			"-debugAddr", debugServerAddress,
 			"-driversPath", defaultPluginsDirectory,
 		),
-		StartCheck: "fakedriverServer.started",
+		StartCheck: "local-driver-server.started",
 	})
 })
 

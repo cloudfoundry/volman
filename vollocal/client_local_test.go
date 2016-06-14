@@ -155,7 +155,7 @@ var _ = Describe("Volman", func() {
 
 				fakeDriverFactory.DiscoverReturns(drivers, nil)
 
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte(fmt.Sprintf("http://0.0.0.0:%d", localDriverServerPort)))
+				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte(fmt.Sprintf("http://0.0.0.0:%d", fakeDriver)))
 				Expect(err).NotTo(HaveOccurred())
 
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})

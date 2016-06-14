@@ -79,8 +79,6 @@ type FakeDriver struct {
 	unmountReturns struct {
 		result1 voldriver.ErrorResponse
 	}
-	invocations      map[string][][]interface{}
-	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeDriver) Activate(logger lager.Logger) voldriver.ActivateResponse {
@@ -88,7 +86,6 @@ func (fake *FakeDriver) Activate(logger lager.Logger) voldriver.ActivateResponse
 	fake.activateArgsForCall = append(fake.activateArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.recordInvocation("Activate", []interface{}{logger})
 	fake.activateMutex.Unlock()
 	if fake.ActivateStub != nil {
 		return fake.ActivateStub(logger)
@@ -122,7 +119,6 @@ func (fake *FakeDriver) Create(logger lager.Logger, createRequest voldriver.Crea
 		logger        lager.Logger
 		createRequest voldriver.CreateRequest
 	}{logger, createRequest})
-	fake.recordInvocation("Create", []interface{}{logger, createRequest})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(logger, createRequest)
@@ -156,7 +152,6 @@ func (fake *FakeDriver) Get(logger lager.Logger, getRequest voldriver.GetRequest
 		logger     lager.Logger
 		getRequest voldriver.GetRequest
 	}{logger, getRequest})
-	fake.recordInvocation("Get", []interface{}{logger, getRequest})
 	fake.getMutex.Unlock()
 	if fake.GetStub != nil {
 		return fake.GetStub(logger, getRequest)
@@ -189,7 +184,6 @@ func (fake *FakeDriver) List(logger lager.Logger) voldriver.ListResponse {
 	fake.listArgsForCall = append(fake.listArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.recordInvocation("List", []interface{}{logger})
 	fake.listMutex.Unlock()
 	if fake.ListStub != nil {
 		return fake.ListStub(logger)
@@ -223,7 +217,6 @@ func (fake *FakeDriver) Mount(logger lager.Logger, mountRequest voldriver.MountR
 		logger       lager.Logger
 		mountRequest voldriver.MountRequest
 	}{logger, mountRequest})
-	fake.recordInvocation("Mount", []interface{}{logger, mountRequest})
 	fake.mountMutex.Unlock()
 	if fake.MountStub != nil {
 		return fake.MountStub(logger, mountRequest)
@@ -257,7 +250,6 @@ func (fake *FakeDriver) Path(logger lager.Logger, pathRequest voldriver.PathRequ
 		logger      lager.Logger
 		pathRequest voldriver.PathRequest
 	}{logger, pathRequest})
-	fake.recordInvocation("Path", []interface{}{logger, pathRequest})
 	fake.pathMutex.Unlock()
 	if fake.PathStub != nil {
 		return fake.PathStub(logger, pathRequest)
@@ -291,7 +283,6 @@ func (fake *FakeDriver) Remove(logger lager.Logger, removeRequest voldriver.Remo
 		logger        lager.Logger
 		removeRequest voldriver.RemoveRequest
 	}{logger, removeRequest})
-	fake.recordInvocation("Remove", []interface{}{logger, removeRequest})
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(logger, removeRequest)
@@ -325,7 +316,6 @@ func (fake *FakeDriver) Unmount(logger lager.Logger, unmountRequest voldriver.Un
 		logger         lager.Logger
 		unmountRequest voldriver.UnmountRequest
 	}{logger, unmountRequest})
-	fake.recordInvocation("Unmount", []interface{}{logger, unmountRequest})
 	fake.unmountMutex.Unlock()
 	if fake.UnmountStub != nil {
 		return fake.UnmountStub(logger, unmountRequest)
@@ -351,40 +341,6 @@ func (fake *FakeDriver) UnmountReturns(result1 voldriver.ErrorResponse) {
 	fake.unmountReturns = struct {
 		result1 voldriver.ErrorResponse
 	}{result1}
-}
-
-func (fake *FakeDriver) Invocations() map[string][][]interface{} {
-	fake.invocationsMutex.RLock()
-	defer fake.invocationsMutex.RUnlock()
-	fake.activateMutex.RLock()
-	defer fake.activateMutex.RUnlock()
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
-	fake.listMutex.RLock()
-	defer fake.listMutex.RUnlock()
-	fake.mountMutex.RLock()
-	defer fake.mountMutex.RUnlock()
-	fake.pathMutex.RLock()
-	defer fake.pathMutex.RUnlock()
-	fake.removeMutex.RLock()
-	defer fake.removeMutex.RUnlock()
-	fake.unmountMutex.RLock()
-	defer fake.unmountMutex.RUnlock()
-	return fake.invocations
-}
-
-func (fake *FakeDriver) recordInvocation(key string, args []interface{}) {
-	fake.invocationsMutex.Lock()
-	defer fake.invocationsMutex.Unlock()
-	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
-	}
-	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
-	}
-	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ voldriver.Driver = new(FakeDriver)

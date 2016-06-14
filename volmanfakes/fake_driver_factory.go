@@ -31,8 +31,6 @@ type FakeDriverFactory struct {
 		result1 voldriver.Driver
 		result2 error
 	}
-	invocations      map[string][][]interface{}
-	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
@@ -40,7 +38,6 @@ func (fake *FakeDriverFactory) Discover(logger lager.Logger) (map[string]voldriv
 	fake.discoverArgsForCall = append(fake.discoverArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.recordInvocation("Discover", []interface{}{logger})
 	fake.discoverMutex.Unlock()
 	if fake.DiscoverStub != nil {
 		return fake.DiscoverStub(logger)
@@ -77,7 +74,6 @@ func (fake *FakeDriverFactory) Driver(logger lager.Logger, driverId string, driv
 		driverPath     string
 		driverFileName string
 	}{logger, driverId, driverPath, driverFileName})
-	fake.recordInvocation("Driver", []interface{}{logger, driverId, driverPath, driverFileName})
 	fake.driverMutex.Unlock()
 	if fake.DriverStub != nil {
 		return fake.DriverStub(logger, driverId, driverPath, driverFileName)
@@ -104,28 +100,6 @@ func (fake *FakeDriverFactory) DriverReturns(result1 voldriver.Driver, result2 e
 		result1 voldriver.Driver
 		result2 error
 	}{result1, result2}
-}
-
-func (fake *FakeDriverFactory) Invocations() map[string][][]interface{} {
-	fake.invocationsMutex.RLock()
-	defer fake.invocationsMutex.RUnlock()
-	fake.discoverMutex.RLock()
-	defer fake.discoverMutex.RUnlock()
-	fake.driverMutex.RLock()
-	defer fake.driverMutex.RUnlock()
-	return fake.invocations
-}
-
-func (fake *FakeDriverFactory) recordInvocation(key string, args []interface{}) {
-	fake.invocationsMutex.Lock()
-	defer fake.invocationsMutex.Unlock()
-	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
-	}
-	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
-	}
-	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ vollocal.DriverFactory = new(FakeDriverFactory)

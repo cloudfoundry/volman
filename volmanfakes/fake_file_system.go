@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/volman/fakedriver"
+	"github.com/cloudfoundry-incubator/localdriver"
 )
 
 type FakeFileSystem struct {
@@ -242,4 +242,4 @@ func (fake *FakeFileSystem) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ fakedriver.FileSystem = new(FakeFileSystem)
+var _ localdriver.FileSystem = new(FakeFileSystem)

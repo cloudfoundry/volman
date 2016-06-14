@@ -40,8 +40,6 @@ type FakeManager struct {
 	unmountReturns struct {
 		result1 error
 	}
-	invocations      map[string][][]interface{}
-	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeManager) ListDrivers(logger lager.Logger) (volman.ListDriversResponse, error) {
@@ -49,7 +47,6 @@ func (fake *FakeManager) ListDrivers(logger lager.Logger) (volman.ListDriversRes
 	fake.listDriversArgsForCall = append(fake.listDriversArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.recordInvocation("ListDrivers", []interface{}{logger})
 	fake.listDriversMutex.Unlock()
 	if fake.ListDriversStub != nil {
 		return fake.ListDriversStub(logger)
@@ -86,7 +83,6 @@ func (fake *FakeManager) Mount(logger lager.Logger, driverId string, volumeId st
 		volumeId string
 		config   map[string]interface{}
 	}{logger, driverId, volumeId, config})
-	fake.recordInvocation("Mount", []interface{}{logger, driverId, volumeId, config})
 	fake.mountMutex.Unlock()
 	if fake.MountStub != nil {
 		return fake.MountStub(logger, driverId, volumeId, config)
@@ -122,7 +118,6 @@ func (fake *FakeManager) Unmount(logger lager.Logger, driverId string, volumeId 
 		driverId string
 		volumeId string
 	}{logger, driverId, volumeId})
-	fake.recordInvocation("Unmount", []interface{}{logger, driverId, volumeId})
 	fake.unmountMutex.Unlock()
 	if fake.UnmountStub != nil {
 		return fake.UnmountStub(logger, driverId, volumeId)
@@ -148,30 +143,6 @@ func (fake *FakeManager) UnmountReturns(result1 error) {
 	fake.unmountReturns = struct {
 		result1 error
 	}{result1}
-}
-
-func (fake *FakeManager) Invocations() map[string][][]interface{} {
-	fake.invocationsMutex.RLock()
-	defer fake.invocationsMutex.RUnlock()
-	fake.listDriversMutex.RLock()
-	defer fake.listDriversMutex.RUnlock()
-	fake.mountMutex.RLock()
-	defer fake.mountMutex.RUnlock()
-	fake.unmountMutex.RLock()
-	defer fake.unmountMutex.RUnlock()
-	return fake.invocations
-}
-
-func (fake *FakeManager) recordInvocation(key string, args []interface{}) {
-	fake.invocationsMutex.Lock()
-	defer fake.invocationsMutex.Unlock()
-	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
-	}
-	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
-	}
-	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ volman.Manager = new(FakeManager)

@@ -1,9 +1,0 @@
-{
-  "volman_driver_path": "/tmp/plugins",
-  "driver_name": "fakedriver",
-  "reset_driver_script": "../scripts/resetdriver_tcp.sh",
-  "create_config": {
-    "Name": "fake-volume",
-    "Opts": {"volume_id":"fake-volume"}
-  }
-}

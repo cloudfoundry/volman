@@ -19,8 +19,6 @@ type FakeRemoteClientFactory struct {
 		result1 voldriver.Driver
 		result2 error
 	}
-	invocations      map[string][][]interface{}
-	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeRemoteClientFactory) NewRemoteClient(url string, tls *voldriver.TLSConfig) (voldriver.Driver, error) {
@@ -29,7 +27,6 @@ func (fake *FakeRemoteClientFactory) NewRemoteClient(url string, tls *voldriver.
 		url string
 		tls *voldriver.TLSConfig
 	}{url, tls})
-	fake.recordInvocation("NewRemoteClient", []interface{}{url, tls})
 	fake.newRemoteClientMutex.Unlock()
 	if fake.NewRemoteClientStub != nil {
 		return fake.NewRemoteClientStub(url, tls)
@@ -56,26 +53,6 @@ func (fake *FakeRemoteClientFactory) NewRemoteClientReturns(result1 voldriver.Dr
 		result1 voldriver.Driver
 		result2 error
 	}{result1, result2}
-}
-
-func (fake *FakeRemoteClientFactory) Invocations() map[string][][]interface{} {
-	fake.invocationsMutex.RLock()
-	defer fake.invocationsMutex.RUnlock()
-	fake.newRemoteClientMutex.RLock()
-	defer fake.newRemoteClientMutex.RUnlock()
-	return fake.invocations
-}
-
-func (fake *FakeRemoteClientFactory) recordInvocation(key string, args []interface{}) {
-	fake.invocationsMutex.Lock()
-	defer fake.invocationsMutex.Unlock()
-	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
-	}
-	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
-	}
-	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ driverhttp.RemoteClientFactory = new(FakeRemoteClientFactory)
