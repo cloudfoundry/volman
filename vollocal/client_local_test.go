@@ -7,6 +7,8 @@ import (
 
 	"fmt"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -54,7 +56,7 @@ var _ = Describe("Volman", func() {
 
 		BeforeEach(func() {
 			driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-			client = vollocal.NewLocalClient(logger, driverRegistry)
+			client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 
 			process = ginkgomon.Invoke(driverSyncer.Runner())
 		})
@@ -89,7 +91,7 @@ var _ = Describe("Volman", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 			})
 
 			JustBeforeEach(func() {
@@ -159,7 +161,7 @@ var _ = Describe("Volman", func() {
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 			})
@@ -188,6 +190,36 @@ var _ = Describe("Volman", func() {
 					volumeId := "fake-volume"
 					_, err := client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).To(HaveOccurred())
+				})
+				Context("with metrics", func() {
+					var sender *fake.FakeMetricSender
+
+					BeforeEach(func() {
+						sender = fake.NewFakeMetricSender()
+						metrics.Initialize(sender, nil)
+
+					})
+
+					It("should emit mount time on successful mount", func() {
+						volumeId := "fake-volume"
+
+						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+
+						reportedDuration := sender.GetValue("VolmanMountDuration")
+						Expect(reportedDuration.Unit).To(Equal("nanos"))
+						Expect(reportedDuration.Value).NotTo(BeZero())
+
+					})
+
+					It("should increment error count on mount failure", func() {
+						mountResponse := voldriver.MountResponse{Err: "an error"}
+						fakeDriver.MountReturns(mountResponse)
+
+						volumeId := "fake-volume"
+						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+						Expect(sender.GetCounter("VolmanMountErrors")).To(Equal(uint64(1)))
+					})
+
 				})
 			})
 
@@ -233,7 +265,7 @@ var _ = Describe("Volman", func() {
 
 					driverRegistry := vollocal.NewDriverRegistry()
 					driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-					client = vollocal.NewLocalClient(logger, driverRegistry)
+					client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 
 					process = ginkgomon.Invoke(driverSyncer.Runner())
 				})
@@ -265,7 +297,7 @@ var _ = Describe("Volman", func() {
 						fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{}})
 
 						driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-						client = vollocal.NewLocalClient(logger, driverRegistry)
+						client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 
 						process = ginkgomon.Invoke(driverSyncer.Runner())
 					})
@@ -294,7 +326,7 @@ var _ = Describe("Volman", func() {
 						fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"authz", "NetworkDriver"}})
 
 						driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-						client = vollocal.NewLocalClient(logger, driverRegistry)
+						client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 
 						process = ginkgomon.Invoke(driverSyncer.Runner())
 					})
@@ -333,7 +365,7 @@ var _ = Describe("Volman", func() {
 
 				driverRegistry := vollocal.NewDriverRegistry()
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 
@@ -370,7 +402,7 @@ var _ = Describe("Volman", func() {
 
 				driverRegistry := vollocal.NewDriverRegistry()
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
 
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 			})

@@ -8,10 +8,16 @@ import (
 
 	"fmt"
 
+	"github.com/cloudfoundry-incubator/runtime-schema/metric"
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
+)
+
+const (
+	volmanMountErrorsCounter = metric.Counter("VolmanMountErrors")
+	volmanMountDuration      = metric.Duration("VolmanMountDuration")
 )
 
 type DriverConfig struct {
@@ -27,17 +33,19 @@ func NewDriverConfig() DriverConfig {
 
 type localClient struct {
 	driverRegistry DriverRegistry
+	clock          clock.Clock
 }
 
 func NewServer(logger lager.Logger, config DriverConfig) (volman.Manager, ifrit.Runner) {
 	clock := clock.NewClock()
 	registry := NewDriverRegistry()
-	return NewLocalClient(logger, registry), NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock).Runner()
+	return NewLocalClient(logger, registry, clock), NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock).Runner()
 }
 
-func NewLocalClient(logger lager.Logger, registry DriverRegistry) volman.Manager {
+func NewLocalClient(logger lager.Logger, registry DriverRegistry, clock clock.Clock) volman.Manager {
 	return &localClient{
 		driverRegistry: registry,
+		clock:          clock,
 	}
 }
 
@@ -60,23 +68,36 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
+
+	mountStart := client.clock.Now()
+
+	defer func() {
+		err := volmanMountDuration.Send(time.Since(mountStart))
+		if err != nil {
+			logger.Error("failed-to-send-volman-mount-duration-metric", err)
+		}
+	}()
+
 	logger.Debug("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
 
 	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
+		volmanMountErrorsCounter.Increment()
 		return volman.MountResponse{}, err
 	}
 
 	err := client.activate(logger, driverId, driver)
 	if err != nil {
 		logger.Error("activate-failed", err)
+		volmanMountErrorsCounter.Increment()
 		return volman.MountResponse{}, err
 	}
 
 	err = client.create(logger, driverId, volumeId, config)
 	if err != nil {
+		volmanMountErrorsCounter.Increment()
 		return volman.MountResponse{}, err
 	}
 
@@ -85,6 +106,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	mountResponse := driver.Mount(logger, mountRequest)
 	logger.Debug("response-from-driver", lager.Data{"response": mountResponse})
 	if mountResponse.Err != "" {
+		volmanMountErrorsCounter.Increment()
 		return volman.MountResponse{}, errors.New(mountResponse.Err)
 	}
 
