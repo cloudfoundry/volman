@@ -18,6 +18,8 @@ import (
 const (
 	volmanMountErrorsCounter = metric.Counter("VolmanMountErrors")
 	volmanMountDuration      = metric.Duration("VolmanMountDuration")
+	volmanUnmountErrorsCounter = metric.Counter("VolmanUnmountErrors")
+	volmanUnmountDuration      = metric.Duration("VolmanUnmountDuration")
 )
 
 type DriverConfig struct {
@@ -119,22 +121,34 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 	defer logger.Info("end")
 	logger.Debug("unmounting-volume", lager.Data{"volumeName": volumeName})
 
+	unmountStart := client.clock.Now()
+
+	defer func() {
+		err := volmanUnmountDuration.Send(time.Since(unmountStart))
+		if err != nil {
+			logger.Error("failed-to-send-volman-unmount-duration-metric", err)
+		}
+	}()
+
 	driver, found := client.driverRegistry.Driver(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
+		volmanUnmountErrorsCounter.Increment()
 		return err
 	}
 
 	err := client.activate(logger, driverId, driver)
 	if err != nil {
 		logger.Error("activate-failed", err)
+		volmanUnmountErrorsCounter.Increment()
 		return err
 	}
 
 	if response := driver.Unmount(logger, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
 		err := errors.New(response.Err)
 		logger.Error("unmount-failed", err)
+		volmanUnmountErrorsCounter.Increment()
 		return err
 	}
 

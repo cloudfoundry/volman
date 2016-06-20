@@ -244,6 +244,34 @@ var _ = Describe("Volman", func() {
 					err := client.Unmount(logger, "fakedriver", volumeId)
 					Expect(err).To(HaveOccurred())
 				})
+				Context("with metrics", func() {
+					var sender *fake.FakeMetricSender
+
+					BeforeEach(func() {
+						sender = fake.NewFakeMetricSender()
+						metrics.Initialize(sender, nil)
+
+					})
+
+					It("should emit unmount time on successful unmount", func() {
+						volumeId := "fake-volume"
+						client.Unmount(logger, "fakedriver", volumeId)
+
+						reportedDuration := sender.GetValue("VolmanUnmountDuration")
+						Expect(reportedDuration.Unit).To(Equal("nanos"))
+						Expect(reportedDuration.Value).NotTo(BeZero())
+
+					})
+
+					It("should increment error count on unmount failure", func() {
+						fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
+						volumeId := "fake-volume"
+
+						client.Unmount(logger, "fakedriver", volumeId)
+						Expect(sender.GetCounter("VolmanUnmountErrors")).To(Equal(uint64(1)))
+					})
+
+				})
 			})
 		})
 
