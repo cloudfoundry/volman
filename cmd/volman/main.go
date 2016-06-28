@@ -6,8 +6,8 @@ import (
 
 	"path/filepath"
 
+	cf_lager "code.cloudfoundry.org/cflager"
 	cf_debug_server "code.cloudfoundry.org/debugserver"
-	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/pivotal-golang/lager"
