@@ -1,8 +1,6 @@
 package vollocal_test
 
 import (
-	"bytes"
-	"io"
 	"time"
 
 	"fmt"
@@ -33,8 +31,6 @@ var _ = Describe("Volman", func() {
 
 		scanInterval time.Duration
 
-		validDriverInfoResponse io.ReadCloser
-
 		driverRegistry vollocal.DriverRegistry
 		driverSyncer   vollocal.DriverSyncer
 
@@ -48,12 +44,9 @@ var _ = Describe("Volman", func() {
 		scanInterval = 1 * time.Second
 
 		driverRegistry = vollocal.NewDriverRegistry()
-
-		validDriverInfoResponse = stringCloser{bytes.NewBufferString("{\"Name\":\"fakedriver\",\"Path\":\"somePath\"}")}
 	})
 
 	Describe("ListDrivers", func() {
-
 		BeforeEach(func() {
 			driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
 			client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)

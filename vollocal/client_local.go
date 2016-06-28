@@ -8,7 +8,7 @@ import (
 
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/runtime-schema/metric"
+	"code.cloudfoundry.org/runtimeschema/metric"
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/clock"
@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	volmanMountErrorsCounter = metric.Counter("VolmanMountErrors")
-	volmanMountDuration      = metric.Duration("VolmanMountDuration")
+	volmanMountErrorsCounter   = metric.Counter("VolmanMountErrors")
+	volmanMountDuration        = metric.Duration("VolmanMountDuration")
 	volmanUnmountErrorsCounter = metric.Counter("VolmanUnmountErrors")
 	volmanUnmountDuration      = metric.Duration("VolmanUnmountDuration")
 )
