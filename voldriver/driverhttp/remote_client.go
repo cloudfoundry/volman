@@ -11,7 +11,7 @@ import (
 
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/cf_http"
+	"code.cloudfoundry.org/cfhttp"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
@@ -20,9 +20,9 @@ import (
 
 	"time"
 
+	"errors"
 	"github.com/cloudfoundry/gunk/http_wrap"
 	"github.com/pivotal-golang/clock"
-	"errors"
 )
 
 type reqFactory struct {
@@ -50,15 +50,15 @@ type remoteClient struct {
 }
 
 func NewRemoteClient(url string, tls *voldriver.TLSConfig) (*remoteClient, error) {
-	baseClient := cf_http.NewClient()
+	baseClient := cfhttp.NewClient()
 	httpClient := http_wrap.NewClientFrom(baseClient)
 
 	if strings.Contains(url, ".sock") {
-		httpClient = cf_http.NewUnixClient(url)
+		httpClient = cfhttp.NewUnixClient(url)
 		url = fmt.Sprintf("unix://%s", url)
 	} else {
 		if tls != nil {
-			tlsConfig, err := cf_http.NewTLSConfig(tls.CertFile, tls.KeyFile, tls.CAFile)
+			tlsConfig, err := cfhttp.NewTLSConfig(tls.CertFile, tls.KeyFile, tls.CAFile)
 			if err != nil {
 				return nil, err
 			}

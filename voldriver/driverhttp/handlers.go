@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	cf_http_handlers "github.com/cloudfoundry-incubator/cf_http/handlers"
+	cf_http_handlers "code.cloudfoundry.org/cfhttp/handlers"
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"

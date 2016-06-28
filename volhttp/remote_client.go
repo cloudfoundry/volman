@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/cloudfoundry-incubator/cf_http"
+	"code.cloudfoundry.org/cfhttp"
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
@@ -21,7 +21,7 @@ type remoteClient struct {
 
 func NewRemoteClient(volmanURL string) *remoteClient {
 	return &remoteClient{
-		HttpClient: cf_http.NewClient(),
+		HttpClient: cfhttp.NewClient(),
 		reqGen:     rata.NewRequestGenerator(volmanURL, volman.Routes),
 	}
 }
