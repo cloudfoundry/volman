@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"

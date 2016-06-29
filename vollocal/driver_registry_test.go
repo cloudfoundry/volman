@@ -6,7 +6,7 @@ import (
 
 	. "github.com/cloudfoundry-incubator/volman/vollocal"
 
-	"github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 )
 

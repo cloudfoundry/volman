@@ -11,8 +11,8 @@ import (
 
 	"net/url"
 
-	"github.com/cloudfoundry-incubator/volman/voldriver"
-	"github.com/cloudfoundry-incubator/volman/voldriver/driverhttp"
+	"github.com/cloudfoundry-incubator/voldriver"
+	"github.com/cloudfoundry-incubator/voldriver/driverhttp"
 	"github.com/cloudfoundry/gunk/os_wrap"
 	"github.com/pivotal-golang/lager"
 )

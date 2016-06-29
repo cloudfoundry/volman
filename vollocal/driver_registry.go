@@ -5,7 +5,7 @@ import (
 
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/volman/voldriver"
+	"github.com/cloudfoundry-incubator/voldriver"
 )
 
 type DriverRegistry interface {

@@ -9,8 +9,8 @@ import (
 	"fmt"
 
 	"code.cloudfoundry.org/runtimeschema/metric"
+	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/voldriver"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )
