@@ -33,7 +33,6 @@ var _ = BeforeEach(func() {
 	var err error
 	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
 	Expect(err).NotTo(HaveOccurred())
-
 })
 
 var _ = SynchronizedAfterSuite(func() {

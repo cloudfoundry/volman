@@ -35,19 +35,19 @@ func init() {
 
 func main() {
 	parseCommandLine()
-	withLogger, logTap := logger()
-	defer withLogger.Info("ends")
+	logger, logSink := cf_lager.New("volman")
+	defer logger.Info("ends")
 
-	servers := createVolmanServer(withLogger, *atAddress, *driverPaths)
+	servers := createVolmanServer(logger, *atAddress, *driverPaths)
 
 	if dbgAddr := cf_debug_server.DebugAddress(flag.CommandLine); dbgAddr != "" {
 		servers = append(grouper.Members{
-			{"debug-server", cf_debug_server.Runner(dbgAddr, logTap)},
+			{"debug-server", cf_debug_server.Runner(dbgAddr, logSink)},
 		}, servers...)
 	}
 	process := ifrit.Invoke(processRunnerFor(servers))
-	withLogger.Info("started")
-	untilTerminated(withLogger, process)
+	logger.Info("started")
+	untilTerminated(logger, process)
 }
 
 func exitOnFailure(logger lager.Logger, err error) {
@@ -82,12 +82,6 @@ func createVolmanServer(logger lager.Logger, atAddress string, driverPaths strin
 		{"driver-syncer", runner},
 		{"http-server", http_server.New(atAddress, handler)},
 	}
-}
-
-func logger() (lager.Logger, *lager.ReconfigurableSink) {
-
-	logger, reconfigurableSink := cf_lager.New("volman")
-	return logger, reconfigurableSink
 }
 
 func parseCommandLine() {
