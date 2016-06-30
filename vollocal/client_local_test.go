@@ -15,8 +15,8 @@ import (
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 
 	"code.cloudfoundry.org/clock/fakeclock"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )

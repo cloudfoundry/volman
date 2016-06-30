@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	"code.cloudfoundry.org/cfhttp"
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
 )
 

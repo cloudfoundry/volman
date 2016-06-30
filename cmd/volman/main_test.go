@@ -5,11 +5,11 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/cloudfoundry-incubator/volman"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/voldriver"
+	"github.com/cloudfoundry-incubator/volman"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 

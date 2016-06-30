@@ -4,8 +4,8 @@ package volmanfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/voldriver"
-	"github.com/pivotal-golang/lager"
 )
 
 type FakeDriver struct {

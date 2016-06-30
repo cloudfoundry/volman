@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	cf_http_handlers "code.cloudfoundry.org/cfhttp/handlers"
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
 )
 

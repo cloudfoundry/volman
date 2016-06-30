@@ -1,6 +1,6 @@
 package volman
 
-import "github.com/pivotal-golang/lager"
+import "code.cloudfoundry.org/lager"
 
 //go:generate counterfeiter -o volmanfakes/fake_manager_client.go . Manager
 

@@ -11,10 +11,10 @@ import (
 
 	"net/url"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/voldriver/driverhttp"
 	"github.com/cloudfoundry/gunk/os_wrap"
-	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory

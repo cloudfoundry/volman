@@ -8,9 +8,9 @@ import (
 
 	cf_lager "code.cloudfoundry.org/cflager"
 	cf_debug_server "code.cloudfoundry.org/debugserver"
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/volman/volhttp"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
-	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"

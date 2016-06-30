@@ -8,12 +8,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	"github.com/cloudfoundry/gunk/os_wrap/osfakes"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("DriverFactory", func() {
@@ -84,7 +84,7 @@ var _ = Describe("DriverFactory", func() {
 	Context("when a valid driver spec is discovered", func() {
 		var (
 			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
-			localDriver              *volmanfakes.FakeDriver
+			localDriver             *volmanfakes.FakeDriver
 			driver                  voldriver.Driver
 			driverFactory           vollocal.DriverFactory
 		)

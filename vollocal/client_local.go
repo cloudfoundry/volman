@@ -9,10 +9,10 @@ import (
 	"fmt"
 
 	"code.cloudfoundry.org/clock"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/runtimeschema/metric"
 	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/volman"
-	"github.com/pivotal-golang/lager"
 )
 
 const (
