@@ -8,10 +8,15 @@ import (
 
 	"fmt"
 
+	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/runtimeschema/metric"
 	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/volman"
+<<<<<<< Updated upstream
 	"github.com/pivotal-golang/clock"
+=======
+	"github.com/cloudfoundry-incubator/volman/voldriver"
+>>>>>>> Stashed changes
 	"github.com/pivotal-golang/lager"
 )
 
