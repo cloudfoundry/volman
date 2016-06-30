@@ -8,8 +8,13 @@ import (
 	"os"
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/pivotal-golang/clock"
+=======
+	"code.cloudfoundry.org/clock"
+	"github.com/cloudfoundry-incubator/volman/voldriver"
+>>>>>>> Stashed changes
 =======
 	"code.cloudfoundry.org/clock"
 	"github.com/cloudfoundry-incubator/volman/voldriver"

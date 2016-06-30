@@ -13,7 +13,11 @@ import (
 	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/cloudfoundry-incubator/volman"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 	"github.com/pivotal-golang/clock"
+=======
+	"github.com/cloudfoundry-incubator/volman/voldriver"
+>>>>>>> Stashed changes
 =======
 	"github.com/cloudfoundry-incubator/volman/voldriver"
 >>>>>>> Stashed changes
