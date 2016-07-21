@@ -62,6 +62,14 @@ var _ = Describe("DriverFactory", func() {
 				fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			})
 
+			It("should not find drivers that are unresponsive", func() {
+				fakeDriver.ListReturns(voldriver.ListResponse{Err: "Error"})
+				drivers, err := driverFactory.Discover(testLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(drivers)).To(Equal(0))
+				Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(1))
+			})
+
 			It("should find drivers", func() {
 				drivers, err := driverFactory.Discover(testLogger)
 				Expect(err).ToNot(HaveOccurred())
