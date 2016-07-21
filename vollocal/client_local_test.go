@@ -17,6 +17,7 @@ import (
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/cloudfoundry-incubator/voldriver/voldriverfakes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
@@ -26,7 +27,7 @@ var _ = Describe("Volman", func() {
 		logger = lagertest.NewTestLogger("client-test")
 
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
-		fakeDriver        *volmanfakes.FakeDriver
+		fakeDriver        *voldriverfakes.FakeDriver
 		fakeClock         *fakeclock.FakeClock
 
 		scanInterval time.Duration
@@ -103,7 +104,7 @@ var _ = Describe("Volman", func() {
 
 			Context("after running drivers discovery", func() {
 				BeforeEach(func() {
-					fakeDriver := new(volmanfakes.FakeDriver)
+					fakeDriver := new(voldriverfakes.FakeDriver)
 					fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"fakedriver": fakeDriver}, nil)
 					fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
@@ -140,7 +141,7 @@ var _ = Describe("Volman", func() {
 		Context("when given valid driver", func() {
 			BeforeEach(func() {
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
-				fakeDriver = new(volmanfakes.FakeDriver)
+				fakeDriver = new(voldriverfakes.FakeDriver)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
 				drivers := make(map[string]voldriver.Driver)
@@ -272,7 +273,7 @@ var _ = Describe("Volman", func() {
 			BeforeEach(func() {
 				localDriverProcess = ginkgomon.Invoke(localDriverRunner)
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
-				fakeDriver = new(volmanfakes.FakeDriver)
+				fakeDriver = new(voldriverfakes.FakeDriver)
 			})
 
 			AfterEach(func() {
@@ -377,7 +378,7 @@ var _ = Describe("Volman", func() {
 			BeforeEach(func() {
 
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
-				fakeDriver = new(volmanfakes.FakeDriver)
+				fakeDriver = new(voldriverfakes.FakeDriver)
 				mountReturn := voldriver.MountResponse{Err: "driver not found",
 					Mountpoint: "",
 				}
@@ -414,7 +415,7 @@ var _ = Describe("Volman", func() {
 		Context("after unsuccessfully creating", func() {
 			BeforeEach(func() {
 				localDriverProcess = ginkgomon.Invoke(localDriverRunner)
-				fakeDriver = new(volmanfakes.FakeDriver)
+				fakeDriver = new(voldriverfakes.FakeDriver)
 
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)

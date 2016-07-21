@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/voldriver"
+	"github.com/cloudfoundry-incubator/voldriver/voldriverfakes"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	"github.com/tedsuo/ifrit"
@@ -66,7 +67,7 @@ var _ = Describe("Driver Syncer", func() {
 
 		Context("when there are drivers", func() {
 			BeforeEach(func() {
-				fakeDriver := new(volmanfakes.FakeDriver)
+				fakeDriver := new(voldriverfakes.FakeDriver)
 				fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"fakedriver": fakeDriver}, nil)
 
 				syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{"/some/path"}, scanInterval, fakeClock, fakeDriverFactory)
@@ -86,7 +87,7 @@ var _ = Describe("Driver Syncer", func() {
 
 			Context("when drivers are added", func() {
 				BeforeEach(func() {
-					fakeDriver := new(volmanfakes.FakeDriver)
+					fakeDriver := new(voldriverfakes.FakeDriver)
 					fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"anotherfakedriver": fakeDriver, "fakedriver": fakeDriver}, nil)
 				})
 

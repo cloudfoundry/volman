@@ -4,12 +4,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/onsi/gomega/ghttp"
 
 	"testing"
 )
 
 var (
 	binaryPath string
+	fakeDriver *ghttp.Server
 )
 
 func TestVolman(t *testing.T) {
@@ -25,4 +27,9 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	return []byte(binaryPath)
 }, func(bytes []byte) {
 	binaryPath = string(bytes)
+})
+
+var _ = BeforeEach(func() {
+	fakeDriver = ghttp.NewServer()
+	fakeDriver.AllowUnhandledRequests = true
 })

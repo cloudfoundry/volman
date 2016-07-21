@@ -11,8 +11,8 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/voldriver"
+	"github.com/cloudfoundry-incubator/voldriver/voldriverfakes"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
-	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	"github.com/cloudfoundry/gunk/os_wrap/osfakes"
 )
 
@@ -27,7 +27,7 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when given driverspath with no drivers", func() {
 		It("no drivers are found", func() {
-			fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
+			fakeRemoteClientFactory := new(voldriverfakes.FakeRemoteClientFactory)
 			driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory([]string{"some-invalid-drivers-path"}, fakeRemoteClientFactory)
 			drivers, err := driverFactory.Discover(testLogger)
 			Expect(err).ToNot(HaveOccurred())
@@ -37,21 +37,29 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when given a simple driverspath", func() {
 		var (
-			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
+			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
 			driverFactory           vollocal.DriverFactory
 		)
 
 		JustBeforeEach(func() {
-			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 		})
 
 		Context("with a single driver", func() {
+			var fakeDriver *voldriverfakes.FakeDriver
 
 			BeforeEach(func() {
 				driverName = "some-driver-name"
 				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				fakeDriver = new(voldriverfakes.FakeDriver)
+				fakeDriver.ListReturns(voldriver.ListResponse{})
+
+				fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			})
 
 			It("should find drivers", func() {
@@ -63,6 +71,7 @@ var _ = Describe("DriverFactory", func() {
 		})
 
 		Context("with hetergeneous driver specifications", func() {
+			var fakeDriver *voldriverfakes.FakeDriver
 
 			BeforeEach(func() {
 				driverName = "some-driver-name"
@@ -70,6 +79,13 @@ var _ = Describe("DriverFactory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				err = voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				fakeDriver = new(voldriverfakes.FakeDriver)
+				fakeDriver.ListReturns(voldriver.ListResponse{})
+
+				fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			})
 
 			It("should preferentially select spec over json specification", func() {
@@ -83,15 +99,15 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when a valid driver spec is discovered", func() {
 		var (
-			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
-			localDriver             *volmanfakes.FakeDriver
+			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
+			localDriver             *voldriverfakes.FakeDriver
 			driver                  voldriver.Driver
 			driverFactory           vollocal.DriverFactory
 		)
 		BeforeEach(func() {
 			driverName = "some-driver-name"
-			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
-			localDriver = new(volmanfakes.FakeDriver)
+			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
+			localDriver = new(voldriverfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(localDriver, nil)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 
@@ -148,7 +164,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 
 			It("should error if driver id doesn't match found driver", func() {
-				fakeRemoteClientFactory := new(volmanfakes.FakeRemoteClientFactory)
+				fakeRemoteClientFactory := new(voldriverfakes.FakeRemoteClientFactory)
 				driverFactory := vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 				_, err := driverFactory.Driver(testLogger, "garbage", defaultPluginsDirectory, "garbage.garbage")
 				Expect(err).To(HaveOccurred())
@@ -178,14 +194,14 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when valid driver spec is not discovered", func() {
 		var (
-			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
-			fakeDriver              *volmanfakes.FakeDriver
+			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
+			fakeDriver              *voldriverfakes.FakeDriver
 			driverFactory           vollocal.DriverFactory
 		)
 		BeforeEach(func() {
 			driverName = "some-driver-name"
-			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
-			fakeDriver = new(volmanfakes.FakeDriver)
+			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
+			fakeDriver = new(voldriverfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 
@@ -198,17 +214,21 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when given a compound driverspath", func() {
 		var (
-			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
+			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
 			driverFactory           vollocal.DriverFactory
+			fakeDriver              *voldriverfakes.FakeDriver
 		)
 
 		JustBeforeEach(func() {
-			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory, secondPluginsDirectory}, fakeRemoteClientFactory)
+			fakeDriver = new(voldriverfakes.FakeDriver)
+			fakeDriver.ListReturns(voldriver.ListResponse{})
+
+			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 		})
 
 		Context("with a single driver", func() {
-
 			BeforeEach(func() {
 				driverName = "some-driver-name"
 				err := voldriver.WriteDriverSpec(testLogger, secondPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
@@ -265,12 +285,13 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when given a driver spec not in canonical form", func() {
 		var (
-			fakeRemoteClientFactory *volmanfakes.FakeRemoteClientFactory
+			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
 			driverFactory           vollocal.DriverFactory
+			fakeDriver              *voldriverfakes.FakeDriver
 		)
 
 		JustBeforeEach(func() {
-			fakeRemoteClientFactory = new(volmanfakes.FakeRemoteClientFactory)
+			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
 		})
 
@@ -280,6 +301,13 @@ var _ = Describe("DriverFactory", func() {
 					driverName = "some-driver-name"
 					err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte(actual))
 					Expect(err).NotTo(HaveOccurred())
+				})
+
+				JustBeforeEach(func() {
+					fakeDriver = new(voldriverfakes.FakeDriver)
+					fakeDriver.ListReturns(voldriver.ListResponse{})
+
+					fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 				})
 
 				It(it, func() {

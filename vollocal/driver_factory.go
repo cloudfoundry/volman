@@ -71,14 +71,14 @@ func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.
 			}
 			if len(matchingDriverSpecs) > 0 {
 				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
-				endpoints = r.insertIfNotFound(logger, endpoints, driverPath, matchingDriverSpecs)
+				endpoints = r.insertIfAliveAndNotFound(logger, endpoints, driverPath, matchingDriverSpecs)
 			}
 		}
 	}
 	return endpoints, nil
 }
 
-func (r *realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, driverPath string, specs []string) map[string]voldriver.Driver {
+func (r *realDriverFactory) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, driverPath string, specs []string) map[string]voldriver.Driver {
 	logger = logger.Session("insert-if-not-found")
 	logger.Debug("start")
 	defer logger.Debug("end")
@@ -101,7 +101,12 @@ func (r *realDriverFactory) insertIfNotFound(logger lager.Logger, endpoints map[
 				continue
 			}
 
-			endpoints[specName] = driver
+			resp := driver.List(logger)
+			if resp.Err != "" {
+				logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
+			} else {
+				endpoints[specName] = driver
+			}
 		}
 	}
 	return endpoints

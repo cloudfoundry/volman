@@ -7,7 +7,7 @@ import (
 	. "github.com/cloudfoundry-incubator/volman/vollocal"
 
 	"github.com/cloudfoundry-incubator/voldriver"
-	"github.com/cloudfoundry-incubator/volman/volmanfakes"
+	"github.com/cloudfoundry-incubator/voldriver/voldriverfakes"
 )
 
 var _ = Describe("DriverRegistry", func() {
@@ -19,12 +19,12 @@ var _ = Describe("DriverRegistry", func() {
 		emptyRegistry = NewDriverRegistry()
 
 		oneRegistry = NewDriverRegistryWith(map[string]voldriver.Driver{
-			"one": new(volmanfakes.FakeDriver),
+			"one": new(voldriverfakes.FakeDriver),
 		})
 
 		manyRegistry = NewDriverRegistryWith(map[string]voldriver.Driver{
-			"one": new(volmanfakes.FakeDriver),
-			"two": new(volmanfakes.FakeDriver),
+			"one": new(voldriverfakes.FakeDriver),
+			"two": new(voldriverfakes.FakeDriver),
 		})
 	})
 
@@ -77,13 +77,13 @@ var _ = Describe("DriverRegistry", func() {
 
 	Describe("#Add", func() {
 		It("fails when adding driver that already exists", func() {
-			newDriver := new(volmanfakes.FakeDriver)
+			newDriver := new(voldriverfakes.FakeDriver)
 			err := oneRegistry.Add("one", newDriver)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("adds driver that does not exists", func() {
-			newDriver := new(volmanfakes.FakeDriver)
+			newDriver := new(voldriverfakes.FakeDriver)
 			err := manyRegistry.Add("three", newDriver)
 			Expect(err).NotTo(HaveOccurred())
 		})
