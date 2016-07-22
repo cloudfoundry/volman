@@ -70,23 +70,24 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 
 	close(ready)
 
-	setDriverCh := make(chan error, 1)
+	newDriverCh := make(chan map[string]voldriver.Driver, 1)
 
 	for {
 		select {
-
-		case <-setDriverCh:
-			timer.Reset(r.scanInterval)
-
 		case <-timer.C():
-			drivers, err := r.driverFactory.Discover(logger)
-			if err != nil {
-				setDriverCh <- err
-				continue
-			}
+			go func() {
+				drivers, err := r.driverFactory.Discover(logger)
+				if err != nil {
+					logger.Error("volman-driver-discovery-failed",err)
+					newDriverCh <- nil
+				} else {
+					newDriverCh <- drivers
+				}
+			}()
 
+		case drivers := <-newDriverCh:
 			r.addNewDrivers(drivers)
-			setDriverCh <- nil
+			timer.Reset(r.scanInterval)
 
 		case signal := <-signals:
 			logger.Info("received-signal", lager.Data{"signal": signal.String()})
