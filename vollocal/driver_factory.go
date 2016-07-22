@@ -101,7 +101,7 @@ func (r *realDriverFactory) insertIfAliveAndNotFound(logger lager.Logger, endpoi
 				continue
 			}
 
-			resp := driver.List(logger)
+			resp := driver.Activate(logger)
 			if resp.Err != "" {
 				logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
 			} else {

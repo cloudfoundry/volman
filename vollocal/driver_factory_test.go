@@ -57,13 +57,13 @@ var _ = Describe("DriverFactory", func() {
 
 			JustBeforeEach(func() {
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriver.ListReturns(voldriver.ListResponse{})
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
 
 				fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			})
 
 			It("should not find drivers that are unresponsive", func() {
-				fakeDriver.ListReturns(voldriver.ListResponse{Err: "Error"})
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Err: "Error"})
 				drivers, err := driverFactory.Discover(testLogger)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(drivers)).To(Equal(0))
@@ -91,7 +91,7 @@ var _ = Describe("DriverFactory", func() {
 
 			JustBeforeEach(func() {
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriver.ListReturns(voldriver.ListResponse{})
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
 
 				fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			})
@@ -231,7 +231,7 @@ var _ = Describe("DriverFactory", func() {
 			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory, secondPluginsDirectory}, fakeRemoteClientFactory)
 			fakeDriver = new(voldriverfakes.FakeDriver)
-			fakeDriver.ListReturns(voldriver.ListResponse{})
+			fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
 
 			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 		})
@@ -313,7 +313,7 @@ var _ = Describe("DriverFactory", func() {
 
 				JustBeforeEach(func() {
 					fakeDriver = new(voldriverfakes.FakeDriver)
-					fakeDriver.ListReturns(voldriver.ListResponse{})
+					fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
 
 					fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 				})
