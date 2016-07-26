@@ -57,7 +57,9 @@ var _ = Describe("DriverFactory", func() {
 
 			JustBeforeEach(func() {
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+					Implements: []string{"VolumeDriver"},
+				})
 
 				fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			})
@@ -91,14 +93,17 @@ var _ = Describe("DriverFactory", func() {
 
 			JustBeforeEach(func() {
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+					Implements: []string{"VolumeDriver"},
+				})
 
 				fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			})
 
 			It("should preferentially select spec over json specification", func() {
-				_, err := driverFactory.Discover(testLogger)
+				drivers, err := driverFactory.Discover(testLogger)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(len(drivers)).To(Equal(1))
 				actualAddress, _ := fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)
 				Expect(actualAddress).To(Equal("http://0.0.0.0:9090"))
 			})
@@ -231,7 +236,9 @@ var _ = Describe("DriverFactory", func() {
 			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory, secondPluginsDirectory}, fakeRemoteClientFactory)
 			fakeDriver = new(voldriverfakes.FakeDriver)
-			fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
+			fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+				Implements: []string{"VolumeDriver"},
+			})
 
 			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 		})
@@ -313,7 +320,9 @@ var _ = Describe("DriverFactory", func() {
 
 				JustBeforeEach(func() {
 					fakeDriver = new(voldriverfakes.FakeDriver)
-					fakeDriver.ActivateReturns(voldriver.ActivateResponse{})
+					fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+						Implements: []string{"VolumeDriver"},
+					})
 
 					fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 				})
@@ -347,6 +356,49 @@ var _ = Describe("DriverFactory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeRemoteClientFactory.NewRemoteClientCallCount()).To(Equal(0))
 			})
+		})
+	})
+
+	Context("when given a driver spec with a bad driver", func() {
+		var (
+			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
+			driverFactory           vollocal.DriverFactory
+			fakeDriver              *voldriverfakes.FakeDriver
+		)
+
+		JustBeforeEach(func() {
+			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
+			driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory([]string{defaultPluginsDirectory}, fakeRemoteClientFactory)
+		})
+
+		BeforeEach(func() {
+			driverName = "some-driver-name"
+			err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("127.0.0.1:8080"))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return no drivers if the driver doesn't implement VolumeDriver", func() {
+			fakeDriver = new(voldriverfakes.FakeDriver)
+			fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+				Implements: []string{"something-else"},
+			})
+
+			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
+			drivers, err := driverFactory.Discover(testLogger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(drivers)).To(Equal(0))
+		})
+
+		It("should return no drivers if the driver doesn't respond", func() {
+			fakeDriver = new(voldriverfakes.FakeDriver)
+			fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+				Err: "some-error",
+			})
+
+			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
+			drivers, err := driverFactory.Discover(testLogger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(drivers)).To(Equal(0))
 		})
 	})
 })

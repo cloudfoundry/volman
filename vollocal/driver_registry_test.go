@@ -42,27 +42,6 @@ var _ = Describe("DriverRegistry", func() {
 		})
 	})
 
-	Describe("#Activate", func() {
-		It("returns true when driver is activated", func() {
-			activated, err := oneRegistry.Activated("one")
-			Expect(activated).To(BeFalse())
-			Expect(err).NotTo(HaveOccurred())
-
-			err = oneRegistry.Activate("one")
-			Expect(err).NotTo(HaveOccurred())
-
-			activated, err = oneRegistry.Activated("one")
-			Expect(activated).To(BeTrue())
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("returns false and error for non-present drivers", func() {
-			activated, err := oneRegistry.Activated("two")
-			Expect(err).To(HaveOccurred())
-			Expect(activated).To(BeFalse())
-		})
-	})
-
 	Describe("#Drivers", func() {
 		It("should return return empty map for emptyRegistry", func() {
 			drivers := emptyRegistry.Drivers()
@@ -75,17 +54,27 @@ var _ = Describe("DriverRegistry", func() {
 		})
 	})
 
-	Describe("#Add", func() {
-		It("fails when adding driver that already exists", func() {
-			newDriver := new(voldriverfakes.FakeDriver)
-			err := oneRegistry.Add("one", newDriver)
-			Expect(err).To(HaveOccurred())
+	Describe("#Set", func() {
+		It("replaces driver if it already exists", func() {
+			newDriver := map[string]voldriver.Driver{
+				"one": new(voldriverfakes.FakeDriver),
+			}
+			oneRegistry.Set(newDriver)
+			oneDriver, exists := oneRegistry.Driver("one")
+			Expect(exists).To(BeTrue())
+			Expect(oneDriver).NotTo(BeNil())
 		})
 
 		It("adds driver that does not exists", func() {
-			newDriver := new(voldriverfakes.FakeDriver)
-			err := manyRegistry.Add("three", newDriver)
-			Expect(err).NotTo(HaveOccurred())
+			newDriver := map[string]voldriver.Driver{
+				"one":   new(voldriverfakes.FakeDriver),
+				"two":   new(voldriverfakes.FakeDriver),
+				"three": new(voldriverfakes.FakeDriver),
+			}
+			manyRegistry.Set(newDriver)
+			threeDriver, exists := manyRegistry.Driver("three")
+			Expect(exists).To(BeTrue())
+			Expect(threeDriver).NotTo(BeNil())
 		})
 	})
 

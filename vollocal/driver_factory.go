@@ -105,6 +105,16 @@ func (r *realDriverFactory) insertIfAliveAndNotFound(logger lager.Logger, endpoi
 			if resp.Err != "" {
 				logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
 			} else {
+				driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
+				if len(resp.Implements) == 0 {
+					logger.Error("driver-incorrect", driverImplementsErr)
+					continue
+				}
+
+				if !driverImplements("VolumeDriver", resp.Implements) {
+					logger.Error("driver-incorrect", driverImplementsErr)
+					continue
+				}
 				endpoints[specName] = driver
 			}
 		}
@@ -214,4 +224,13 @@ func (r *realDriverFactory) canonicalize(logger lager.Logger, address string) (s
 		}
 	}
 	return fmt.Sprintf("http://%s", address), nil
+}
+
+func driverImplements(protocol string, activateResponseProtocols []string) bool {
+	for _, nextProtocol := range activateResponseProtocols {
+		if protocol == nextProtocol {
+			return true
+		}
+	}
+	return false
 }

@@ -65,8 +65,7 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	if err != nil {
 		return err
 	}
-
-	r.addNewDrivers(drivers)
+	r.setDrivers(drivers)
 
 	close(ready)
 
@@ -78,7 +77,7 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 			go func() {
 				drivers, err := r.driverFactory.Discover(logger)
 				if err != nil {
-					logger.Error("volman-driver-discovery-failed",err)
+					logger.Error("volman-driver-discovery-failed", err)
 					newDriverCh <- nil
 				} else {
 					newDriverCh <- drivers
@@ -86,7 +85,7 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 			}()
 
 		case drivers := <-newDriverCh:
-			r.addNewDrivers(drivers)
+			r.setDrivers(drivers)
 			timer.Reset(r.scanInterval)
 
 		case signal := <-signals:
@@ -96,10 +95,6 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	}
 }
 
-func (r *driverSyncer) addNewDrivers(drivers map[string]voldriver.Driver) {
-	for name, driver := range drivers {
-		if _, exists := r.driverRegistry.Driver(name); exists == false {
-			r.driverRegistry.Add(name, driver)
-		}
-	}
+func (r *driverSyncer) setDrivers(drivers map[string]voldriver.Driver) {
+	r.driverRegistry.Set(drivers)
 }

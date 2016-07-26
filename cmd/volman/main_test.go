@@ -70,7 +70,9 @@ var _ = Describe("Volman main", func() {
 			err := voldriver.WriteDriverSpec(testLogger, driversPath, "test-driver", "spec", []byte(driverAddr))
 			Expect(err).NotTo(HaveOccurred())
 
-			resp, err := json.Marshal(voldriver.ActivateResponse{})
+			resp, err := json.Marshal(voldriver.ActivateResponse{
+				Implements: []string{"VolumeDriver"},
+			})
 			Expect(err).NotTo(HaveOccurred())
 			fakeDriver.RouteToHandler("POST", "/Plugin.Activate",
 				ghttp.RespondWith(200, resp),

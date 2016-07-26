@@ -6,8 +6,6 @@ import (
 
 	"github.com/tedsuo/ifrit"
 
-	"fmt"
-
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/runtimeschema/metric"
@@ -62,6 +60,7 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	for name, _ := range drivers {
 		infoResponses = append(infoResponses, volman.InfoResponse{Name: name})
 	}
+
 	logger.Debug("listing-drivers", lager.Data{"drivers": infoResponses})
 	return volman.ListDriversResponse{infoResponses}, nil
 }
@@ -90,14 +89,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 		return volman.MountResponse{}, err
 	}
 
-	err := client.activate(logger, driverId, driver)
-	if err != nil {
-		logger.Error("activate-failed", err)
-		volmanMountErrorsCounter.Increment()
-		return volman.MountResponse{}, err
-	}
-
-	err = client.create(logger, driverId, volumeId, config)
+	err := client.create(logger, driverId, volumeId, config)
 	if err != nil {
 		volmanMountErrorsCounter.Increment()
 		return volman.MountResponse{}, err
@@ -138,58 +130,11 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 		return err
 	}
 
-	err := client.activate(logger, driverId, driver)
-	if err != nil {
-		logger.Error("activate-failed", err)
-		volmanUnmountErrorsCounter.Increment()
-		return err
-	}
-
 	if response := driver.Unmount(logger, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
 		err := errors.New(response.Err)
 		logger.Error("unmount-failed", err)
 		volmanUnmountErrorsCounter.Increment()
 		return err
-	}
-
-	return nil
-}
-
-func (client *localClient) activate(logger lager.Logger, driverId string, driver voldriver.Driver) error {
-	logger = logger.Session("activate")
-	logger.Info("start")
-	defer logger.Info("end")
-
-	activated, err := client.driverRegistry.Activated(driverId)
-	if err != nil {
-		logger.Error("activate-driver-lookup-error", err)
-		return err
-	}
-
-	if !activated {
-		activateResponse := driver.Activate(logger)
-		if activateResponse.Err != "" {
-			logger.Error("driver-activate-error", err)
-			return errors.New(activateResponse.Err)
-		}
-
-		driverImplementsErr := errors.New(fmt.Sprintf("driver-implements: %#v", activateResponse.Implements))
-		if len(activateResponse.Implements) == 0 {
-			logger.Error("driver-incorrect", driverImplementsErr)
-			return driverImplementsErr
-		}
-
-		if !client.driverImplements("VolumeDriver", activateResponse.Implements) {
-			logger.Error("driver-incorrect", driverImplementsErr)
-			return driverImplementsErr
-		} else {
-			err := client.driverRegistry.Activate(driverId)
-			if err != nil {
-				logger.Error("driver-registry-activate-error", err)
-				return err
-			}
-			logger.Debug("driver-activated", lager.Data{"driver": driverId})
-		}
 	}
 
 	return nil
@@ -212,13 +157,4 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 		return errors.New(response.Err)
 	}
 	return nil
-}
-
-func (client *localClient) driverImplements(protocol string, activateResponseProtocols []string) bool {
-	for _, nextProtocol := range activateResponseProtocols {
-		if protocol == nextProtocol {
-			return true
-		}
-	}
-	return false
 }

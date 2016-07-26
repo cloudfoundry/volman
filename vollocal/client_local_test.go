@@ -117,16 +117,6 @@ var _ = Describe("Volman", func() {
 					Expect(drivers.Drivers[0].Name).To(Equal("fakedriver"))
 				})
 
-				It("all reported drivers should not be activated", func() {
-					drivers, err := client.ListDrivers(logger)
-					Expect(err).NotTo(HaveOccurred())
-
-					for _, driverInfoResponse := range drivers.Drivers {
-						activated, err := driverRegistry.Activated(driverInfoResponse.Name)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(activated).To(BeFalse())
-					}
-				})
 			})
 		})
 
@@ -165,16 +155,12 @@ var _ = Describe("Volman", func() {
 			})
 
 			Context("mount", func() {
-				It("should be able to mount and activate", func() {
+				It("should be able to mount", func() {
 					volumeId := "fake-volume"
 
 					mountPath, err := client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(mountPath).NotTo(Equal(""))
-
-					activated, err := driverRegistry.Activated("fakedriver")
-					Expect(err).NotTo(HaveOccurred())
-					Expect(activated).To(BeTrue())
 				})
 
 				It("should not be able to mount if mount fails", func() {
@@ -218,17 +204,13 @@ var _ = Describe("Volman", func() {
 			})
 
 			Context("umount", func() {
-				It("should be able to unmount and activate", func() {
+				It("should be able to unmount", func() {
 					volumeId := "fake-volume"
 
 					err := client.Unmount(logger, "fakedriver", volumeId)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
 					Expect(fakeDriver.RemoveCallCount()).To(Equal(0))
-
-					activated, err := driverRegistry.Activated("fakedriver")
-					Expect(err).NotTo(HaveOccurred())
-					Expect(activated).To(BeTrue())
 				})
 
 				It("should not be able to unmount when driver unmount fails", func() {
@@ -312,64 +294,6 @@ var _ = Describe("Volman", func() {
 
 					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte(fmt.Sprintf("http://0.0.0.0:%d", localDriverServerPort)))
 					Expect(err).NotTo(HaveOccurred())
-				})
-
-				Context("when driver implements nothing", func() {
-					BeforeEach(func() {
-						fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{}})
-
-						driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-						client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
-
-						process = ginkgomon.Invoke(driverSyncer.Runner())
-					})
-
-					It("should not be able to mount", func() {
-						_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
-						Expect(err).To(HaveOccurred())
-
-						activated, err := driverRegistry.Activated("fakedriver")
-						Expect(err).NotTo(HaveOccurred())
-						Expect(activated).To(BeFalse())
-					})
-
-					It("should not be able to unmount", func() {
-						err := client.Unmount(logger, "fakedriver", "fake-volume")
-						Expect(err).To(HaveOccurred())
-
-						activated, err := driverRegistry.Activated("fakedriver")
-						Expect(err).NotTo(HaveOccurred())
-						Expect(activated).To(BeFalse())
-					})
-				})
-
-				Context("when driver implements other protocols", func() {
-					BeforeEach(func() {
-						fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"authz", "NetworkDriver"}})
-
-						driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-						client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
-
-						process = ginkgomon.Invoke(driverSyncer.Runner())
-					})
-
-					It("should not be able to mount", func() {
-						_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
-						Expect(err).To(HaveOccurred())
-
-						activated, err := driverRegistry.Activated("fakedriver")
-						Expect(err).NotTo(HaveOccurred())
-						Expect(activated).To(BeFalse())
-					})
-
-					It("should not be able to unmount", func() {
-						err := client.Unmount(logger, "fakedriver", "fake-volume")
-						Expect(err).To(HaveOccurred())
-
-						activated, err := driverRegistry.Activated("fakedriver")
-						Expect(err).NotTo(HaveOccurred())
-						Expect(activated).To(BeFalse())
-					})
 				})
 			})
 		})

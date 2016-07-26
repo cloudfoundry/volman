@@ -97,6 +97,17 @@ var _ = Describe("Driver Syncer", func() {
 					Expect(fakeDriverFactory.DiscoverCallCount()).To(Equal(2))
 				})
 			})
+			Context("when drivers are removed", func() {
+				BeforeEach(func() {
+					fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{}, nil)
+				})
+
+				It("should find no drivers", func() {
+					fakeClock.Increment(scanInterval * 2)
+					Eventually(registry.Drivers).Should(HaveLen(0))
+					Expect(fakeDriverFactory.DiscoverCallCount()).To(Equal(2))
+				})
+			})
 		})
 	})
 })
