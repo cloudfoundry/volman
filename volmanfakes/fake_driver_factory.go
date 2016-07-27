@@ -10,15 +10,6 @@ import (
 )
 
 type FakeDriverFactory struct {
-	DiscoverStub        func(logger lager.Logger) (map[string]voldriver.Driver, error)
-	discoverMutex       sync.RWMutex
-	discoverArgsForCall []struct {
-		logger lager.Logger
-	}
-	discoverReturns struct {
-		result1 map[string]voldriver.Driver
-		result2 error
-	}
 	DriverStub        func(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
 	driverMutex       sync.RWMutex
 	driverArgsForCall []struct {
@@ -33,40 +24,6 @@ type FakeDriverFactory struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
-	fake.discoverMutex.Lock()
-	fake.discoverArgsForCall = append(fake.discoverArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("Discover", []interface{}{logger})
-	fake.discoverMutex.Unlock()
-	if fake.DiscoverStub != nil {
-		return fake.DiscoverStub(logger)
-	} else {
-		return fake.discoverReturns.result1, fake.discoverReturns.result2
-	}
-}
-
-func (fake *FakeDriverFactory) DiscoverCallCount() int {
-	fake.discoverMutex.RLock()
-	defer fake.discoverMutex.RUnlock()
-	return len(fake.discoverArgsForCall)
-}
-
-func (fake *FakeDriverFactory) DiscoverArgsForCall(i int) lager.Logger {
-	fake.discoverMutex.RLock()
-	defer fake.discoverMutex.RUnlock()
-	return fake.discoverArgsForCall[i].logger
-}
-
-func (fake *FakeDriverFactory) DiscoverReturns(result1 map[string]voldriver.Driver, result2 error) {
-	fake.DiscoverStub = nil
-	fake.discoverReturns = struct {
-		result1 map[string]voldriver.Driver
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
@@ -109,8 +66,6 @@ func (fake *FakeDriverFactory) DriverReturns(result1 voldriver.Driver, result2 e
 func (fake *FakeDriverFactory) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.discoverMutex.RLock()
-	defer fake.discoverMutex.RUnlock()
 	fake.driverMutex.RLock()
 	defer fake.driverMutex.RUnlock()
 	return fake.invocations

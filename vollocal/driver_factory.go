@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
-	"path/filepath"
-	"regexp"
 	"strings"
 
 	"net/url"
@@ -21,105 +19,28 @@ import (
 
 // DriverFactories are responsible for instantiating remote client implementations of the voldriver.Driver interface.
 type DriverFactory interface {
-
-	// Discover will compile a list of drivers from the path list in DriversPath.  If the same driver id is found in
-	// multiple directories, it will favor the directory found first in the path.
-	// if 2 specs are found within the *same* directory, it will choose .sock files first, then .spec files, then .json
-	Discover(logger lager.Logger) (map[string]voldriver.Driver, error)
-
 	// Given a driver id, path and config filename returns a remote client implementation of the voldriver.Driver interface
 	Driver(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
 }
 
 type realDriverFactory struct {
-	DriverPaths     []string
 	Factory         driverhttp.RemoteClientFactory
 	useOs           os_wrap.Os
 	DriversRegistry map[string]voldriver.Driver
 }
 
-func NewDriverFactory(driverPaths []string) DriverFactory {
+func NewDriverFactory() DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
-	return NewDriverFactoryWithRemoteClientFactory(driverPaths, remoteClientFactory)
+	return NewDriverFactoryWithRemoteClientFactory(remoteClientFactory)
 }
 
-func NewDriverFactoryWithRemoteClientFactory(driverPaths []string, remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
-	return &realDriverFactory{driverPaths, remoteClientFactory, os_wrap.NewOs(), nil}
+func NewDriverFactoryWithRemoteClientFactory(remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
+	return &realDriverFactory{remoteClientFactory, os_wrap.NewOs(), nil}
 }
 
-func NewDriverFactoryWithOs(driverPaths []string, useOs os_wrap.Os) DriverFactory {
+func NewDriverFactoryWithOs(useOs os_wrap.Os) DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
-	return &realDriverFactory{driverPaths, remoteClientFactory, useOs, nil}
-}
-
-func (r *realDriverFactory) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
-	logger = logger.Session("discover")
-	logger.Debug("start")
-	logger.Info(fmt.Sprintf("Discovering drivers in %s", r.DriverPaths))
-	defer logger.Debug("end")
-
-	endpoints := make(map[string]voldriver.Driver)
-	for _, driverPath := range r.DriverPaths {
-		//precedence order: sock -> spec -> json
-		spec_types := [3]string{"sock", "spec", "json"}
-		for _, spec_type := range spec_types {
-			matchingDriverSpecs, err := r.getMatchingDriverSpecs(logger, driverPath, spec_type)
-
-			if err != nil {
-				// untestable on linux, does glob work differently on windows???
-				return map[string]voldriver.Driver{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
-			}
-			if len(matchingDriverSpecs) > 0 {
-				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
-				endpoints = r.insertIfAliveAndNotFound(logger, endpoints, driverPath, matchingDriverSpecs)
-			}
-		}
-	}
-	return endpoints, nil
-}
-
-func (r *realDriverFactory) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, driverPath string, specs []string) map[string]voldriver.Driver {
-	logger = logger.Session("insert-if-not-found")
-	logger.Debug("start")
-	defer logger.Debug("end")
-
-	for _, spec := range specs {
-		re := regexp.MustCompile("([^/]*/)?([^/]*)\\.(sock|spec|json)$")
-
-		segs2 := re.FindAllStringSubmatch(spec, 1)
-		if len(segs2) <= 0 {
-			continue
-		}
-		specName := segs2[0][2]
-		specFile := segs2[0][2] + "." + segs2[0][3]
-		logger.Debug("insert-unique-spec", lager.Data{"specname": specName})
-		_, ok := endpoints[specName]
-		if ok == false {
-			driver, err := r.Driver(logger, specName, driverPath, specFile)
-			if err != nil {
-				logger.Error("error-creating-driver", err)
-				continue
-			}
-
-			resp := driver.Activate(logger)
-			if resp.Err != "" {
-				logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
-			} else {
-				driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
-				if len(resp.Implements) == 0 {
-					logger.Error("driver-incorrect", driverImplementsErr)
-					continue
-				}
-
-				if !driverImplements("VolumeDriver", resp.Implements) {
-					logger.Error("driver-incorrect", driverImplementsErr)
-					continue
-				}
-				endpoints[specName] = driver
-			}
-		}
-	}
-	return endpoints
+	return &realDriverFactory{remoteClientFactory, useOs, nil}
 }
 
 func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
@@ -189,16 +110,6 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 	}
 
 	return nil, fmt.Errorf("Driver '%s' not found in list of known drivers", driverId)
-}
-
-func (r *realDriverFactory) getMatchingDriverSpecs(logger lager.Logger, path string, pattern string) ([]string, error) {
-	logger.Debug("binaries", lager.Data{"path": path, "pattern": pattern})
-	matchingDriverSpecs, err := filepath.Glob(path + "/*." + pattern)
-	if err != nil { // untestable on linux, does glob work differently on windows???
-		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", path, err.Error())
-	}
-	return matchingDriverSpecs, nil
-
 }
 
 func (r *realDriverFactory) canonicalize(logger lager.Logger, address string) (string, error) {

@@ -84,16 +84,13 @@ var _ = Describe("Volman", func() {
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
-				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
+				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
-			})
 
-			JustBeforeEach(func() {
-				process = ginkgomon.Invoke(driverSyncer.Runner())
-			})
+				fakeDriver := new(voldriverfakes.FakeDriver)
+				fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
-			AfterEach(func() {
-				ginkgomon.Kill(process)
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements:[]string{"VolumeDriver"}})
 			})
 
 			It("should report empty list of drivers", func() {
@@ -104,13 +101,14 @@ var _ = Describe("Volman", func() {
 
 			Context("after running drivers discovery", func() {
 				BeforeEach(func() {
-					fakeDriver := new(voldriverfakes.FakeDriver)
-					fakeDriverFactory.DiscoverReturns(map[string]voldriver.Driver{"fakedriver": fakeDriver}, nil)
-					fakeDriverFactory.DriverReturns(fakeDriver, nil)
-
+					process = ginkgomon.Invoke(driverSyncer.Runner())
 				})
 
-				It("should report at least fakedriver", func() {
+				AfterEach(func() {
+					ginkgomon.Kill(process)
+				})
+
+				It("should report fakedriver", func() {
 					drivers, err := client.ListDrivers(logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(drivers.Drivers)).ToNot(Equal(0))
@@ -136,8 +134,6 @@ var _ = Describe("Volman", func() {
 
 				drivers := make(map[string]voldriver.Driver)
 				drivers["fakedriver"] = fakeDriver
-
-				fakeDriverFactory.DiscoverReturns(drivers, nil)
 
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte(fmt.Sprintf("http://0.0.0.0:%d", fakeDriver)))
 				Expect(err).NotTo(HaveOccurred())
@@ -290,11 +286,11 @@ var _ = Describe("Volman", func() {
 					drivers := make(map[string]voldriver.Driver)
 					drivers["fakedriver"] = fakeDriver
 
-					fakeDriverFactory.DiscoverReturns(drivers, nil)
-
 					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte(fmt.Sprintf("http://0.0.0.0:%d", localDriverServerPort)))
 					Expect(err).NotTo(HaveOccurred())
 				})
+
+				// TODO FIX ME
 			})
 		})
 
