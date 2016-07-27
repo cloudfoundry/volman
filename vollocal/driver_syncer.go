@@ -16,8 +16,6 @@ import (
 	"regexp"
 )
 
-//go:generate counterfeiter -o ../volmanfakes/fake_driver_syncer.go . DriverSyncer
-
 type DriverSyncer interface {
 	Runner() ifrit.Runner
 	Discover(logger lager.Logger) (map[string]voldriver.Driver, error)
