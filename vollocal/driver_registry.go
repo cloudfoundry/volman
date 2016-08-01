@@ -3,7 +3,7 @@ package vollocal
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/voldriver"
+	"code.cloudfoundry.org/voldriver"
 )
 
 type DriverRegistry interface {

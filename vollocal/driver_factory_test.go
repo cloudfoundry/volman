@@ -10,8 +10,8 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/voldriver"
-	"github.com/cloudfoundry-incubator/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry/gunk/os_wrap/osfakes"
 )

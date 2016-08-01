@@ -10,14 +10,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry-incubator/voldriver"
+	"code.cloudfoundry.org/voldriver"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
@@ -90,7 +90,7 @@ var _ = Describe("Volman", func() {
 				fakeDriver := new(voldriverfakes.FakeDriver)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements:[]string{"VolumeDriver"}})
+				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 			})
 
 			It("should report empty list of drivers", func() {

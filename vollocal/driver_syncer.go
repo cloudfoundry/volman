@@ -9,8 +9,8 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/voldriver"
 	"fmt"
-	"github.com/cloudfoundry-incubator/voldriver"
 	"github.com/tedsuo/ifrit"
 	"path/filepath"
 	"regexp"

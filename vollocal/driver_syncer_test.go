@@ -10,8 +10,8 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 
 	"code.cloudfoundry.org/clock"
-	"github.com/cloudfoundry-incubator/voldriver"
-	"github.com/cloudfoundry-incubator/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"github.com/cloudfoundry-incubator/volman/vollocal"
 	"github.com/cloudfoundry-incubator/volman/volmanfakes"
 	"github.com/tedsuo/ifrit"
@@ -31,9 +31,9 @@ var _ = Describe("Driver Syncer", func() {
 		syncer   vollocal.DriverSyncer
 		process  ifrit.Process
 
-		fakeDriver              *voldriverfakes.FakeDriver
+		fakeDriver *voldriverfakes.FakeDriver
 
-		driverName              string
+		driverName string
 	)
 
 	BeforeEach(func() {
@@ -79,9 +79,9 @@ var _ = Describe("Driver Syncer", func() {
 
 		Context("when there are drivers", func() {
 			var (
-				fakeDriver              *voldriverfakes.FakeDriver
-				driverName              string
-				syncer                  vollocal.DriverSyncer
+				fakeDriver *voldriverfakes.FakeDriver
+				driverName string
+				syncer     vollocal.DriverSyncer
 			)
 
 			BeforeEach(func() {
