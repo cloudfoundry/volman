@@ -21,7 +21,7 @@ func TestHandlers(t *testing.T) {
 var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
 
-	localDriverPath, err = gexec.Build("github.com/cloudfoundry-incubator/localdriver", "-race")
+	localDriverPath, err = gexec.Build("code.cloudfoundry.org/localdriver", "-race")
 	Expect(err).NotTo(HaveOccurred())
 	return []byte(strings.Join([]string{localDriverPath}, ","))
 }, func(pathsByte []byte) {
