@@ -10,7 +10,7 @@ import (
 
 	"code.cloudfoundry.org/cfhttp"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/volman"
+	"code.cloudfoundry.org/volman"
 	"github.com/tedsuo/rata"
 )
 

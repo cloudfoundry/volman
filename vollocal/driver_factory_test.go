@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
-	"github.com/cloudfoundry-incubator/volman/vollocal"
+	"code.cloudfoundry.org/volman/vollocal"
 	"github.com/cloudfoundry/gunk/os_wrap/osfakes"
 )
 

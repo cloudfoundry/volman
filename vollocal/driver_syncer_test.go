@@ -12,8 +12,8 @@ import (
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
-	"github.com/cloudfoundry-incubator/volman/vollocal"
-	"github.com/cloudfoundry-incubator/volman/volmanfakes"
+	"code.cloudfoundry.org/volman/vollocal"
+	"code.cloudfoundry.org/volman/volmanfakes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )

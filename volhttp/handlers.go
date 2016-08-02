@@ -8,7 +8,7 @@ import (
 
 	cf_http_handlers "code.cloudfoundry.org/cfhttp/handlers"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/volman"
+	"code.cloudfoundry.org/volman"
 	"github.com/tedsuo/rata"
 )
 

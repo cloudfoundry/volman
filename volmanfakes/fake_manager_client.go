@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/volman"
+	"code.cloudfoundry.org/volman"
 )
 
 type FakeManager struct {

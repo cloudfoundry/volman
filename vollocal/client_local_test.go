@@ -11,8 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"code.cloudfoundry.org/voldriver"
-	"github.com/cloudfoundry-incubator/volman/vollocal"
-	"github.com/cloudfoundry-incubator/volman/volmanfakes"
+	"code.cloudfoundry.org/volman/vollocal"
+	"code.cloudfoundry.org/volman/volmanfakes"
 
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/lager"

@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/runtimeschema/metric"
 	"code.cloudfoundry.org/voldriver"
-	"github.com/cloudfoundry-incubator/volman"
+	"code.cloudfoundry.org/volman"
 )
 
 const (

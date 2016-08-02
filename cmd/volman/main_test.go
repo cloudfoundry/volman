@@ -8,8 +8,8 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/voldriver"
-	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/volhttp"
+	"code.cloudfoundry.org/volman"
+	"code.cloudfoundry.org/volman/volhttp"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 

@@ -21,7 +21,7 @@ func TestVolman(t *testing.T) {
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
-	binaryPath, err = gexec.Build("github.com/cloudfoundry-incubator/volman/cmd/volman", "-race")
+	binaryPath, err = gexec.Build("code.cloudfoundry.org/volman/cmd/volman", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
 	return []byte(binaryPath)

@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
-	"github.com/cloudfoundry-incubator/volman/vollocal"
+	"code.cloudfoundry.org/volman/vollocal"
 )
 
 type FakeDriverFactory struct {

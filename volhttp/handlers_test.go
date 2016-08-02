@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/cloudfoundry-incubator/volman"
-	"github.com/cloudfoundry-incubator/volman/volhttp"
+	"code.cloudfoundry.org/volman"
+	"code.cloudfoundry.org/volman/volhttp"
 
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/volman/volmanfakes"
+	"code.cloudfoundry.org/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
