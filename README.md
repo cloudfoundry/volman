@@ -1,56 +1,14 @@
-# Building
-Prereqs:
-- [go](https://storage.googleapis.com/golang/go1.4.3.darwin-amd64.pkg)
-- [direnv](direnv.readthedocs.org/en/latest/install/)
+# Cloud Foundry Volume Services
 
-```
-mkdir bin
-go install <TBD>
-```
+On Cloud Foundry, applications connect to services via a service marketplace. Each service has a Service Broker, with encapsulates the logic for creating, managing, and binding services to applications. Until recently, the only data services that have been allowed were ones with a network-based connection, such as a SQL database. With Volume Services, we've added the ability to attach data services that have a filesystem-based interface.
 
-# Quality checks
+Currently, we have platform support for **Shared Volumes**. Shared Volumes are distributed filesystems, such as NFS-based systems, which allow all instances of an application to share the same mounted volume simultaneously and access it concurrently.
 
-## Unit Tests
-Note: to run tests, you'll need to be in a containing project (eg. diego_release).
-This will set the correct go environment.
-```
-# one time setup
-cd ~
-go get github.com/onsi/ginkgo/ginkgo
-go get github.com/onsi/gomega
-cd -
+This feature adds two new concepts to CF: **Volume Mounts** on Service Brokers and **Volume Drivers** on Diego Cells, which are described below.
 
-# generate fakes
-go generate ./...
+For more information on CF Volume Services, please refer to [this introductory document](https://docs.google.com/document/d/1TFlbXAutgtYT63n0tasKZCP_NqS-G4dxZV0OKvi7rMk/edit?usp=sharing).
 
-# run tests
-ginkgo -r -p -race
-```
-## Coverage
-```
-# install
-cd ~ 
-go get golang.org/x/tools/cmd/cover
-cd -
-
-# run
-ginkgo -r -cover
-
-# to see coverage reports in html
-cd id # or any src directory
-go tool cover -html=id.coverprofile
-```
-Snapshot:
-```
-# Any coverage holes are due to Test Files, 3rd party code(xstream) or system calls
-# generated with:
-go test -cover ./...
-```
-View results for a package as HTML:
-```
-cd <package-dir>
-go tool cover -html=<package>.coverprofile
-```
+# Developer Notes
 
 ## Setting up Intellij
 
