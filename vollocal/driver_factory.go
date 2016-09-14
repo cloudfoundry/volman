@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
-	"github.com/cloudfoundry/gunk/os_wrap"
+	"code.cloudfoundry.org/goshims/os"
 )
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory
@@ -25,7 +25,7 @@ type DriverFactory interface {
 
 type realDriverFactory struct {
 	Factory         driverhttp.RemoteClientFactory
-	useOs           os_wrap.Os
+	useOs           osshim.Os
 	DriversRegistry map[string]voldriver.Driver
 }
 
@@ -35,10 +35,10 @@ func NewDriverFactory() DriverFactory {
 }
 
 func NewDriverFactoryWithRemoteClientFactory(remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
-	return &realDriverFactory{remoteClientFactory, os_wrap.NewOs(), nil}
+	return &realDriverFactory{remoteClientFactory, &osshim.OsShim{}, nil}
 }
 
-func NewDriverFactoryWithOs(useOs os_wrap.Os) DriverFactory {
+func NewDriverFactoryWithOs(useOs osshim.Os) DriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
 	return &realDriverFactory{remoteClientFactory, useOs, nil}
 }

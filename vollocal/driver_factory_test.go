@@ -13,7 +13,7 @@ import (
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman/vollocal"
-	"github.com/cloudfoundry/gunk/os_wrap/osfakes"
+	"code.cloudfoundry.org/goshims/os/os_fake"
 )
 
 var _ = Describe("DriverFactory", func() {
@@ -53,7 +53,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal("http://0.0.0.0:8080"))
 			})
 			It("should fail if unable to open file", func() {
-				fakeOs := new(osfakes.FakeOs)
+				fakeOs := new(os_fake.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".json")
@@ -84,7 +84,7 @@ var _ = Describe("DriverFactory", func() {
 				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal("http://0.0.0.0:8080"))
 			})
 			It("should fail if unable to open file", func() {
-				fakeOs := new(osfakes.FakeOs)
+				fakeOs := new(os_fake.FakeOs)
 				driverFactory := vollocal.NewDriverFactoryWithOs(fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.Driver(testLogger, driverName, defaultPluginsDirectory, driverName+".spec")
