@@ -11,6 +11,8 @@ import (
 	"code.cloudfoundry.org/runtimeschema/metric"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman"
+	"github.com/tedsuo/ifrit/grouper"
+	"os"
 )
 
 const (
@@ -39,7 +41,14 @@ type localClient struct {
 func NewServer(logger lager.Logger, config DriverConfig) (volman.Manager, ifrit.Runner) {
 	clock := clock.NewClock()
 	registry := NewDriverRegistry()
-	return NewLocalClient(logger, registry, clock), NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock).Runner()
+
+
+	syncer := NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock)
+	purger := NewMountPurger(logger, registry)
+
+	grouper := grouper.NewOrdered(os.Kill, grouper.Members{grouper.Member{"volman-syncer", syncer.Runner()}, grouper.Member{"volman-purger",purger.Runner()}})
+
+	return NewLocalClient(logger, registry, clock), grouper
 }
 
 func NewLocalClient(logger lager.Logger, registry DriverRegistry, clock clock.Clock) volman.Manager {
