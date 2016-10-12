@@ -6,10 +6,13 @@ import (
 
 	"github.com/tedsuo/ifrit"
 
+	"context"
+
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/runtimeschema/metric"
 	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
 	"github.com/tedsuo/ifrit/grouper"
 	"os"
@@ -104,9 +107,11 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 		return volman.MountResponse{}, err
 	}
 
+	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+
 	mountRequest := voldriver.MountRequest{Name: volumeId}
 	logger.Debug("calling-driver-with-mount-request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
-	mountResponse := driver.Mount(logger, mountRequest)
+	mountResponse := driver.Mount(env, mountRequest)
 	logger.Debug("response-from-driver", lager.Data{"response": mountResponse})
 	if mountResponse.Err != "" {
 		volmanMountErrorsCounter.Increment()
@@ -139,7 +144,9 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 		return err
 	}
 
-	if response := driver.Unmount(logger, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
+	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+
+	if response := driver.Unmount(env, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
 		err := errors.New(response.Err)
 		logger.Error("unmount-failed", err)
 		volmanUnmountErrorsCounter.Increment()
@@ -160,8 +167,10 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 		return err
 	}
 
+	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+
 	logger.Debug("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId, "opts": opts})
-	response := driver.Create(logger, voldriver.CreateRequest{Name: volumeName, Opts: opts})
+	response := driver.Create(env, voldriver.CreateRequest{Name: volumeName, Opts: opts})
 	if response.Err != "" {
 		return errors.New(response.Err)
 	}

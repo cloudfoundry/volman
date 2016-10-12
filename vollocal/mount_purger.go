@@ -4,8 +4,11 @@ import (
 	"errors"
 	"os"
 
+	"context"
+
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/voldriver/driverhttp"
 	"github.com/tedsuo/ifrit"
 )
 
@@ -49,9 +52,11 @@ func (p *mountPurger) PurgeMounts(logger lager.Logger) error {
 	drivers := p.registry.Drivers()
 
 	for _, driver := range drivers {
-		listResponse := driver.List(logger)
+		env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+		listResponse := driver.List(env)
 		for _, mount := range listResponse.Volumes {
-			errorResponse := driver.Unmount(logger, voldriver.UnmountRequest{Name: mount.Name})
+			env = driverhttp.NewHttpDriverEnv(logger, context.TODO())
+			errorResponse := driver.Unmount(env, voldriver.UnmountRequest{Name: mount.Name})
 			if errorResponse.Err != "" {
 				logger.Error("failed-purging-volume-mount", errors.New(errorResponse.Err))
 			}

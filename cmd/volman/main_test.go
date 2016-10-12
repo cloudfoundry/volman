@@ -14,6 +14,7 @@ import (
 	"github.com/tedsuo/ifrit/ginkgomon"
 
 	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
@@ -75,6 +76,15 @@ var _ = Describe("Volman main", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			fakeDriver.RouteToHandler("POST", "/Plugin.Activate",
+				ghttp.RespondWith(200, resp),
+			)
+
+			resp, err = json.Marshal(voldriver.ListResponse{
+				Volumes: []voldriver.VolumeInfo{},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			fakeDriver.RouteToHandler("POST", "/VolumeDriver.List",
 				ghttp.RespondWith(200, resp),
 			)
 		})

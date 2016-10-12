@@ -7,13 +7,17 @@ import (
 
 	"os"
 
+	"fmt"
+	"path/filepath"
+	"regexp"
+
+	"context"
+
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
-	"fmt"
+	"code.cloudfoundry.org/voldriver/driverhttp"
 	"github.com/tedsuo/ifrit"
-	"path/filepath"
-	"regexp"
 )
 
 type DriverSyncer interface {
@@ -165,7 +169,9 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 				continue
 			}
 
-			resp := driver.Activate(logger)
+			env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+
+			resp := driver.Activate(env)
 			if resp.Err != "" {
 				logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
 			} else {
