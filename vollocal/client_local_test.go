@@ -181,7 +181,9 @@ var _ = Describe("Volman", func() {
 						reportedDuration := sender.GetValue("VolmanMountDuration")
 						Expect(reportedDuration.Unit).To(Equal("nanos"))
 						Expect(reportedDuration.Value).NotTo(BeZero())
-
+						reportedDuration = sender.GetValue("VolmanMountDurationForfakedriver")
+						Expect(reportedDuration.Unit).To(Equal("nanos"))
+						Expect(reportedDuration.Value).NotTo(BeZero())
 					})
 
 					It("should increment error count on mount failure", func() {
@@ -229,7 +231,9 @@ var _ = Describe("Volman", func() {
 						reportedDuration := sender.GetValue("VolmanUnmountDuration")
 						Expect(reportedDuration.Unit).To(Equal("nanos"))
 						Expect(reportedDuration.Value).NotTo(BeZero())
-
+						reportedDuration = sender.GetValue("VolmanUnmountDurationForfakedriver")
+						Expect(reportedDuration.Unit).To(Equal("nanos"))
+						Expect(reportedDuration.Value).NotTo(BeZero())
 					})
 
 					It("should increment error count on unmount failure", func() {

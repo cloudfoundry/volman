@@ -25,6 +25,11 @@ const (
 	volmanUnmountDuration      = metric.Duration("VolmanUnmountDuration")
 )
 
+var (
+	driverMountDurations   = map[string]metric.Duration{}
+	driverUnmountDurations = map[string]metric.Duration{}
+)
+
 type DriverConfig struct {
 	DriverPaths  []string
 	SyncInterval time.Duration
@@ -45,11 +50,10 @@ func NewServer(logger lager.Logger, config DriverConfig) (volman.Manager, ifrit.
 	clock := clock.NewClock()
 	registry := NewDriverRegistry()
 
-
 	syncer := NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock)
 	purger := NewMountPurger(logger, registry)
 
-	grouper := grouper.NewOrdered(os.Kill, grouper.Members{grouper.Member{"volman-syncer", syncer.Runner()}, grouper.Member{"volman-purger",purger.Runner()}})
+	grouper := grouper.NewOrdered(os.Kill, grouper.Members{grouper.Member{"volman-syncer", syncer.Runner()}, grouper.Member{"volman-purger", purger.Runner()}})
 
 	return NewLocalClient(logger, registry, clock), grouper
 }
@@ -85,10 +89,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	mountStart := client.clock.Now()
 
 	defer func() {
-		err := volmanMountDuration.Send(time.Since(mountStart))
-		if err != nil {
-			logger.Error("failed-to-send-volman-mount-duration-metric", err)
-		}
+		sendMountDurationMetrics(logger, time.Since(mountStart), driverId)
 	}()
 
 	logger.Debug("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
@@ -121,6 +122,40 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	return volman.MountResponse{mountResponse.Mountpoint}, nil
 }
 
+func sendMountDurationMetrics(logger lager.Logger, duration time.Duration, driverId string) {
+	err := volmanMountDuration.Send(duration)
+	if err != nil {
+		logger.Error("failed-to-send-volman-mount-duration-metric", err)
+	}
+
+	m, ok := driverMountDurations[driverId]
+	if !ok {
+		m = metric.Duration("VolmanMountDurationFor" + driverId)
+		driverMountDurations[driverId] = m
+	}
+	err = m.Send(duration)
+	if err != nil {
+		logger.Error("failed-to-send-volman-mount-duration-metric", err)
+	}
+}
+
+func sendUnmountDurationMetrics(logger lager.Logger, duration time.Duration, driverId string) {
+	err := volmanUnmountDuration.Send(duration)
+	if err != nil {
+		logger.Error("failed-to-send-volman-unmount-duration-metric", err)
+	}
+
+	m, ok := driverUnmountDurations[driverId]
+	if !ok {
+		m = metric.Duration("VolmanUnmountDurationFor" + driverId)
+		driverUnmountDurations[driverId] = m
+	}
+	err = m.Send(duration)
+	if err != nil {
+		logger.Error("failed-to-send-volman-unmount-duration-metric", err)
+	}
+}
+
 func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeName string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
@@ -130,10 +165,7 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 	unmountStart := client.clock.Now()
 
 	defer func() {
-		err := volmanUnmountDuration.Send(time.Since(unmountStart))
-		if err != nil {
-			logger.Error("failed-to-send-volman-unmount-duration-metric", err)
-		}
+		sendUnmountDurationMetrics(logger, time.Since(unmountStart), driverId)
 	}()
 
 	driver, found := client.driverRegistry.Driver(driverId)
