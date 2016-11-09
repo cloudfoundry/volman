@@ -6,7 +6,7 @@ Currently, we have platform support for **Shared Volumes**. Shared Volumes are d
 
 This feature adds two new concepts to CF: **Volume Mounts** on Service Brokers and **Volume Drivers** on Diego Cells, which are described below.
 
-For more information on CF Volume Services, please refer to [this introductory document](https://docs.google.com/document/d/1TFlbXAutgtYT63n0tasKZCP_NqS-G4dxZV0OKvi7rMk/edit?usp=sharing).
+For more information on CF Volume Services, please refer to [this introductory document](https://docs.google.com/document/d/1YtPMY9EjxlgJPa4SVVwIinfid_fshCF48xRhzyoZhrQ/edit?usp=sharing).
 
 # Developer Notes
 
