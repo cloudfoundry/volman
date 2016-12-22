@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
-	"code.cloudfoundry.org/goshims/os"
+	"code.cloudfoundry.org/goshims/osshim"
 )
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory

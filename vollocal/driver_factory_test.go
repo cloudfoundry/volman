@@ -13,7 +13,7 @@ import (
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman/vollocal"
-	"code.cloudfoundry.org/goshims/os/os_fake"
+	"code.cloudfoundry.org/goshims/osshim/os_fake"
 )
 
 var _ = Describe("DriverFactory", func() {
