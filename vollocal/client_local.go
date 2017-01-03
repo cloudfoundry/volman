@@ -16,6 +16,8 @@ import (
 	"code.cloudfoundry.org/volman"
 	"github.com/tedsuo/ifrit/grouper"
 	"os"
+	"strings"
+	"fmt"
 )
 
 const (
@@ -114,6 +116,11 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	logger.Debug("calling-driver-with-mount-request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
 	mountResponse := driver.Mount(env, mountRequest)
 	logger.Debug("response-from-driver", lager.Data{"response": mountResponse})
+
+	if !strings.HasPrefix(mountResponse.Mountpoint, "/var/vcap/data") {
+		logger.Info(fmt.Sprintf("Invalid or dangerous mountpath %s outside of /var/vcap/data", mountResponse.Mountpoint))
+	}
+
 	if mountResponse.Err != "" {
 		volmanMountErrorsCounter.Increment()
 		return volman.MountResponse{}, errors.New(mountResponse.Err)

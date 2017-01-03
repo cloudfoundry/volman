@@ -20,6 +20,7 @@ import (
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Volman", func() {
@@ -120,6 +121,12 @@ var _ = Describe("Volman", func() {
 	})
 
 	Describe("Mount and Unmount", func() {
+		var (
+			volumeId string
+		)
+		BeforeEach(func() {
+			volumeId = "fake-volume"
+		})
 		Context("when given a driver", func() {
 			BeforeEach(func() {
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
@@ -148,22 +155,43 @@ var _ = Describe("Volman", func() {
 			})
 
 			Context("mount", func() {
-				It("should be able to mount", func() {
-					volumeId := "fake-volume"
+				BeforeEach(func() {
+					mountResponse := voldriver.MountResponse{Mountpoint: "/var/vcap/data/mounts/" + volumeId}
+					fakeDriver.MountReturns(mountResponse)
+				})
 
+				It("should be able to mount without warning", func() {
 					mountPath, err := client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(mountPath).NotTo(Equal(""))
+					Expect(logger.Buffer()).NotTo(gbytes.Say("Invalid or dangerous mountpath"))
 				})
 
 				It("should not be able to mount if mount fails", func() {
 					mountResponse := voldriver.MountResponse{Err: "an error"}
 					fakeDriver.MountReturns(mountResponse)
 
-					volumeId := "fake-volume"
 					_, err := client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).To(HaveOccurred())
 				})
+
+				Context("with bad mount path", func() {
+					var err error
+					BeforeEach(func() {
+						mountResponse := voldriver.MountResponse{Mountpoint: "/var/tmp"}
+						fakeDriver.MountReturns(mountResponse)
+					})
+
+					JustBeforeEach(func() {
+						_, err = client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+					})
+
+					It("should return a warning in the log", func() {
+						Expect(err).NotTo(HaveOccurred())
+						Expect(logger.Buffer()).To(gbytes.Say("Invalid or dangerous mountpath"))
+					})
+				})
+
 				Context("with metrics", func() {
 					var sender *fake.FakeMetricSender
 
@@ -174,7 +202,6 @@ var _ = Describe("Volman", func() {
 					})
 
 					It("should emit mount time on successful mount", func() {
-						volumeId := "fake-volume"
 
 						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 
@@ -190,18 +217,14 @@ var _ = Describe("Volman", func() {
 						mountResponse := voldriver.MountResponse{Err: "an error"}
 						fakeDriver.MountReturns(mountResponse)
 
-						volumeId := "fake-volume"
 						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 						Expect(sender.GetCounter("VolmanMountErrors")).To(Equal(uint64(1)))
 					})
-
 				})
 			})
 
 			Context("umount", func() {
 				It("should be able to unmount", func() {
-					volumeId := "fake-volume"
-
 					err := client.Unmount(logger, "fakedriver", volumeId)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
@@ -210,8 +233,6 @@ var _ = Describe("Volman", func() {
 
 				It("should not be able to unmount when driver unmount fails", func() {
 					fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
-					volumeId := "fake-volume"
-
 					err := client.Unmount(logger, "fakedriver", volumeId)
 					Expect(err).To(HaveOccurred())
 				})
@@ -225,7 +246,6 @@ var _ = Describe("Volman", func() {
 					})
 
 					It("should emit unmount time on successful unmount", func() {
-						volumeId := "fake-volume"
 						client.Unmount(logger, "fakedriver", volumeId)
 
 						reportedDuration := sender.GetValue("VolmanUnmountDuration")
@@ -238,7 +258,6 @@ var _ = Describe("Volman", func() {
 
 					It("should increment error count on unmount failure", func() {
 						fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
-						volumeId := "fake-volume"
 
 						client.Unmount(logger, "fakedriver", volumeId)
 						Expect(sender.GetCounter("VolmanUnmountErrors")).To(Equal(uint64(1)))
