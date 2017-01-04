@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Volman", func() {
 	var (
-		logger = lagertest.NewTestLogger("client-test")
+		logger *lagertest.TestLogger
 
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
@@ -40,6 +40,8 @@ var _ = Describe("Volman", func() {
 	)
 
 	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("client-test")
+
 		fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
 		fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
 
