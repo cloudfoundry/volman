@@ -129,7 +129,12 @@ func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Drive
 			}
 			if len(matchingDriverSpecs) > 0 {
 				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
-				endpoints = r.insertIfAliveAndNotFound(logger, endpoints, driverPath, matchingDriverSpecs)
+				var existing map[string]voldriver.Driver
+				if r.driverRegistry != nil {
+					existing =  r.driverRegistry.Drivers()
+				}
+
+				endpoints = r.insertIfAliveAndNotFound(logger, endpoints, driverPath, matchingDriverSpecs, existing)
 			}
 		}
 	}
@@ -146,7 +151,7 @@ func (r *driverSyncer) getMatchingDriverSpecs(logger lager.Logger, path string, 
 
 }
 
-func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, driverPath string, specs []string) map[string]voldriver.Driver {
+func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, driverPath string, specs []string, existing map[string]voldriver.Driver) map[string]voldriver.Driver {
 	logger = logger.Session("insert-if-not-found")
 	logger.Debug("start")
 	defer logger.Debug("end")
@@ -163,7 +168,7 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 		logger.Debug("insert-unique-spec", lager.Data{"specname": specName})
 		_, ok := endpoints[specName]
 		if ok == false {
-			driver, err := r.driverFactory.Driver(logger, specName, driverPath, specFile)
+			driver, err := r.driverFactory.Driver(logger, specName, driverPath, specFile, existing)
 			if err != nil {
 				logger.Error("error-creating-driver", err)
 				continue

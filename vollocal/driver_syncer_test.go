@@ -185,7 +185,7 @@ var _ = Describe("Driver Syncer", func() {
 					drivers, err := syncer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(drivers)).To(Equal(1))
-					_, _, _, specFileName := fakeDriverFactory.DriverArgsForCall(0)
+					_, _, _, specFileName, _ := fakeDriverFactory.DriverArgsForCall(0)
 					Expect(specFileName).To(Equal(driverName + ".spec"))
 				})
 			})
@@ -237,7 +237,7 @@ var _ = Describe("Driver Syncer", func() {
 				It("should preferentially select the driver in the first directory", func() {
 					_, err := syncer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
-					_, _, _, specFileName := fakeDriverFactory.DriverArgsForCall(0)
+					_, _, _, specFileName, _ := fakeDriverFactory.DriverArgsForCall(0)
 					Expect(specFileName).To(Equal(driverName + ".json"))
 				})
 			})

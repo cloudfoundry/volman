@@ -53,9 +53,8 @@ func (fake *FakeManager) ListDrivers(logger lager.Logger) (volman.ListDriversRes
 	fake.listDriversMutex.Unlock()
 	if fake.ListDriversStub != nil {
 		return fake.ListDriversStub(logger)
-	} else {
-		return fake.listDriversReturns.result1, fake.listDriversReturns.result2
 	}
+	return fake.listDriversReturns.result1, fake.listDriversReturns.result2
 }
 
 func (fake *FakeManager) ListDriversCallCount() int {
@@ -90,9 +89,8 @@ func (fake *FakeManager) Mount(logger lager.Logger, driverId string, volumeId st
 	fake.mountMutex.Unlock()
 	if fake.MountStub != nil {
 		return fake.MountStub(logger, driverId, volumeId, config)
-	} else {
-		return fake.mountReturns.result1, fake.mountReturns.result2
 	}
+	return fake.mountReturns.result1, fake.mountReturns.result2
 }
 
 func (fake *FakeManager) MountCallCount() int {
@@ -126,9 +124,8 @@ func (fake *FakeManager) Unmount(logger lager.Logger, driverId string, volumeId 
 	fake.unmountMutex.Unlock()
 	if fake.UnmountStub != nil {
 		return fake.UnmountStub(logger, driverId, volumeId)
-	} else {
-		return fake.unmountReturns.result1
 	}
+	return fake.unmountReturns.result1
 }
 
 func (fake *FakeManager) UnmountCallCount() int {

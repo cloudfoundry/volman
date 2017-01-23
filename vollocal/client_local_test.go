@@ -319,7 +319,7 @@ var _ = Describe("Volman", func() {
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 
 				calls := 0
-				fakeDriverFactory.DriverStub = func(lager.Logger, string, string, string) (voldriver.Driver, error) {
+				fakeDriverFactory.DriverStub = func(lager.Logger, string, string, string, map[string]voldriver.Driver) (voldriver.Driver, error) {
 					calls++
 					if calls > 1 {
 						return nil, fmt.Errorf("driver not found")

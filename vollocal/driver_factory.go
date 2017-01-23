@@ -9,10 +9,10 @@ import (
 
 	"net/url"
 
+	"code.cloudfoundry.org/goshims/osshim"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
-	"code.cloudfoundry.org/goshims/osshim"
 )
 
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory
@@ -20,7 +20,7 @@ import (
 // DriverFactories are responsible for instantiating remote client implementations of the voldriver.Driver interface.
 type DriverFactory interface {
 	// Given a driver id, path and config filename returns a remote client implementation of the voldriver.Driver interface
-	Driver(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
+	Driver(logger lager.Logger, driverId string, driverPath, driverFileName string, existing map[string]voldriver.Driver) (voldriver.Driver, error)
 }
 
 type realDriverFactory struct {
@@ -43,7 +43,7 @@ func NewDriverFactoryWithOs(useOs osshim.Os) DriverFactory {
 	return &realDriverFactory{remoteClientFactory, useOs, nil}
 }
 
-func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
+func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string, existing map[string]voldriver.Driver) (voldriver.Driver, error) {
 	logger = logger.Session("driver", lager.Data{"driverId": driverId, "driverFileName": driverFileName})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -99,11 +99,24 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 			return nil, err
 		}
 
-		logger.Info("getting-driver", lager.Data{"address": address})
-		driver, err = r.Factory.NewRemoteClient(address, tls)
-		if err != nil {
-			logger.Error(fmt.Sprintf("error-building-driver-attached-to-%s", address), err)
-			return nil, err
+		logger.Info("checking-existing-drivers")
+		var ok bool
+		driver, ok = existing[driverId]
+		if ok {
+			matchable, ok := driver.(voldriver.MatchableDriver)
+			if !ok || !matchable.Matches(logger, address, tls) {
+				driver = nil
+			}
+			logger.Info("existing-driver-matches")
+		}
+
+		if driver == nil {
+			logger.Info("getting-driver", lager.Data{"address": address})
+			driver, err = r.Factory.NewRemoteClient(address, tls)
+			if err != nil {
+				logger.Error(fmt.Sprintf("error-building-driver-attached-to-%s", address), err)
+				return nil, err
+			}
 		}
 
 		return driver, nil
