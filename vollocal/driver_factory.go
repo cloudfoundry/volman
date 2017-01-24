@@ -99,15 +99,17 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 			return nil, err
 		}
 
-		logger.Info("checking-existing-drivers")
+		logger.Info("checking-existing-drivers", lager.Data{"driverId": driverId})
 		var ok bool
 		driver, ok = existing[driverId]
 		if ok {
+			logger.Info("existing-driver-found", lager.Data{"driverId": driverId})
 			matchable, ok := driver.(voldriver.MatchableDriver)
 			if !ok || !matchable.Matches(logger, address, tls) {
+				logger.Info("existing-driver-mismatch", lager.Data{"driverId": driverId, "address": address, "tls": tls})
 				driver = nil
 			}
-			logger.Info("existing-driver-matches")
+			logger.Info("existing-driver-matches", lager.Data{"driverId": driverId})
 		}
 
 		if driver == nil {
