@@ -10,6 +10,11 @@
 ```bash
 CF_TRACE=true cf restage <app name>
 ```
+- If you see mount errors in the cf application logs, it is possible that your NFS share is not opened to the Diego cells, or that the network access between the cell and the NFS server is not open.  To test this, you will need to SSH onto the cell.  See the steps below about failing broker/driver deployment for some information about how to bosh ssh into the cell.  Once you are ssh'd into the cell, type the following command to test NFS access:
+```bash
+showmount -e <your nfs host name or ip>
+```
+If the network is open, you should see a list of shares with corresponding ip addresses.  Check to make sure that your share is opened to the Diego cell IPs.
 - If you get this far, then you will need to consult the BOSH logs while restaging your application to see if you can find an error there (assuming that you have bosh access).  See the steps below about failing broker/driver deployment for some information about how to bosh ssh into the cell.  Once you are ssh'd into the cell, check the driver stderr/stdout logs.   It is also useful to look at the `rep` logs as some errors in the volume services infrastructure will end up there.
 - If you don't see any errors on the Diego cell, it is likely that your error occurred in the cloud controller, before the could be placed on a cell.  To find the cloud controller logs related to your application, you can `bosh ssh` into the `api` vm in your cloudfoundry deployment.  `grep` for your application guid in the `cloud_controller_ng` logs.  Sometimes it is helpful to pipe the results of that `grep` to also grep for `error`:
 ```bash
