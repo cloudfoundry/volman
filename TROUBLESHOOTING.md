@@ -33,7 +33,7 @@ However, it's a good idea to take a look on your application container to make s
 
 If your application requires data to be mounted in a specific location, you can normally alter the mount path when you bind your application to the volume by using the `-c` flag as follows;  
    ```bash
-   cf bind-service <app name> <service name> -c '{"mount":"/path/in/container"}'`
+   cf bind-service <app name> <service name> -c '{"mount":"/path/in/container"}'
    ```
 This mount configuration is supported by all of the volume service brokers in the cloudfoundry-incubator.
 
