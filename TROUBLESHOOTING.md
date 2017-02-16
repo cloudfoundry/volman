@@ -6,20 +6,20 @@
 - If your application still won't start, try unbinding it from the volume service and see if it starts when it is *not* bound.  (Most of our test applications like [pora](https://github.com/cloudfoundry-incubator/persi-acceptance-tests/tree/master/assets/pora) and [kitty](https://github.com/EMC-Dojo/Kitty) will start up even when no volume is available.)
   If the application starts up, then that indicates the problem is volume services related.  If you still see the same error regardless, then that indicates that the problem is elsewhere, and you should go through the [Troubleshooting Application Deployment and Health](https://docs.cloudfoundry.org/devguide/deploy-apps/troubleshoot-app-health.html) steps.
 - Simple errors may turn up in the application logs.  Try `cf logs <app name>`.  Even if there are no errors in evidence, make a note of the application guid in this log--it could be useful later.
-- More detailed logging is available by restaging your app with `CF_TRACE`.  To do this, type 
-```bash
-CF_TRACE=true cf restage <app name>
-```
+- More detailed logging is available by restaging your app with `CF_TRACE`.  To do this, type  
+   ```bash
+   CF_TRACE=true cf restage <app name>
+   ```
 - If you see mount errors in the cf application logs, it is possible that your NFS share is not opened to the Diego cells, or that the network access between the cell and the NFS server is not open.  To test this, you will need to SSH onto the cell.  See the steps below about failing broker/driver deployment for some information about how to bosh ssh into the cell.  Once you are ssh'd into the cell, type the following command to test NFS access:  
    ```bash
    showmount -e <your nfs host name or ip>
    ```  
    If the network is open, you should see a list of shares with corresponding ip addresses.  Check to make sure that your share is opened to the Diego cell IPs.
 - If you get this far, then you will need to consult the BOSH logs while restaging your application to see if you can find an error there (assuming that you have bosh access).  See the steps below about failing broker/driver deployment for some information about how to bosh ssh into the cell.  Once you are ssh'd into the cell, check the driver stderr/stdout logs.   It is also useful to look at the `rep` logs as some errors in the volume services infrastructure will end up there.
-- If you don't see any errors on the Diego cell, it is likely that your error occurred in the cloud controller, before the could be placed on a cell.  To find the cloud controller logs related to your application, you can `bosh ssh` into the `api` vm in your cloudfoundry deployment.  `grep` for your application guid in the `cloud_controller_ng` logs.  Sometimes it is helpful to pipe the results of that `grep` to also grep for `error`:
-```bash
-grep <app guid> cloud_controller_ng.log | grep error
-```
+- If you don't see any errors on the Diego cell, it is likely that your error occurred in the cloud controller, before the could be placed on a cell.  To find the cloud controller logs related to your application, you can `bosh ssh` into the `api` vm in your cloudfoundry deployment.  `grep` for your application guid in the `cloud_controller_ng` logs.  Sometimes it is helpful to pipe the results of that `grep` to also grep for `error`:  
+   ```bash
+   grep <app guid> cloud_controller_ng.log | grep error
+   ```
 
 ## When the application starts, but data is missing
 
@@ -31,10 +31,10 @@ However, it's a good idea to take a look on your application container to make s
 - `cd` to the path above, and validate that it contains the data you expected and/or that you can create files in that location.
 - to double check that volume services are really working, you can bind a second app to the same service and `cf ssh` into that application.  If volume services are operational, data written in one application container will be in the share when you ssh into the other.
 
-If your application requires data to be mounted in a specific location, you can normally alter the mount path when you bind your application to the volume by using the `-c` flag as follows;
-```bash
-cf bind-service <app name> <service name> -c '{"mount":"/path/in/container"}'`
-```
+If your application requires data to be mounted in a specific location, you can normally alter the mount path when you bind your application to the volume by using the `-c` flag as follows;  
+   ```bash
+   cf bind-service <app name> <service name> -c '{"mount":"/path/in/container"}'`
+   ```
 This mount configuration is supported by all of the volume service brokers in the cloudfoundry-incubator.
 
 ## When BOSH deployment fails
@@ -58,9 +58,9 @@ In a multi-cell deployment, sometimes it is necessary to try different cell vms 
 
 ## When the service broker cannot be registered with `cf create-service-broker`
 
-* Check to make sure that the service broker is reachable at the URL you are passing to the `create-service-broker` call:
-```bash
-curl http://user:password@yourbroker.your.app.domain.com/v2/catalog
-```
+* Check to make sure that the service broker is reachable at the URL you are passing to the `create-service-broker` call:  
+   ```bash
+   curl http://user:password@yourbroker.your.app.domain.com/v2/catalog
+   ```
 * Check to make sure that your cloudfoundry manifest has `properties.cc.volume_services_enabled` set to `true`.  If not, change your manifest and redeploy Cloud Foundry.
 
