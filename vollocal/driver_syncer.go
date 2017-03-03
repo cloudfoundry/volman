@@ -113,7 +113,7 @@ func (r *driverSyncer) setDrivers(drivers map[string]voldriver.Driver) {
 func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
 	logger = logger.Session("discover")
 	logger.Debug("start")
-	logger.Info(fmt.Sprintf("Discovering drivers in %s", r.driverPaths))
+	logger.Info("discovering-drivers", lager.Data{"driver-paths": r.driverPaths})
 	defer logger.Debug("end")
 
 	endpoints := make(map[string]voldriver.Driver)

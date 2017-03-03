@@ -118,7 +118,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	logger.Debug("response-from-driver", lager.Data{"response": mountResponse})
 
 	if !strings.HasPrefix(mountResponse.Mountpoint, "/var/vcap/data") {
-		logger.Info(fmt.Sprintf("Invalid or dangerous mountpath %s outside of /var/vcap/data", mountResponse.Mountpoint))
+		logger.Info("invalid-mountpath", lager.Data{"detail":fmt.Sprintf("Invalid or dangerous mountpath %s outside of /var/vcap/data", mountResponse.Mountpoint)})
 	}
 
 	if mountResponse.Err != "" {

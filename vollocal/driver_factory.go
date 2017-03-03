@@ -60,13 +60,13 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 		case "spec":
 			configFile, err := r.useOs.Open(path.Join(driverPath, driverFileName))
 			if err != nil {
-				logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
+				logger.Error("error-opening-config", err, lager.Data{"DriverFileName": driverFileName})
 				return nil, err
 			}
 			reader := bufio.NewReader(configFile)
 			addressBytes, _, err := reader.ReadLine()
 			if err != nil { // no real value in faking this as bigger problems exist when this fails
-				logger.Error(fmt.Sprintf("error-reading-%s", driverFileName), err)
+				logger.Error("error-reading-driver-file", err, lager.Data{"DriverFileName": driverFileName})
 				return nil, err
 			}
 			address = string(addressBytes)
@@ -75,7 +75,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 			var driverJsonSpec voldriver.DriverSpec
 			configFile, err := r.useOs.Open(path.Join(driverPath, driverFileName))
 			if err != nil {
-				logger.Error(fmt.Sprintf("error-opening-config-%s", driverFileName), err)
+				logger.Error("error-opening-config", err, lager.Data{"DriverFileName": driverFileName})
 				return nil, err
 			}
 			jsonParser := json.NewDecoder(configFile)
@@ -95,7 +95,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 
 		address, err = r.canonicalize(logger, address)
 		if err != nil {
-			logger.Error(fmt.Sprintf("invalid-address: %s", address), err)
+			logger.Error("invalid-address", err, lager.Data{"address": address})
 			return nil, err
 		}
 
@@ -116,7 +116,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 			logger.Info("getting-driver", lager.Data{"address": address})
 			driver, err = r.Factory.NewRemoteClient(address, tls)
 			if err != nil {
-				logger.Error(fmt.Sprintf("error-building-driver-attached-to-%s", address), err)
+				logger.Error("error-building-driver", err, lager.Data{"address": address})
 				return nil, err
 			}
 		}

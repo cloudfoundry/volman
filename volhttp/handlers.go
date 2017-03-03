@@ -2,7 +2,6 @@ package volhttp
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -12,8 +11,8 @@ import (
 	"github.com/tedsuo/rata"
 )
 
-func respondWithError(logger lager.Logger, info string, err error, w http.ResponseWriter) {
-	logger.Error(info, err)
+func respondWithError(logger lager.Logger, info string, err error, w http.ResponseWriter, data lager.Data) {
+	logger.Error(info, err, data)
 	cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, volman.NewError(err))
 }
 
@@ -50,19 +49,19 @@ func newMountHandler(logger lager.Logger, client volman.Manager) http.HandlerFun
 
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			respondWithError(logger, "Error reading mount request body", err, w)
+			respondWithError(logger, "error-reading-mount-request", err, w, lager.Data{})
 			return
 		}
 
 		var mountRequest volman.MountRequest
 		if err = json.Unmarshal(body, &mountRequest); err != nil {
-			respondWithError(logger, fmt.Sprintf("Error reading mount request body: %#v", body), err, w)
+			respondWithError(logger, "error-reading-mount-request", err, w, lager.Data{"body": body})
 			return
 		}
 
 		mountPoint, err := client.Mount(logger, mountRequest.DriverId, mountRequest.VolumeId, mountRequest.Config)
 		if err != nil {
-			respondWithError(logger, fmt.Sprintf("Error mounting volume %s with driver %s", mountRequest.VolumeId, mountRequest.DriverId), err, w)
+			respondWithError(logger, "error-mounting-volume", err, w, lager.Data{"volumeId": mountRequest.VolumeId, "driverId": mountRequest.DriverId})
 			return
 		}
 
@@ -78,19 +77,19 @@ func newUnmountHandler(logger lager.Logger, client volman.Manager) http.HandlerF
 
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			respondWithError(logger, "Error reading unmount request body", err, w)
+			respondWithError(logger, "error-reading-unmount-request", err, w, lager.Data{})
 			return
 		}
 
 		var unmountRequest volman.UnmountRequest
 		if err = json.Unmarshal(body, &unmountRequest); err != nil {
-			respondWithError(logger, fmt.Sprintf("Error reading unmount request body: %#v", body), err, w)
+			respondWithError(logger, "error-reading-unmount-request", err, w, lager.Data{"body": body})
 			return
 		}
 
 		err = client.Unmount(logger, unmountRequest.DriverId, unmountRequest.VolumeId)
 		if err != nil {
-			respondWithError(logger, fmt.Sprintf("Error unmounting volume %s with driver %s", unmountRequest.VolumeId, unmountRequest.DriverId), err, w)
+			respondWithError(logger, "error-unmounting-volume", err, w, lager.Data{"volumeId": unmountRequest.VolumeId, "driverId": unmountRequest.DriverId})
 			return
 		}
 

@@ -52,7 +52,7 @@ func main() {
 
 func exitOnFailure(logger lager.Logger, err error) {
 	if err != nil {
-		logger.Error("Fatal err.. aborting", err)
+		logger.Error("fatal-err-aborting", err)
 		panic(err.Error())
 	}
 }
