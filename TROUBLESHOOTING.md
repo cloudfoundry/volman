@@ -6,6 +6,7 @@
 - If your application still won't start, try unbinding it from the volume service and see if it starts when it is *not* bound.  (Most of our test applications like [pora](https://github.com/cloudfoundry-incubator/persi-acceptance-tests/tree/master/assets/pora) and [kitty](https://github.com/EMC-Dojo/Kitty) will start up even when no volume is available.)
   If the application starts up, then that indicates the problem is volume services related.  If you still see the same error regardless, then that indicates that the problem is elsewhere, and you should go through the [Troubleshooting Application Deployment and Health](https://docs.cloudfoundry.org/devguide/deploy-apps/troubleshoot-app-health.html) steps.
 - Simple errors may turn up in the application logs.  Try `cf logs <app name>`.  Even if there are no errors in evidence, make a note of the application guid in this log--it could be useful later.
+- If you're specifying a mount on the bind and you see application logs detailing that the creation of the container fails, then it's possible that you're trying to mount into a path that isn't currently allowed by AUFS. See the [note](https://github.com/cloudfoundry-incubator/nfs-volume-release#deploy-the-pora-test-app-first-by-pushing-the-source-code-to-cloudfoundry) on mount parameters.
 - More detailed logging is available by restaging your app with `CF_TRACE`.  To do this, type  
    ```bash
    CF_TRACE=true cf restage <app name>
