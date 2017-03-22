@@ -131,7 +131,7 @@ func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Drive
 				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
 				var existing map[string]voldriver.Driver
 				if r.driverRegistry != nil {
-					existing =  r.driverRegistry.Drivers()
+					existing = r.driverRegistry.Drivers()
 				}
 
 				endpoints = r.insertIfAliveAndNotFound(logger, endpoints, driverPath, matchingDriverSpecs, existing)

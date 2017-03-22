@@ -96,7 +96,7 @@ func (r *remoteClient) Unmount(logger lager.Logger, driverId string, volumeId st
 	unmountRequest := volman.UnmountRequest{driverId, volumeId}
 	payload, err := json.Marshal(unmountRequest)
 	if err != nil {
-		return  r.clientError(logger, err, "error-marshalling-json", lager.Data{"unmount-request": unmountRequest})
+		return r.clientError(logger, err, "error-marshalling-json", lager.Data{"unmount-request": unmountRequest})
 	}
 
 	request, err := r.reqGen.CreateRequest(volman.UnmountRoute, nil, bytes.NewReader(payload))

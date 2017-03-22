@@ -3,17 +3,18 @@ package vollocal_test
 import (
 	"code.cloudfoundry.org/volman/vollocal"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/voldriverfakes"
-	"github.com/tedsuo/ifrit/ginkgomon"
-	"code.cloudfoundry.org/lager/lagertest"
+	"time"
+
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/clock/fakeclock"
-	"time"
+	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman/volmanfakes"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
 var _ = Describe("MountPurger", func() {
@@ -22,12 +23,15 @@ var _ = Describe("MountPurger", func() {
 		logger *lagertest.TestLogger
 
 		driverRegistry vollocal.DriverRegistry
-		driverSyncer vollocal.DriverSyncer
-		purger vollocal.MountPurger
+		driverSyncer   vollocal.DriverSyncer
+		purger         vollocal.MountPurger
 
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
-		fakeClock clock.Clock
+		fakeClock         clock.Clock
+
+		durationMetricMap map[string]time.Duration
+		counterMetricMap  map[string]int
 
 		scanInterval time.Duration
 
@@ -53,12 +57,16 @@ var _ = Describe("MountPurger", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
+
+			durationMetricMap = make(map[string]time.Duration)
+			counterMetricMap = make(map[string]int)
+
 			fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
 
 			scanInterval = 1 * time.Second
 
 			driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-			client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
+			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
 
 			fakeDriver = new(voldriverfakes.FakeDriver)
 			fakeDriverFactory.DriverReturns(fakeDriver, nil)
@@ -81,7 +89,7 @@ var _ = Describe("MountPurger", func() {
 			BeforeEach(func() {
 				fakeDriver.ListReturns(voldriver.ListResponse{Volumes: []voldriver.VolumeInfo{
 					{
-						Name: "a-volume",
+						Name:       "a-volume",
 						Mountpoint: "foo",
 					},
 				}})

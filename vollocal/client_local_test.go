@@ -5,11 +5,10 @@ import (
 
 	"fmt"
 
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	mfakes "code.cloudfoundry.org/loggregator_v2/fakes"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
@@ -18,9 +17,9 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
-	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Volman", func() {
@@ -30,11 +29,14 @@ var _ = Describe("Volman", func() {
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
 		fakeClock         *fakeclock.FakeClock
+		fakeMetronClient  *mfakes.FakeClient
 
 		scanInterval time.Duration
 
-		driverRegistry vollocal.DriverRegistry
-		driverSyncer   vollocal.DriverSyncer
+		driverRegistry    vollocal.DriverRegistry
+		driverSyncer      vollocal.DriverSyncer
+		durationMetricMap map[string]time.Duration
+		counterMetricMap  map[string]int
 
 		process ifrit.Process
 	)
@@ -48,12 +50,30 @@ var _ = Describe("Volman", func() {
 		scanInterval = 1 * time.Second
 
 		driverRegistry = vollocal.NewDriverRegistry()
+		durationMetricMap = make(map[string]time.Duration)
+		counterMetricMap = make(map[string]int)
+
+		fakeMetronClient = new(mfakes.FakeClient)
+		fakeMetronClient.SendDurationStub = func(name string, value time.Duration) error {
+			durationMetricMap[name] = value
+			return nil
+		}
+		fakeMetronClient.IncrementCounterStub = func(name string) error {
+			value, ok := counterMetricMap[name]
+			if ok {
+				counterMetricMap[name] = value + 1
+			} else {
+				counterMetricMap[name] = 1
+			}
+			return nil
+		}
+
 	})
 
 	Describe("ListDrivers", func() {
 		BeforeEach(func() {
 			driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-			client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
+			client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 			process = ginkgomon.Invoke(driverSyncer.Runner())
 		})
@@ -88,7 +108,7 @@ var _ = Describe("Volman", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				fakeDriver := new(voldriverfakes.FakeDriver)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)
@@ -144,7 +164,7 @@ var _ = Describe("Volman", func() {
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 			})
 
@@ -195,32 +215,21 @@ var _ = Describe("Volman", func() {
 				})
 
 				Context("with metrics", func() {
-					var sender *fake.FakeMetricSender
-
-					BeforeEach(func() {
-						sender = fake.NewFakeMetricSender()
-						metrics.Initialize(sender, nil)
-
-					})
-
 					It("should emit mount time on successful mount", func() {
 
 						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 
-						reportedDuration := sender.GetValue("VolmanMountDuration")
-						Expect(reportedDuration.Unit).To(Equal("nanos"))
-						Expect(reportedDuration.Value).NotTo(BeZero())
-						reportedDuration = sender.GetValue("VolmanMountDurationForfakedriver")
-						Expect(reportedDuration.Unit).To(Equal("nanos"))
-						Expect(reportedDuration.Value).NotTo(BeZero())
+						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanMountDuration", Not(BeZero())))
+						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanMountDurationForfakedriver", Not(BeZero())))
 					})
 
 					It("should increment error count on mount failure", func() {
+						Expect(counterMetricMap).ShouldNot(HaveKey("VolmanMountErrors"))
 						mountResponse := voldriver.MountResponse{Err: "an error"}
 						fakeDriver.MountReturns(mountResponse)
 
 						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
-						Expect(sender.GetCounter("VolmanMountErrors")).To(Equal(uint64(1)))
+						Expect(counterMetricMap).Should(HaveKeyWithValue("VolmanMountErrors", 1))
 					})
 				})
 			})
@@ -239,30 +248,18 @@ var _ = Describe("Volman", func() {
 					Expect(err).To(HaveOccurred())
 				})
 				Context("with metrics", func() {
-					var sender *fake.FakeMetricSender
-
-					BeforeEach(func() {
-						sender = fake.NewFakeMetricSender()
-						metrics.Initialize(sender, nil)
-
-					})
-
 					It("should emit unmount time on successful unmount", func() {
 						client.Unmount(logger, "fakedriver", volumeId)
 
-						reportedDuration := sender.GetValue("VolmanUnmountDuration")
-						Expect(reportedDuration.Unit).To(Equal("nanos"))
-						Expect(reportedDuration.Value).NotTo(BeZero())
-						reportedDuration = sender.GetValue("VolmanUnmountDurationForfakedriver")
-						Expect(reportedDuration.Unit).To(Equal("nanos"))
-						Expect(reportedDuration.Value).NotTo(BeZero())
+						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanUnmountDuration", Not(BeZero())))
+						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanUnmountDurationForfakedriver", Not(BeZero())))
 					})
 
 					It("should increment error count on unmount failure", func() {
 						fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
 
 						client.Unmount(logger, "fakedriver", volumeId)
-						Expect(sender.GetCounter("VolmanUnmountErrors")).To(Equal(uint64(1)))
+						Expect(counterMetricMap).Should(HaveKeyWithValue("VolmanUnmountErrors", 1))
 					})
 
 				})
@@ -314,7 +311,7 @@ var _ = Describe("Volman", func() {
 
 				driverRegistry := vollocal.NewDriverRegistry()
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 
@@ -351,7 +348,7 @@ var _ = Describe("Volman", func() {
 
 				driverRegistry := vollocal.NewDriverRegistry()
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
-				client = vollocal.NewLocalClient(logger, driverRegistry, fakeClock)
+				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 			})
