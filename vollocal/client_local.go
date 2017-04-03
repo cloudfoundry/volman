@@ -211,7 +211,7 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 
 	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 
-	logger.Debug("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId, "opts": opts})
+	logger.Debug("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId})
 	response := driver.Create(env, voldriver.CreateRequest{Name: volumeName, Opts: opts})
 	if response.Err != "" {
 		return errors.New(response.Err)
