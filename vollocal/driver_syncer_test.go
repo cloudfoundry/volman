@@ -284,6 +284,7 @@ var _ = Describe("Driver Syncer", func() {
 			}
 
 			TestCanonicalization("with an ip (and no port)", "127.0.0.1", "should return a canonicalized address", "http://127.0.0.1")
+			TestCanonicalization("with an ip and port", "127.0.0.1:8080", "should return a canonicalized address", "http://127.0.0.1:8080")
 			TestCanonicalization("with a tcp protocol uri with port", "tcp://127.0.0.1:8080", "should return a canonicalized address", "http://127.0.0.1:8080")
 			TestCanonicalization("with a tcp protocol uri without port", "tcp://127.0.0.1", "should return a canonicalized address", "http://127.0.0.1")
 			TestCanonicalization("with a unix address including protocol", "unix:///other.sock", "should return a canonicalized address", "unix:///other.sock")
@@ -291,8 +292,7 @@ var _ = Describe("Driver Syncer", func() {
 
 			Context("with an invalid url", func() {
 				BeforeEach(func() {
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName+"2", "spec", []byte("127.0.0.1:8080"))
-					err = voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("htt%p:\\\\"))
+					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("htt%p:\\\\"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
