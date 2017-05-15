@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	mfakes "code.cloudfoundry.org/go-loggregator/fakes"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
-	mfakes "code.cloudfoundry.org/go-loggregator/loggregator_v2/fakes"
 
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/lager"
