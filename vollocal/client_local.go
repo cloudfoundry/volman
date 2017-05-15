@@ -13,11 +13,11 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/clock"
+	loggregator_v2 "code.cloudfoundry.org/go-loggregator"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
-	"code.cloudfoundry.org/go-loggregator/loggregator_v2"
 	"github.com/tedsuo/ifrit/grouper"
 )
 
