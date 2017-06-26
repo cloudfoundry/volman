@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	mfakes "code.cloudfoundry.org/go-loggregator/fakes"
+	mfakes "code.cloudfoundry.org/go-loggregator/testhelpers/fakes/v1"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
@@ -29,7 +29,7 @@ var _ = Describe("Volman", func() {
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
 		fakeClock         *fakeclock.FakeClock
-		fakeMetronClient  *mfakes.FakeClient
+		fakeMetronClient  *mfakes.FakeIngressClient
 
 		scanInterval time.Duration
 
@@ -53,7 +53,7 @@ var _ = Describe("Volman", func() {
 		durationMetricMap = make(map[string]time.Duration)
 		counterMetricMap = make(map[string]int)
 
-		fakeMetronClient = new(mfakes.FakeClient)
+		fakeMetronClient = new(mfakes.FakeIngressClient)
 		fakeMetronClient.SendDurationStub = func(name string, value time.Duration) error {
 			durationMetricMap[name] = value
 			return nil

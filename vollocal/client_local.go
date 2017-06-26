@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/clock"
-	loggregator_v2 "code.cloudfoundry.org/go-loggregator"
+	loggregator_v2 "code.cloudfoundry.org/go-loggregator/compatibility"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
@@ -46,11 +46,11 @@ func NewDriverConfig() DriverConfig {
 
 type localClient struct {
 	driverRegistry DriverRegistry
-	metronClient   loggregator_v2.Client
+	metronClient   loggregator_v2.IngressClient
 	clock          clock.Clock
 }
 
-func NewServer(logger lager.Logger, metronClient loggregator_v2.Client, config DriverConfig) (volman.Manager, ifrit.Runner) {
+func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, config DriverConfig) (volman.Manager, ifrit.Runner) {
 	clock := clock.NewClock()
 	registry := NewDriverRegistry()
 
@@ -62,7 +62,7 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.Client, config D
 	return NewLocalClient(logger, registry, metronClient, clock), grouper
 }
 
-func NewLocalClient(logger lager.Logger, registry DriverRegistry, metronClient loggregator_v2.Client, clock clock.Clock) volman.Manager {
+func NewLocalClient(logger lager.Logger, registry DriverRegistry, metronClient loggregator_v2.IngressClient, clock clock.Clock) volman.Manager {
 	return &localClient{
 		driverRegistry: registry,
 		metronClient:   metronClient,
@@ -132,7 +132,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	return volman.MountResponse{mountResponse.Mountpoint}, nil
 }
 
-func sendMountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.Client, duration time.Duration, driverId string) {
+func sendMountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.IngressClient, duration time.Duration, driverId string) {
 	err := metronClient.SendDuration(volmanMountDuration, duration)
 	if err != nil {
 		logger.Error("failed-to-send-volman-mount-duration-metric", err)
@@ -149,7 +149,7 @@ func sendMountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.C
 	}
 }
 
-func sendUnmountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.Client, duration time.Duration, driverId string) {
+func sendUnmountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.IngressClient, duration time.Duration, driverId string) {
 	err := metronClient.SendDuration(volmanUnmountDuration, duration)
 	if err != nil {
 		logger.Error("failed-to-send-volman-unmount-duration-metric", err)
