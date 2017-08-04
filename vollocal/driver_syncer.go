@@ -117,6 +117,7 @@ func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Drive
 	defer logger.Debug("end")
 
 	endpoints := make(map[string]voldriver.Driver)
+
 	for _, driverPath := range r.driverPaths {
 		//precedence order: sock -> spec -> json
 		spec_types := [3]string{"sock", "spec", "json"}
@@ -156,6 +157,10 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 	logger.Debug("start")
 	defer logger.Debug("end")
 
+	var driver voldriver.Driver
+	var err error
+	var ok bool
+
 	for _, spec := range specs {
 		re := regexp.MustCompile("([^/]*/)?([^/]*)\\.(sock|spec|json)$")
 
@@ -166,31 +171,50 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 		specName := segs2[0][2]
 		specFile := segs2[0][2] + "." + segs2[0][3]
 		logger.Debug("insert-unique-spec", lager.Data{"specname": specName})
-		_, ok := endpoints[specName]
-		if ok == false {
-			driver, err := r.driverFactory.Driver(logger, specName, driverPath, specFile, existing)
-			if err != nil {
-				logger.Error("error-creating-driver", err)
-				continue
+
+		_, ok = endpoints[specName]
+		if !ok {
+			driver, ok = existing[specName]
+			if ok == true {
+				driverSpec, err := voldriver.ReadDriverSpec(logger, specName, driverPath, specFile)
+				if err != nil {
+					logger.Error("error-reading-driver-spec", err)
+					continue
+				}
+				matchable, ok := driver.(voldriver.MatchableDriver)
+				logger.Info("support-is-matchable", lager.Data{"ok": ok})
+
+				if !ok || !matchable.Matches(logger, driverSpec.Address, driverSpec.TLSConfig) {
+					logger.Info("existing-driver-mismatch", lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
+					driver = nil
+				}
 			}
 
-			env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-
-			resp := driver.Activate(env)
-			if resp.Err != "" {
-				logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
-			} else {
-				driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
-				if len(resp.Implements) == 0 {
-					logger.Error("driver-incorrect", driverImplementsErr)
+			if driver == nil {
+				driver, err = r.driverFactory.Driver(logger, specName, driverPath, specFile)
+				if err != nil {
+					logger.Error("error-creating-driver", err)
 					continue
 				}
 
-				if !driverImplements("VolumeDriver", resp.Implements) {
-					logger.Error("driver-incorrect", driverImplementsErr)
-					continue
+				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+				resp := driver.Activate(env)
+
+				if resp.Err != "" {
+					logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
+				} else {
+					driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
+					if len(resp.Implements) == 0 {
+						logger.Error("driver-incorrect", driverImplementsErr)
+						continue
+					}
+
+					if !driverImplements("VolumeDriver", resp.Implements) {
+						logger.Error("driver-incorrect", driverImplementsErr)
+						continue
+					}
+					endpoints[specName] = driver
 				}
-				endpoints[specName] = driver
 			}
 		}
 	}

@@ -20,7 +20,7 @@ import (
 // DriverFactories are responsible for instantiating remote client implementations of the voldriver.Driver interface.
 type DriverFactory interface {
 	// Given a driver id, path and config filename returns a remote client implementation of the voldriver.Driver interface
-	Driver(logger lager.Logger, driverId string, driverPath, driverFileName string, existing map[string]voldriver.Driver) (voldriver.Driver, error)
+	Driver(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
 }
 
 type realDriverFactory struct {
@@ -43,12 +43,10 @@ func NewDriverFactoryWithOs(useOs osshim.Os) DriverFactory {
 	return &realDriverFactory{remoteClientFactory, useOs, nil}
 }
 
-func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string, existing map[string]voldriver.Driver) (voldriver.Driver, error) {
+func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
 	logger = logger.Session("driver", lager.Data{"driverId": driverId, "driverFileName": driverFileName})
 	logger.Info("start")
 	defer logger.Info("end")
-
-	var driver voldriver.Driver
 
 	var address string
 	var tls *voldriver.TLSConfig
@@ -99,26 +97,11 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 			return nil, err
 		}
 
-		logger.Info("checking-existing-drivers", lager.Data{"driverId": driverId})
-		var ok bool
-		driver, ok = existing[driverId]
-		if ok {
-			logger.Info("existing-driver-found", lager.Data{"driverId": driverId})
-			matchable, ok := driver.(voldriver.MatchableDriver)
-			if !ok || !matchable.Matches(logger, address, tls) {
-				logger.Info("existing-driver-mismatch", lager.Data{"driverId": driverId, "address": address, "tls": tls})
-				driver = nil
-			}
-			logger.Info("existing-driver-matches", lager.Data{"driverId": driverId})
-		}
-
-		if driver == nil {
-			logger.Info("getting-driver", lager.Data{"address": address})
-			driver, err = r.Factory.NewRemoteClient(address, tls)
-			if err != nil {
-				logger.Error("error-building-driver", err, lager.Data{"address": address})
-				return nil, err
-			}
+		logger.Info("getting-driver", lager.Data{"address": address})
+		driver, err := r.Factory.NewRemoteClient(address, tls)
+		if err != nil {
+			logger.Error("error-building-driver", err, lager.Data{"address": address})
+			return nil, err
 		}
 
 		return driver, nil

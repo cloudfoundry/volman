@@ -79,7 +79,7 @@ var _ = Describe("Driver Syncer", func() {
 
 		Context("when there are drivers", func() {
 			var (
-				fakeDriver *voldriverfakes.FakeDriver
+				fakeDriver *voldriverfakes.FakeMatchableDriver
 				driverName string
 				syncer     vollocal.DriverSyncer
 			)
@@ -91,7 +91,7 @@ var _ = Describe("Driver Syncer", func() {
 
 				syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
-				fakeDriver = new(voldriverfakes.FakeDriver)
+				fakeDriver = new(voldriverfakes.FakeMatchableDriver)
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{
 					Implements: []string{"VolumeDriver"},
 				})
@@ -110,6 +110,44 @@ var _ = Describe("Driver Syncer", func() {
 				Expect(len(drivers)).To(Equal(1))
 				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
 				Expect(fakeDriver.ActivateCallCount()).To(Equal(1))
+			})
+
+			Context("when the same driver is added", func() {
+				JustBeforeEach(func() {
+					_, err := syncer.Discover(logger)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				Context("with the same config", func() {
+					BeforeEach(func() {
+						fakeDriver.MatchesReturns(true)
+						err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should not replace the driver in the registry", func() {
+						// Expect SetDrivers not to be called
+						drivers := registry.Drivers()
+						Expect(len(drivers)).To(Equal(1))
+						Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+						Expect(fakeDriver.ActivateCallCount()).To(Equal(1))
+					})
+				})
+
+				Context("with different config", func() {
+					BeforeEach(func() {
+						err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should replace the driver in the registry", func() {
+						// Expect SetDrivers to be called
+						drivers := registry.Drivers()
+						Expect(len(drivers)).To(Equal(1))
+						Expect(fakeDriverFactory.DriverCallCount()).To(Equal(2))
+						Expect(fakeDriver.ActivateCallCount()).To(Equal(2))
+					})
+				})
 			})
 
 			Context("when drivers are added", func() {
@@ -185,7 +223,7 @@ var _ = Describe("Driver Syncer", func() {
 					drivers, err := syncer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(drivers)).To(Equal(1))
-					_, _, _, specFileName, _ := fakeDriverFactory.DriverArgsForCall(0)
+					_, _, _, specFileName := fakeDriverFactory.DriverArgsForCall(0)
 					Expect(specFileName).To(Equal(driverName + ".spec"))
 				})
 			})
@@ -237,7 +275,7 @@ var _ = Describe("Driver Syncer", func() {
 				It("should preferentially select the driver in the first directory", func() {
 					_, err := syncer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
-					_, _, _, specFileName, _ := fakeDriverFactory.DriverArgsForCall(0)
+					_, _, _, specFileName := fakeDriverFactory.DriverArgsForCall(0)
 					Expect(specFileName).To(Equal(driverName + ".json"))
 				})
 			})
