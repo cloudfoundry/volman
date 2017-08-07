@@ -133,6 +133,7 @@ func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Plugi
 				var existing map[string]voldriver.Plugin
 				if r.driverRegistry != nil {
 					existing = r.driverRegistry.Drivers()
+					logger.Debug("existing-drivers", lager.Data{"len": len(existing)})
 				}
 
 				endpoints = r.insertIfAliveAndNotFound(logger, endpoints, driverPath, matchingDriverSpecs, existing)
@@ -187,6 +188,7 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 			}
 
 			if plugin == nil {
+				logger.Info("creating-driver", lager.Data{"specName": specName, "driver-path": driverPath, "specFile": specFile})
 				driver, err := r.driverFactory.Driver(logger, specName, driverPath, specFile)
 				if err != nil {
 					logger.Error("error-creating-driver", err)
@@ -197,9 +199,9 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 				resp := plugin.GetVoldriver().Activate(env)
-
 				if resp.Err != "" {
 					logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
+					continue
 				} else {
 					driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
 					if len(resp.Implements) == 0 {
@@ -211,9 +213,9 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 						logger.Error("driver-incorrect", driverImplementsErr)
 						continue
 					}
-					endpoints[specName] = plugin
 				}
 			}
+			endpoints[specName] = plugin
 		}
 	}
 	return endpoints

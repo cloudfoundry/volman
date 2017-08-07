@@ -2,8 +2,10 @@ package vollocal_test
 
 import (
 	"time"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
 	"code.cloudfoundry.org/clock/fakeclock"
@@ -54,7 +56,7 @@ var _ = Describe("Driver Syncer", func() {
 
 		fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
-		driverName = "some-driver-name"
+		driverName = fmt.Sprintf("fakedriver-%d", GinkgoConfig.ParallelNode)
 	})
 
 	Describe("#Runner", func() {
@@ -85,7 +87,6 @@ var _ = Describe("Driver Syncer", func() {
 			)
 
 			BeforeEach(func() {
-				driverName = "fakedriver"
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
@@ -114,9 +115,20 @@ var _ = Describe("Driver Syncer", func() {
 			})
 
 			Context("when the same driver is added", func() {
+				var (
+					err error
+					drivers map[string]voldriver.Plugin
+					ok bool
+
+				)
 				JustBeforeEach(func() {
-					_, err := syncer.Discover(logger)
+					drivers, err = syncer.Discover(logger)
 					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should be idempotent and rediscover the same driver everytime", func() {
+					_, ok = drivers[driverName]
+					Expect(ok).To(Equal(true))
 				})
 
 				Context("with the same config", func() {
@@ -137,6 +149,7 @@ var _ = Describe("Driver Syncer", func() {
 
 				Context("with different config", func() {
 					BeforeEach(func() {
+						fakeDriver.MatchesReturns(false)
 						err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
 						Expect(err).NotTo(HaveOccurred())
 					})
@@ -190,25 +203,36 @@ var _ = Describe("Driver Syncer", func() {
 		})
 
 		Context("with a single driver", func() {
+			var (
+				drivers map[string]voldriver.Plugin
+				err     error
+			)
 			BeforeEach(func() {
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should not find drivers that are unresponsive", func() {
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Err: "Error"})
-				drivers, err := syncer.Discover(logger)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(len(drivers)).To(Equal(0))
-				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+			JustBeforeEach(func() {
+				drivers, err = syncer.Discover(logger)
+			})
+
+			Context("when activate returns an error", func() {
+				BeforeEach(func() {
+					fakeDriver.ActivateReturns(voldriver.ActivateResponse{Err: "Error"})
+				})
+				It("should not find drivers that are unresponsive", func() {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(drivers)).To(Equal(0))
+					Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+				})
 			})
 
 			It("should find drivers", func() {
-				drivers, err := syncer.Discover(logger)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(drivers)).To(Equal(1))
 				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
 			})
+
 		})
 
 		Context("when given a simple driverspath", func() {
