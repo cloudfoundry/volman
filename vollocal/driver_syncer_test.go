@@ -31,7 +31,7 @@ var _ = Describe("Driver Syncer", func() {
 		syncer   vollocal.DriverSyncer
 		process  ifrit.Process
 
-		fakeDriver *voldriverfakes.FakeDriver
+		fakeDriver *voldriverfakes.FakeMatchableDriver
 
 		driverName string
 	)
@@ -47,8 +47,7 @@ var _ = Describe("Driver Syncer", func() {
 		registry = vollocal.NewDriverRegistry()
 		syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
-		fakeDriver = new(voldriverfakes.FakeDriver)
-		fakeDriver.GetVoldriverReturns(fakeDriver)
+		fakeDriver = new(voldriverfakes.FakeMatchableDriver)
 		fakeDriver.ActivateReturns(voldriver.ActivateResponse{
 			Implements: []string{"VolumeDriver"},
 		})
@@ -306,7 +305,6 @@ var _ = Describe("Driver Syncer", func() {
 
 					JustBeforeEach(func() {
 						fakeDriver = new(voldriverfakes.FakeDriver)
-						fakeDriver.GetVoldriverReturns(fakeDriver)
 						fakeDriver.ActivateReturns(voldriver.ActivateResponse{
 							Implements: []string{"VolumeDriver"},
 						})

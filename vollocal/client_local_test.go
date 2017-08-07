@@ -28,6 +28,7 @@ var _ = Describe("Volman", func() {
 
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
+		fakePlugin        *voldriverfakes.FakePlugin
 		fakeClock         *fakeclock.FakeClock
 		fakeMetronClient  *mfakes.FakeIngressClient
 
@@ -111,7 +112,8 @@ var _ = Describe("Volman", func() {
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				fakeDriver := new(voldriverfakes.FakeDriver)
-				fakeDriver.GetVoldriverReturns(fakeDriver)
+				fakePlugin = new(voldriverfakes.FakePlugin)
+				fakePlugin.GetVoldriverReturns(fakeDriver)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
@@ -154,7 +156,8 @@ var _ = Describe("Volman", func() {
 			BeforeEach(func() {
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriver.GetVoldriverReturns(fakeDriver)
+				fakePlugin = new(voldriverfakes.FakePlugin)
+				fakePlugin.GetVoldriverReturns(fakeDriver)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
 				drivers := make(map[string]voldriver.Driver)
@@ -305,7 +308,8 @@ var _ = Describe("Volman", func() {
 
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriver.GetVoldriverReturns(fakeDriver)
+				fakePlugin = new(voldriverfakes.FakePlugin)
+				fakePlugin.GetVoldriverReturns(fakeDriver)
 				mountReturn := voldriver.MountResponse{Err: "driver not found",
 					Mountpoint: "",
 				}
@@ -343,7 +347,8 @@ var _ = Describe("Volman", func() {
 			BeforeEach(func() {
 				localDriverProcess = ginkgomon.Invoke(localDriverRunner)
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriver.GetVoldriverReturns(fakeDriver)
+				fakePlugin = new(voldriverfakes.FakePlugin)
+				fakePlugin.GetVoldriverReturns(fakeDriver)
 
 				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)

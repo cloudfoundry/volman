@@ -157,7 +157,7 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	var driver voldriver.Plugin
+	var plugin voldriver.Plugin
 	var ok bool
 
 	for _, spec := range specs {
@@ -173,31 +173,30 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 
 		_, ok = endpoints[specName]
 		if !ok {
-			driver, ok = existing[specName]
+			plugin, ok = existing[specName]
 			if ok == true {
 				driverSpec, err := voldriver.ReadDriverSpec(logger, specName, driverPath, specFile)
 				if err != nil {
 					logger.Error("error-reading-driver-spec", err)
 					continue
 				}
-				matchable, ok := driver.(voldriver.MatchableDriver)
-				logger.Info("support-is-matchable", lager.Data{"ok": ok})
-
-				if !ok || !matchable.Matches(logger, driverSpec.Address, driverSpec.TLSConfig) {
+				if !plugin.Matches(logger, driverSpec.Address, driverSpec.TLSConfig) {
 					logger.Info("existing-driver-mismatch", lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
-					driver = nil
+					plugin = nil
 				}
 			}
 
-			if driver == nil {
+			if plugin == nil {
 				driver, err := r.driverFactory.Driver(logger, specName, driverPath, specFile)
 				if err != nil {
 					logger.Error("error-creating-driver", err)
 					continue
 				}
 
+				plugin = voldriver.NewVoldriverPlugin(driver)
+
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-				resp := driver.GetVoldriver().Activate(env)
+				resp := plugin.GetVoldriver().Activate(env)
 
 				if resp.Err != "" {
 					logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
@@ -212,7 +211,7 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 						logger.Error("driver-incorrect", driverImplementsErr)
 						continue
 					}
-					endpoints[specName] = driver
+					endpoints[specName] = plugin
 				}
 			}
 		}

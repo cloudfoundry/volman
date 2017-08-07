@@ -19,12 +19,12 @@ var _ = Describe("DriverRegistry", func() {
 		emptyRegistry = NewDriverRegistry()
 
 		oneRegistry = NewDriverRegistryWith(map[string]voldriver.Plugin{
-			"one": new(voldriverfakes.FakeDriver),
+			"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 		})
 
 		manyRegistry = NewDriverRegistryWith(map[string]voldriver.Plugin{
-			"one": new(voldriverfakes.FakeDriver),
-			"two": new(voldriverfakes.FakeDriver),
+			"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
+			"two": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 		})
 	})
 
@@ -57,7 +57,7 @@ var _ = Describe("DriverRegistry", func() {
 	Describe("#Set", func() {
 		It("replaces driver if it already exists", func() {
 			newDriver := map[string]voldriver.Plugin{
-				"one": new(voldriverfakes.FakeDriver),
+				"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 			}
 			oneRegistry.Set(newDriver)
 			oneDriver, exists := oneRegistry.Driver("one")
@@ -67,9 +67,9 @@ var _ = Describe("DriverRegistry", func() {
 
 		It("adds driver that does not exists", func() {
 			newDriver := map[string]voldriver.Plugin{
-				"one":   new(voldriverfakes.FakeDriver),
-				"two":   new(voldriverfakes.FakeDriver),
-				"three": new(voldriverfakes.FakeDriver),
+				"one":   voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
+				"two":   voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
+				"three": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 			}
 			manyRegistry.Set(newDriver)
 			threeDriver, exists := manyRegistry.Driver("three")

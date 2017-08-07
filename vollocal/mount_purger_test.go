@@ -28,6 +28,7 @@ var _ = Describe("MountPurger", func() {
 
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
+		fakePlugin        *voldriverfakes.FakePlugin
 		fakeClock         clock.Clock
 
 		durationMetricMap map[string]time.Duration
@@ -69,7 +70,8 @@ var _ = Describe("MountPurger", func() {
 			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
 
 			fakeDriver = new(voldriverfakes.FakeDriver)
-			fakeDriver.GetVoldriverReturns(fakeDriver)
+			fakePlugin = new(voldriverfakes.FakePlugin)
+			fakePlugin.GetVoldriverReturns(fakeDriver)
 			fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
 			fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
