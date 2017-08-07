@@ -18,11 +18,11 @@ var _ = Describe("DriverRegistry", func() {
 	BeforeEach(func() {
 		emptyRegistry = NewDriverRegistry()
 
-		oneRegistry = NewDriverRegistryWith(map[string]voldriver.Driver{
+		oneRegistry = NewDriverRegistryWith(map[string]voldriver.Plugin{
 			"one": new(voldriverfakes.FakeDriver),
 		})
 
-		manyRegistry = NewDriverRegistryWith(map[string]voldriver.Driver{
+		manyRegistry = NewDriverRegistryWith(map[string]voldriver.Plugin{
 			"one": new(voldriverfakes.FakeDriver),
 			"two": new(voldriverfakes.FakeDriver),
 		})
@@ -56,7 +56,7 @@ var _ = Describe("DriverRegistry", func() {
 
 	Describe("#Set", func() {
 		It("replaces driver if it already exists", func() {
-			newDriver := map[string]voldriver.Driver{
+			newDriver := map[string]voldriver.Plugin{
 				"one": new(voldriverfakes.FakeDriver),
 			}
 			oneRegistry.Set(newDriver)
@@ -66,7 +66,7 @@ var _ = Describe("DriverRegistry", func() {
 		})
 
 		It("adds driver that does not exists", func() {
-			newDriver := map[string]voldriver.Driver{
+			newDriver := map[string]voldriver.Plugin{
 				"one":   new(voldriverfakes.FakeDriver),
 				"two":   new(voldriverfakes.FakeDriver),
 				"three": new(voldriverfakes.FakeDriver),

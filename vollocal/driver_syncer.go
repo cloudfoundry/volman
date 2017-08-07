@@ -22,7 +22,7 @@ import (
 
 type DriverSyncer interface {
 	Runner() ifrit.Runner
-	Discover(logger lager.Logger) (map[string]voldriver.Driver, error)
+	Discover(logger lager.Logger) (map[string]voldriver.Plugin, error)
 }
 
 type driverSyncer struct {
@@ -80,7 +80,7 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 
 	close(ready)
 
-	newDriverCh := make(chan map[string]voldriver.Driver, 1)
+	newDriverCh := make(chan map[string]voldriver.Plugin, 1)
 
 	for {
 		select {
@@ -106,17 +106,17 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	}
 }
 
-func (r *driverSyncer) setDrivers(drivers map[string]voldriver.Driver) {
+func (r *driverSyncer) setDrivers(drivers map[string]voldriver.Plugin) {
 	r.driverRegistry.Set(drivers)
 }
 
-func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Driver, error) {
+func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Plugin, error) {
 	logger = logger.Session("discover")
 	logger.Debug("start")
 	logger.Info("discovering-drivers", lager.Data{"driver-paths": r.driverPaths})
 	defer logger.Debug("end")
 
-	endpoints := make(map[string]voldriver.Driver)
+	endpoints := make(map[string]voldriver.Plugin)
 
 	for _, driverPath := range r.driverPaths {
 		//precedence order: sock -> spec -> json
@@ -126,11 +126,11 @@ func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Drive
 
 			if err != nil {
 				// untestable on linux, does glob work differently on windows???
-				return map[string]voldriver.Driver{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
+				return map[string]voldriver.Plugin{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
 			}
 			if len(matchingDriverSpecs) > 0 {
 				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
-				var existing map[string]voldriver.Driver
+				var existing map[string]voldriver.Plugin
 				if r.driverRegistry != nil {
 					existing = r.driverRegistry.Drivers()
 				}
@@ -152,13 +152,12 @@ func (r *driverSyncer) getMatchingDriverSpecs(logger lager.Logger, path string, 
 
 }
 
-func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Driver, driverPath string, specs []string, existing map[string]voldriver.Driver) map[string]voldriver.Driver {
+func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Plugin, driverPath string, specs []string, existing map[string]voldriver.Plugin) map[string]voldriver.Plugin {
 	logger = logger.Session("insert-if-not-found")
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	var driver voldriver.Driver
-	var err error
+	var driver voldriver.Plugin
 	var ok bool
 
 	for _, spec := range specs {
@@ -191,14 +190,14 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 			}
 
 			if driver == nil {
-				driver, err = r.driverFactory.Driver(logger, specName, driverPath, specFile)
+				driver, err := r.driverFactory.Driver(logger, specName, driverPath, specFile)
 				if err != nil {
 					logger.Error("error-creating-driver", err)
 					continue
 				}
 
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-				resp := driver.Activate(env)
+				resp := driver.GetVoldriver().Activate(env)
 
 				if resp.Err != "" {
 					logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})

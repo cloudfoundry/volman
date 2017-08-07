@@ -7,30 +7,30 @@ import (
 )
 
 type DriverRegistry interface {
-	Driver(id string) (voldriver.Driver, bool)
-	Drivers() map[string]voldriver.Driver
-	Set(drivers map[string]voldriver.Driver)
+	Driver(id string) (voldriver.Plugin, bool)
+	Drivers() map[string]voldriver.Plugin
+	Set(drivers map[string]voldriver.Plugin)
 	Keys() []string
 }
 
 type driverRegistry struct {
 	sync.RWMutex
-	registryEntries map[string]voldriver.Driver
+	registryEntries map[string]voldriver.Plugin
 }
 
 func NewDriverRegistry() DriverRegistry {
 	return &driverRegistry{
-		registryEntries: map[string]voldriver.Driver{},
+		registryEntries: map[string]voldriver.Plugin{},
 	}
 }
 
-func NewDriverRegistryWith(initialMap map[string]voldriver.Driver) DriverRegistry {
+func NewDriverRegistryWith(initialMap map[string]voldriver.Plugin) DriverRegistry {
 	return &driverRegistry{
 		registryEntries: initialMap,
 	}
 }
 
-func (d *driverRegistry) Driver(id string) (voldriver.Driver, bool) {
+func (d *driverRegistry) Driver(id string) (voldriver.Plugin, bool) {
 	d.RLock()
 	defer d.RUnlock()
 
@@ -41,14 +41,14 @@ func (d *driverRegistry) Driver(id string) (voldriver.Driver, bool) {
 	return d.registryEntries[id], true
 }
 
-func (d *driverRegistry) Drivers() map[string]voldriver.Driver {
+func (d *driverRegistry) Drivers() map[string]voldriver.Plugin {
 	d.RLock()
 	defer d.RUnlock()
 
 	return d.registryEntries
 }
 
-func (d *driverRegistry) Set(drivers map[string]voldriver.Driver) {
+func (d *driverRegistry) Set(drivers map[string]voldriver.Plugin) {
 	d.Lock()
 	defer d.Unlock()
 

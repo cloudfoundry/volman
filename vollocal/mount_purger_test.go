@@ -69,6 +69,7 @@ var _ = Describe("MountPurger", func() {
 			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
 
 			fakeDriver = new(voldriverfakes.FakeDriver)
+			fakeDriver.GetVoldriverReturns(fakeDriver)
 			fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
 			fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})

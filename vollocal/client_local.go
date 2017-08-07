@@ -117,7 +117,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 
 	mountRequest := voldriver.MountRequest{Name: volumeId}
 	logger.Debug("calling-driver-with-mount-request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
-	mountResponse := driver.Mount(env, mountRequest)
+	mountResponse := driver.GetVoldriver().Mount(env, mountRequest)
 	logger.Debug("response-from-driver", lager.Data{"response": mountResponse})
 
 	if !strings.HasPrefix(mountResponse.Mountpoint, "/var/vcap/data") {
@@ -188,7 +188,7 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 
 	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 
-	if response := driver.Unmount(env, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
+	if response := driver.GetVoldriver().Unmount(env, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
 		err := errors.New(response.Err)
 		logger.Error("unmount-failed", err)
 		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
@@ -212,7 +212,7 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 
 	logger.Debug("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId})
-	response := driver.Create(env, voldriver.CreateRequest{Name: volumeName, Opts: opts})
+	response := driver.GetVoldriver().Create(env, voldriver.CreateRequest{Name: volumeName, Opts: opts})
 	if response.Err != "" {
 		return errors.New(response.Err)
 	}

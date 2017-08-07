@@ -48,6 +48,7 @@ var _ = Describe("Driver Syncer", func() {
 		syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
 		fakeDriver = new(voldriverfakes.FakeDriver)
+		fakeDriver.GetVoldriverReturns(fakeDriver)
 		fakeDriver.ActivateReturns(voldriver.ActivateResponse{
 			Implements: []string{"VolumeDriver"},
 		})
@@ -92,6 +93,7 @@ var _ = Describe("Driver Syncer", func() {
 				syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
 				fakeDriver = new(voldriverfakes.FakeMatchableDriver)
+				fakeDriver.GetVoldriverReturns(fakeDriver)
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{
 					Implements: []string{"VolumeDriver"},
 				})
@@ -304,6 +306,7 @@ var _ = Describe("Driver Syncer", func() {
 
 					JustBeforeEach(func() {
 						fakeDriver = new(voldriverfakes.FakeDriver)
+						fakeDriver.GetVoldriverReturns(fakeDriver)
 						fakeDriver.ActivateReturns(voldriver.ActivateResponse{
 							Implements: []string{"VolumeDriver"},
 						})
