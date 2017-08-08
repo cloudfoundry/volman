@@ -30,7 +30,7 @@ var _ = Describe("Driver Syncer", func() {
 		fakeClock         *fakeclock.FakeClock
 		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
 
-		registry vollocal.PluginRegistry
+		registry volman.PluginRegistry
 		syncer   vollocal.DockerDriverSyncer
 		process  ifrit.Process
 

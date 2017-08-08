@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
 	"github.com/tedsuo/ifrit"
+	"code.cloudfoundry.org/volman"
 )
 
 type MountPurger interface {
@@ -19,10 +20,10 @@ type MountPurger interface {
 
 type mountPurger struct {
 	logger   lager.Logger
-	registry PluginRegistry
+	registry volman.PluginRegistry
 }
 
-func NewMountPurger(logger lager.Logger, registry PluginRegistry) MountPurger {
+func NewMountPurger(logger lager.Logger, registry volman.PluginRegistry) MountPurger {
 	return &mountPurger{
 		logger,
 		registry,

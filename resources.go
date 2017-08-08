@@ -1,6 +1,8 @@
 package volman
 
-import "code.cloudfoundry.org/lager"
+import (
+	"code.cloudfoundry.org/lager"
+)
 
 //go:generate counterfeiter -o volmanfakes/fake_plugin.go . Plugin
 type Plugin interface {
@@ -50,4 +52,12 @@ type TLSConfig struct {
 	CAFile             string `json:"CAFile"`
 	CertFile           string `json:"CertFile"`
 	KeyFile            string `json:"KeyFile"`
+}
+
+
+type PluginRegistry interface {
+	Plugin(id string) (Plugin, bool)
+	Plugins() map[string]Plugin
+	Set(plugins map[string]Plugin)
+	Keys() []string
 }

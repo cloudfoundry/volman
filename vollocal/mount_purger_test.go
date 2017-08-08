@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
+	"code.cloudfoundry.org/volman"
 )
 
 var _ = Describe("MountPurger", func() {
@@ -22,7 +23,7 @@ var _ = Describe("MountPurger", func() {
 	var (
 		logger *lagertest.TestLogger
 
-		driverRegistry vollocal.PluginRegistry
+		driverRegistry volman.PluginRegistry
 		driverSyncer   vollocal.DockerDriverSyncer
 		purger         vollocal.MountPurger
 

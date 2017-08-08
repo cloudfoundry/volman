@@ -45,7 +45,7 @@ func NewDriverConfig() DriverConfig {
 }
 
 type localClient struct {
-	driverRegistry PluginRegistry
+	driverRegistry volman.PluginRegistry
 	metronClient   loggregator_v2.IngressClient
 	clock          clock.Clock
 }
@@ -62,7 +62,7 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, c
 	return NewLocalClient(logger, registry, metronClient, clock), grouper
 }
 
-func NewLocalClient(logger lager.Logger, registry PluginRegistry, metronClient loggregator_v2.IngressClient, clock clock.Clock) volman.Manager {
+func NewLocalClient(logger lager.Logger, registry volman.PluginRegistry, metronClient loggregator_v2.IngressClient, clock clock.Clock) volman.Manager {
 	return &localClient{
 		driverRegistry: registry,
 		metronClient:   metronClient,

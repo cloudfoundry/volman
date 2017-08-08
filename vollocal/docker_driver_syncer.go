@@ -33,11 +33,11 @@ type dockerDriverSyncer struct {
 	scanInterval   time.Duration
 	clock          clock.Clock
 
-	driverRegistry PluginRegistry
+	driverRegistry volman.PluginRegistry
 	driverPaths    []string
 }
 
-func NewDockerDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *dockerDriverSyncer {
+func NewDockerDriverSyncer(logger lager.Logger, driverRegistry volman.PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *dockerDriverSyncer {
 	return &dockerDriverSyncer{
 		logger:        logger,
 		driverFactory: NewDockerDriverFactory(),
@@ -49,7 +49,7 @@ func NewDockerDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, d
 	}
 }
 
-func NewDockerDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DockerDriverFactory) *dockerDriverSyncer {
+func NewDockerDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry volman.PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DockerDriverFactory) *dockerDriverSyncer {
 	return &dockerDriverSyncer{
 		logger:        logger,
 		driverFactory: factory,

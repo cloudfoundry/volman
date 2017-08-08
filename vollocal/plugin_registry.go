@@ -6,25 +6,19 @@ import (
 	"code.cloudfoundry.org/volman"
 )
 
-type PluginRegistry interface {
-	Plugin(id string) (volman.Plugin, bool)
-	Plugins() map[string]volman.Plugin
-	Set(plugins map[string]volman.Plugin)
-	Keys() []string
-}
 
 type pluginRegistry struct {
 	sync.RWMutex
 	registryEntries map[string]volman.Plugin
 }
 
-func NewPluginRegistry() PluginRegistry {
+func NewPluginRegistry() volman.PluginRegistry {
 	return &pluginRegistry{
 		registryEntries: map[string]volman.Plugin{},
 	}
 }
 
-func NewPluginRegistryWith(initialMap map[string]volman.Plugin) PluginRegistry {
+func NewPluginRegistryWith(initialMap map[string]volman.Plugin) volman.PluginRegistry {
 	return &pluginRegistry{
 		registryEntries: initialMap,
 	}

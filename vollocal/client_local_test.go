@@ -20,6 +20,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
+	"code.cloudfoundry.org/volman"
 )
 
 var _ = Describe("Volman", func() {
@@ -33,7 +34,7 @@ var _ = Describe("Volman", func() {
 
 		scanInterval time.Duration
 
-		driverRegistry    vollocal.PluginRegistry
+		driverRegistry    volman.PluginRegistry
 		driverSyncer      vollocal.DockerDriverSyncer
 		durationMetricMap map[string]time.Duration
 		counterMetricMap  map[string]int

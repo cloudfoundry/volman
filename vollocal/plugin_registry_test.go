@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("PluginRegistry", func() {
 	var (
-		emptyRegistry, oneRegistry, manyRegistry PluginRegistry
+		emptyRegistry, oneRegistry, manyRegistry volman.PluginRegistry
 	)
 
 	BeforeEach(func() {
