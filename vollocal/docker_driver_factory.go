@@ -18,32 +18,31 @@ import (
 //go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory
 
 // DriverFactories are responsible for instantiating remote client implementations of the voldriver.Driver interface.
-type DriverFactory interface {
+type DockerDriverFactory interface {
 	// Given a driver id, path and config filename returns a remote client implementation of the voldriver.Driver interface
-	Driver(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
+	DockerDriver(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
 }
 
-type realDriverFactory struct {
+type dockerDriverFactory struct {
 	Factory         driverhttp.RemoteClientFactory
 	useOs           osshim.Os
-	DriversRegistry map[string]voldriver.Driver
 }
 
-func NewDriverFactory() DriverFactory {
+func NewDockerDriverFactory() DockerDriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
-	return NewDriverFactoryWithRemoteClientFactory(remoteClientFactory)
+	return NewDockerDriverFactoryWithRemoteClientFactory(remoteClientFactory)
 }
 
-func NewDriverFactoryWithRemoteClientFactory(remoteClientFactory driverhttp.RemoteClientFactory) DriverFactory {
-	return &realDriverFactory{remoteClientFactory, &osshim.OsShim{}, nil}
+func NewDockerDriverFactoryWithRemoteClientFactory(remoteClientFactory driverhttp.RemoteClientFactory) DockerDriverFactory {
+	return &dockerDriverFactory{remoteClientFactory, &osshim.OsShim{}}
 }
 
-func NewDriverFactoryWithOs(useOs osshim.Os) DriverFactory {
+func NewDockerDriverFactoryWithOs(useOs osshim.Os) DockerDriverFactory {
 	remoteClientFactory := driverhttp.NewRemoteClientFactory()
-	return &realDriverFactory{remoteClientFactory, useOs, nil}
+	return &dockerDriverFactory{remoteClientFactory, useOs}
 }
 
-func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
+func (r *dockerDriverFactory) DockerDriver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
 	logger = logger.Session("driver", lager.Data{"driverId": driverId, "driverFileName": driverFileName})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -110,7 +109,7 @@ func (r *realDriverFactory) Driver(logger lager.Logger, driverId string, driverP
 	return nil, fmt.Errorf("Driver '%s' not found in list of known drivers", driverId)
 }
 
-func (r *realDriverFactory) canonicalize(logger lager.Logger, address string) (string, error) {
+func (r *dockerDriverFactory) canonicalize(logger lager.Logger, address string) (string, error) {
 	logger = logger.Session("canonicalize", lager.Data{"address": address})
 	logger.Debug("start")
 	defer logger.Debug("end")

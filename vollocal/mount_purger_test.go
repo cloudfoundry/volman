@@ -26,7 +26,7 @@ var _ = Describe("MountPurger", func() {
 		driverSyncer   vollocal.DriverSyncer
 		purger         vollocal.MountPurger
 
-		fakeDriverFactory *volmanfakes.FakeDriverFactory
+		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
 		fakeClock         clock.Clock
 
@@ -56,7 +56,7 @@ var _ = Describe("MountPurger", func() {
 			err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
 			Expect(err).NotTo(HaveOccurred())
 
-			fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
+			fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 
 			durationMetricMap = make(map[string]time.Duration)
 			counterMetricMap = make(map[string]int)
@@ -69,7 +69,7 @@ var _ = Describe("MountPurger", func() {
 			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
 
 			fakeDriver = new(voldriverfakes.FakeDriver)
-			fakeDriverFactory.DriverReturns(fakeDriver, nil)
+			fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 			fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 

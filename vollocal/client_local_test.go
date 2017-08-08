@@ -26,7 +26,7 @@ var _ = Describe("Volman", func() {
 	var (
 		logger *lagertest.TestLogger
 
-		fakeDriverFactory *volmanfakes.FakeDriverFactory
+		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
 		fakeClock         *fakeclock.FakeClock
 		fakeMetronClient  *mfakes.FakeIngressClient
@@ -44,7 +44,7 @@ var _ = Describe("Volman", func() {
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("client-test")
 
-		fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
+		fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 		fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
 
 		scanInterval = 1 * time.Second
@@ -87,7 +87,7 @@ var _ = Describe("Volman", func() {
 		Context("has no drivers in location", func() {
 
 			BeforeEach(func() {
-				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
+				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 			})
 
 			It("should report empty list of drivers", func() {
@@ -111,7 +111,7 @@ var _ = Describe("Volman", func() {
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				fakeDriver := new(voldriverfakes.FakeDriver)
-				fakeDriverFactory.DriverReturns(fakeDriver, nil)
+				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 			})
@@ -151,9 +151,9 @@ var _ = Describe("Volman", func() {
 		})
 		Context("when given a driver", func() {
 			BeforeEach(func() {
-				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
+				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 				fakeDriver = new(voldriverfakes.FakeDriver)
-				fakeDriverFactory.DriverReturns(fakeDriver, nil)
+				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				drivers := make(map[string]voldriver.Driver)
 				drivers["fakedriver"] = fakeDriver
@@ -267,7 +267,7 @@ var _ = Describe("Volman", func() {
 
 			Context("when driver is not found", func() {
 				BeforeEach(func() {
-					fakeDriverFactory.DriverReturns(nil, fmt.Errorf("driver not found"))
+					fakeDriverFactory.DockerDriverReturns(nil, fmt.Errorf("driver not found"))
 				})
 
 				It("should not be able to mount", func() {
@@ -301,13 +301,13 @@ var _ = Describe("Volman", func() {
 		Context("after creating successfully driver is not found", func() {
 			BeforeEach(func() {
 
-				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
+				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 				fakeDriver = new(voldriverfakes.FakeDriver)
 				mountReturn := voldriver.MountResponse{Err: "driver not found",
 					Mountpoint: "",
 				}
 				fakeDriver.MountReturns(mountReturn)
-				fakeDriverFactory.DriverReturns(fakeDriver, nil)
+				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				driverRegistry := vollocal.NewPluginRegistry()
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
@@ -316,7 +316,7 @@ var _ = Describe("Volman", func() {
 				process = ginkgomon.Invoke(driverSyncer.Runner())
 
 				calls := 0
-				fakeDriverFactory.DriverStub = func(lager.Logger, string, string, string) (voldriver.Driver, error) {
+				fakeDriverFactory.DockerDriverStub = func(lager.Logger, string, string, string) (voldriver.Driver, error) {
 					calls++
 					if calls > 1 {
 						return nil, fmt.Errorf("driver not found")
@@ -341,8 +341,8 @@ var _ = Describe("Volman", func() {
 				localDriverProcess = ginkgomon.Invoke(localDriverRunner)
 				fakeDriver = new(voldriverfakes.FakeDriver)
 
-				fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
-				fakeDriverFactory.DriverReturns(fakeDriver, nil)
+				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
+				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				fakeDriver.CreateReturns(voldriver.ErrorResponse{"create fails"})
 

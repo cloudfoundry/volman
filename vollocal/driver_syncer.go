@@ -28,7 +28,7 @@ type DriverSyncer interface {
 type driverSyncer struct {
 	sync.RWMutex
 	logger         lager.Logger
-	driverFactory  DriverFactory
+	driverFactory  DockerDriverFactory
 	scanInterval   time.Duration
 	clock          clock.Clock
 
@@ -39,7 +39,7 @@ type driverSyncer struct {
 func NewDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
 	return &driverSyncer{
 		logger:        logger,
-		driverFactory: NewDriverFactory(),
+		driverFactory: NewDockerDriverFactory(),
 		scanInterval:  scanInterval,
 		clock:         clock,
 
@@ -48,7 +48,7 @@ func NewDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, driverP
 	}
 }
 
-func NewDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DriverFactory) *driverSyncer {
+func NewDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DockerDriverFactory) *driverSyncer {
 	return &driverSyncer{
 		logger:        logger,
 		driverFactory: factory,
@@ -189,7 +189,7 @@ func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints m
 
 			if plugin == nil {
 				logger.Info("creating-driver", lager.Data{"specName": specName, "driver-path": driverPath, "specFile": specFile})
-				driver, err := r.driverFactory.Driver(logger, specName, driverPath, specFile)
+				driver, err := r.driverFactory.DockerDriver(logger, specName, driverPath, specFile)
 				if err != nil {
 					logger.Error("error-creating-driver", err)
 					continue

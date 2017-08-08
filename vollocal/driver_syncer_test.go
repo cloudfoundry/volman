@@ -27,7 +27,7 @@ var _ = Describe("Driver Syncer", func() {
 		scanInterval time.Duration
 
 		fakeClock         *fakeclock.FakeClock
-		fakeDriverFactory *volmanfakes.FakeDriverFactory
+		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
 
 		registry vollocal.PluginRegistry
 		syncer   vollocal.DriverSyncer
@@ -42,7 +42,7 @@ var _ = Describe("Driver Syncer", func() {
 		logger = lagertest.NewTestLogger("driver-syncer-test")
 
 		fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
-		fakeDriverFactory = new(volmanfakes.FakeDriverFactory)
+		fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 
 		scanInterval = 10 * time.Second
 
@@ -54,7 +54,7 @@ var _ = Describe("Driver Syncer", func() {
 			Implements: []string{"VolumeDriver"},
 		})
 
-		fakeDriverFactory.DriverReturns(fakeDriver, nil)
+		fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 		driverName = fmt.Sprintf("fakedriver-%d", GinkgoConfig.ParallelNode)
 	})
@@ -75,7 +75,7 @@ var _ = Describe("Driver Syncer", func() {
 			It("should have no drivers in registry map", func() {
 				drivers := registry.Plugins()
 				Expect(len(drivers)).To(Equal(0))
-				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(0))
+				Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(0))
 			})
 		})
 
@@ -98,7 +98,7 @@ var _ = Describe("Driver Syncer", func() {
 					Implements: []string{"VolumeDriver"},
 				})
 
-				fakeDriverFactory.DriverReturns(fakeDriver, nil)
+				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				process = ginkgomon.Invoke(syncer.Runner())
 			})
@@ -110,7 +110,7 @@ var _ = Describe("Driver Syncer", func() {
 			It("should have fake driver in registry map", func() {
 				drivers := registry.Plugins()
 				Expect(len(drivers)).To(Equal(1))
-				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+				Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 				Expect(fakeDriver.ActivateCallCount()).To(Equal(1))
 			})
 
@@ -142,7 +142,7 @@ var _ = Describe("Driver Syncer", func() {
 						// Expect SetDrivers not to be called
 						drivers := registry.Plugins()
 						Expect(len(drivers)).To(Equal(1))
-						Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+						Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 						Expect(fakeDriver.ActivateCallCount()).To(Equal(1))
 					})
 				})
@@ -158,7 +158,7 @@ var _ = Describe("Driver Syncer", func() {
 						// Expect SetDrivers to be called
 						drivers := registry.Plugins()
 						Expect(len(drivers)).To(Equal(1))
-						Expect(fakeDriverFactory.DriverCallCount()).To(Equal(2))
+						Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(2))
 						Expect(fakeDriver.ActivateCallCount()).To(Equal(2))
 					})
 				})
@@ -173,7 +173,7 @@ var _ = Describe("Driver Syncer", func() {
 				It("should find them!", func() {
 					fakeClock.Increment(scanInterval * 2)
 					Eventually(registry.Plugins).Should(HaveLen(2))
-					Expect(fakeDriverFactory.DriverCallCount()).To(Equal(3))
+					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(3))
 					Expect(fakeDriver.ActivateCallCount()).To(Equal(3))
 				})
 			})
@@ -223,14 +223,14 @@ var _ = Describe("Driver Syncer", func() {
 				It("should not find drivers that are unresponsive", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(drivers)).To(Equal(0))
-					Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 				})
 			})
 
 			It("should find drivers", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(drivers)).To(Equal(1))
-				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+				Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 			})
 
 		})
@@ -248,7 +248,7 @@ var _ = Describe("Driver Syncer", func() {
 					drivers, err := syncer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(drivers)).To(Equal(1))
-					_, _, _, specFileName := fakeDriverFactory.DriverArgsForCall(0)
+					_, _, _, specFileName := fakeDriverFactory.DockerDriverArgsForCall(0)
 					Expect(specFileName).To(Equal(driverName + ".spec"))
 				})
 			})
@@ -269,7 +269,7 @@ var _ = Describe("Driver Syncer", func() {
 					drivers, err := syncer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(drivers)).To(Equal(1))
-					Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
+					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 				})
 
 			})
@@ -300,7 +300,7 @@ var _ = Describe("Driver Syncer", func() {
 				It("should preferentially select the driver in the first directory", func() {
 					_, err := syncer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
-					_, _, _, specFileName := fakeDriverFactory.DriverArgsForCall(0)
+					_, _, _, specFileName := fakeDriverFactory.DockerDriverArgsForCall(0)
 					Expect(specFileName).To(Equal(driverName + ".json"))
 				})
 			})
@@ -309,14 +309,14 @@ var _ = Describe("Driver Syncer", func() {
 		Context("when given a driver spec not in canonical form", func() {
 			var (
 				fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
-				driverFactory           vollocal.DriverFactory
+				driverFactory           vollocal.DockerDriverFactory
 				fakeDriver              *voldriverfakes.FakeDriver
 				driverSyncer            vollocal.DriverSyncer
 			)
 
 			JustBeforeEach(func() {
 				fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
-				driverFactory = vollocal.NewDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
+				driverFactory = vollocal.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, nil, []string{defaultPluginsDirectory}, time.Second*60, clock.NewClock(), driverFactory)
 			})
 
