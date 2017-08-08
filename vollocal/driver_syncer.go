@@ -27,16 +27,16 @@ type DriverSyncer interface {
 
 type driverSyncer struct {
 	sync.RWMutex
-	logger        lager.Logger
-	driverFactory DriverFactory
-	scanInterval  time.Duration
-	clock         clock.Clock
+	logger         lager.Logger
+	driverFactory  DriverFactory
+	scanInterval   time.Duration
+	clock          clock.Clock
 
-	driverRegistry DriverRegistry
+	driverRegistry PluginRegistry
 	driverPaths    []string
 }
 
-func NewDriverSyncer(logger lager.Logger, driverRegistry DriverRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
+func NewDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
 	return &driverSyncer{
 		logger:        logger,
 		driverFactory: NewDriverFactory(),
@@ -48,7 +48,7 @@ func NewDriverSyncer(logger lager.Logger, driverRegistry DriverRegistry, driverP
 	}
 }
 
-func NewDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry DriverRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DriverFactory) *driverSyncer {
+func NewDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DriverFactory) *driverSyncer {
 	return &driverSyncer{
 		logger:        logger,
 		driverFactory: factory,
@@ -132,7 +132,7 @@ func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Plugi
 				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
 				var existing map[string]voldriver.Plugin
 				if r.driverRegistry != nil {
-					existing = r.driverRegistry.Drivers()
+					existing = r.driverRegistry.Plugins()
 					logger.Debug("existing-drivers", lager.Data{"len": len(existing)})
 				}
 

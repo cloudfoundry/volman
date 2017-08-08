@@ -45,14 +45,14 @@ func NewDriverConfig() DriverConfig {
 }
 
 type localClient struct {
-	driverRegistry DriverRegistry
+	driverRegistry PluginRegistry
 	metronClient   loggregator_v2.IngressClient
 	clock          clock.Clock
 }
 
 func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, config DriverConfig) (volman.Manager, ifrit.Runner) {
 	clock := clock.NewClock()
-	registry := NewDriverRegistry()
+	registry := NewPluginRegistry()
 
 	syncer := NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock)
 	purger := NewMountPurger(logger, registry)
@@ -62,7 +62,7 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, c
 	return NewLocalClient(logger, registry, metronClient, clock), grouper
 }
 
-func NewLocalClient(logger lager.Logger, registry DriverRegistry, metronClient loggregator_v2.IngressClient, clock clock.Clock) volman.Manager {
+func NewLocalClient(logger lager.Logger, registry PluginRegistry, metronClient loggregator_v2.IngressClient, clock clock.Clock) volman.Manager {
 	return &localClient{
 		driverRegistry: registry,
 		metronClient:   metronClient,
@@ -76,7 +76,7 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	defer logger.Info("end")
 
 	var infoResponses []volman.InfoResponse
-	drivers := client.driverRegistry.Drivers()
+	drivers := client.driverRegistry.Plugins()
 
 	for name, _ := range drivers {
 		infoResponses = append(infoResponses, volman.InfoResponse{Name: name})
@@ -99,7 +99,7 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 
 	logger.Debug("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
 
-	driver, found := client.driverRegistry.Driver(driverId)
+	driver, found := client.driverRegistry.Plugin(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
@@ -178,7 +178,7 @@ func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeN
 		sendUnmountDurationMetrics(logger, client.metronClient, time.Since(unmountStart), driverId)
 	}()
 
-	driver, found := client.driverRegistry.Driver(driverId)
+	driver, found := client.driverRegistry.Plugin(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)
@@ -202,7 +202,7 @@ func (client *localClient) create(logger lager.Logger, driverId string, volumeNa
 	logger = logger.Session("create")
 	logger.Info("start")
 	defer logger.Info("end")
-	driver, found := client.driverRegistry.Driver(driverId)
+	driver, found := client.driverRegistry.Plugin(driverId)
 	if !found {
 		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
 		logger.Error("mount-driver-lookup-error", err)

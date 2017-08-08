@@ -10,71 +10,71 @@ import (
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
 )
 
-var _ = Describe("DriverRegistry", func() {
+var _ = Describe("PluginRegistry", func() {
 	var (
-		emptyRegistry, oneRegistry, manyRegistry DriverRegistry
+		emptyRegistry, oneRegistry, manyRegistry PluginRegistry
 	)
 
 	BeforeEach(func() {
-		emptyRegistry = NewDriverRegistry()
+		emptyRegistry = NewPluginRegistry()
 
-		oneRegistry = NewDriverRegistryWith(map[string]voldriver.Plugin{
+		oneRegistry = NewPluginRegistryWith(map[string]voldriver.Plugin{
 			"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 		})
 
-		manyRegistry = NewDriverRegistryWith(map[string]voldriver.Plugin{
+		manyRegistry = NewPluginRegistryWith(map[string]voldriver.Plugin{
 			"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 			"two": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 		})
 	})
 
-	Describe("#Driver", func() {
-		It("sets the driver to new value", func() {
-			oneDriver, exists := oneRegistry.Driver("one")
+	Describe("#Plugin", func() {
+		It("sets the plugin to new value", func() {
+			onePlugin, exists := oneRegistry.Plugin("one")
 			Expect(exists).To(BeTrue())
-			Expect(oneDriver).NotTo(BeNil())
+			Expect(onePlugin).NotTo(BeNil())
 		})
 
-		It("returns nil and false if the driver doesn't exist", func() {
-			oneDriver, exists := oneRegistry.Driver("doesnotexist")
+		It("returns nil and false if the plugin doesn't exist", func() {
+			onePlugin, exists := oneRegistry.Plugin("doesnotexist")
 			Expect(exists).To(BeFalse())
-			Expect(oneDriver).To(BeNil())
+			Expect(onePlugin).To(BeNil())
 		})
 	})
 
-	Describe("#Drivers", func() {
+	Describe("#Plugins", func() {
 		It("should return return empty map for emptyRegistry", func() {
-			drivers := emptyRegistry.Drivers()
-			Expect(len(drivers)).To(Equal(0))
+			plugins := emptyRegistry.Plugins()
+			Expect(len(plugins)).To(Equal(0))
 		})
 
 		It("should return return one driver for oneRegistry", func() {
-			drivers := oneRegistry.Drivers()
-			Expect(len(drivers)).To(Equal(1))
+			plugins := oneRegistry.Plugins()
+			Expect(len(plugins)).To(Equal(1))
 		})
 	})
 
 	Describe("#Set", func() {
-		It("replaces driver if it already exists", func() {
-			newDriver := map[string]voldriver.Plugin{
+		It("replaces plugin if it already exists", func() {
+			newPlugin := map[string]voldriver.Plugin{
 				"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 			}
-			oneRegistry.Set(newDriver)
-			oneDriver, exists := oneRegistry.Driver("one")
+			oneRegistry.Set(newPlugin)
+			onePlugin, exists := oneRegistry.Plugin("one")
 			Expect(exists).To(BeTrue())
-			Expect(oneDriver).NotTo(BeNil())
+			Expect(onePlugin).NotTo(BeNil())
 		})
 
-		It("adds driver that does not exists", func() {
-			newDriver := map[string]voldriver.Plugin{
+		It("adds plugin that does not exists", func() {
+			newPlugin := map[string]voldriver.Plugin{
 				"one":   voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 				"two":   voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 				"three": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 			}
-			manyRegistry.Set(newDriver)
-			threeDriver, exists := manyRegistry.Driver("three")
+			manyRegistry.Set(newPlugin)
+			threePlugin, exists := manyRegistry.Plugin("three")
 			Expect(exists).To(BeTrue())
-			Expect(threeDriver).NotTo(BeNil())
+			Expect(threePlugin).NotTo(BeNil())
 		})
 	})
 

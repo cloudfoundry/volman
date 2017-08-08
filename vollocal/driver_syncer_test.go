@@ -29,7 +29,7 @@ var _ = Describe("Driver Syncer", func() {
 		fakeClock         *fakeclock.FakeClock
 		fakeDriverFactory *volmanfakes.FakeDriverFactory
 
-		registry vollocal.DriverRegistry
+		registry vollocal.PluginRegistry
 		syncer   vollocal.DriverSyncer
 		process  ifrit.Process
 
@@ -46,7 +46,7 @@ var _ = Describe("Driver Syncer", func() {
 
 		scanInterval = 10 * time.Second
 
-		registry = vollocal.NewDriverRegistry()
+		registry = vollocal.NewPluginRegistry()
 		syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
 		fakeDriver = new(voldriverfakes.FakeMatchableDriver)
@@ -66,14 +66,14 @@ var _ = Describe("Driver Syncer", func() {
 
 		It("has a non-nil and empty driver registry", func() {
 			Expect(registry).NotTo(BeNil())
-			Expect(len(registry.Drivers())).To(Equal(0))
+			Expect(len(registry.Plugins())).To(Equal(0))
 		})
 	})
 
 	Describe("#Run", func() {
 		Context("when there are no drivers", func() {
 			It("should have no drivers in registry map", func() {
-				drivers := registry.Drivers()
+				drivers := registry.Plugins()
 				Expect(len(drivers)).To(Equal(0))
 				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(0))
 			})
@@ -108,7 +108,7 @@ var _ = Describe("Driver Syncer", func() {
 			})
 
 			It("should have fake driver in registry map", func() {
-				drivers := registry.Drivers()
+				drivers := registry.Plugins()
 				Expect(len(drivers)).To(Equal(1))
 				Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
 				Expect(fakeDriver.ActivateCallCount()).To(Equal(1))
@@ -140,7 +140,7 @@ var _ = Describe("Driver Syncer", func() {
 
 					It("should not replace the driver in the registry", func() {
 						// Expect SetDrivers not to be called
-						drivers := registry.Drivers()
+						drivers := registry.Plugins()
 						Expect(len(drivers)).To(Equal(1))
 						Expect(fakeDriverFactory.DriverCallCount()).To(Equal(1))
 						Expect(fakeDriver.ActivateCallCount()).To(Equal(1))
@@ -156,7 +156,7 @@ var _ = Describe("Driver Syncer", func() {
 
 					It("should replace the driver in the registry", func() {
 						// Expect SetDrivers to be called
-						drivers := registry.Drivers()
+						drivers := registry.Plugins()
 						Expect(len(drivers)).To(Equal(1))
 						Expect(fakeDriverFactory.DriverCallCount()).To(Equal(2))
 						Expect(fakeDriver.ActivateCallCount()).To(Equal(2))
@@ -172,7 +172,7 @@ var _ = Describe("Driver Syncer", func() {
 
 				It("should find them!", func() {
 					fakeClock.Increment(scanInterval * 2)
-					Eventually(registry.Drivers).Should(HaveLen(2))
+					Eventually(registry.Plugins).Should(HaveLen(2))
 					Expect(fakeDriverFactory.DriverCallCount()).To(Equal(3))
 					Expect(fakeDriver.ActivateCallCount()).To(Equal(3))
 				})
@@ -186,7 +186,7 @@ var _ = Describe("Driver Syncer", func() {
 
 				It("should find no drivers", func() {
 					fakeClock.Increment(scanInterval * 2)
-					Eventually(registry.Drivers).Should(HaveLen(0))
+					Eventually(registry.Plugins).Should(HaveLen(0))
 				})
 			})
 		})

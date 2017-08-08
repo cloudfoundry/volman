@@ -19,10 +19,10 @@ type MountPurger interface {
 
 type mountPurger struct {
 	logger   lager.Logger
-	registry DriverRegistry
+	registry PluginRegistry
 }
 
-func NewMountPurger(logger lager.Logger, registry DriverRegistry) MountPurger {
+func NewMountPurger(logger lager.Logger, registry PluginRegistry) MountPurger {
 	return &mountPurger{
 		logger,
 		registry,
@@ -49,7 +49,7 @@ func (p *mountPurger) PurgeMounts(logger lager.Logger) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	drivers := p.registry.Drivers()
+	drivers := p.registry.Plugins()
 
 	for _, driver := range drivers {
 		env := driverhttp.NewHttpDriverEnv(logger, context.TODO())

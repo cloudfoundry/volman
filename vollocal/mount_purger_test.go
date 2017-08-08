@@ -22,7 +22,7 @@ var _ = Describe("MountPurger", func() {
 	var (
 		logger *lagertest.TestLogger
 
-		driverRegistry vollocal.DriverRegistry
+		driverRegistry vollocal.PluginRegistry
 		driverSyncer   vollocal.DriverSyncer
 		purger         vollocal.MountPurger
 
@@ -41,7 +41,7 @@ var _ = Describe("MountPurger", func() {
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("mount-purger")
 
-		driverRegistry = vollocal.NewDriverRegistry()
+		driverRegistry = vollocal.NewPluginRegistry()
 
 		purger = vollocal.NewMountPurger(logger, driverRegistry)
 	})

@@ -33,7 +33,7 @@ var _ = Describe("Volman", func() {
 
 		scanInterval time.Duration
 
-		driverRegistry    vollocal.DriverRegistry
+		driverRegistry    vollocal.PluginRegistry
 		driverSyncer      vollocal.DriverSyncer
 		durationMetricMap map[string]time.Duration
 		counterMetricMap  map[string]int
@@ -49,7 +49,7 @@ var _ = Describe("Volman", func() {
 
 		scanInterval = 1 * time.Second
 
-		driverRegistry = vollocal.NewDriverRegistry()
+		driverRegistry = vollocal.NewPluginRegistry()
 		durationMetricMap = make(map[string]time.Duration)
 		counterMetricMap = make(map[string]int)
 
@@ -309,7 +309,7 @@ var _ = Describe("Volman", func() {
 				fakeDriver.MountReturns(mountReturn)
 				fakeDriverFactory.DriverReturns(fakeDriver, nil)
 
-				driverRegistry := vollocal.NewDriverRegistry()
+				driverRegistry := vollocal.NewPluginRegistry()
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
@@ -346,7 +346,7 @@ var _ = Describe("Volman", func() {
 
 				fakeDriver.CreateReturns(voldriver.ErrorResponse{"create fails"})
 
-				driverRegistry := vollocal.NewDriverRegistry()
+				driverRegistry := vollocal.NewPluginRegistry()
 				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 

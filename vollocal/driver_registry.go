@@ -6,56 +6,56 @@ import (
 	"code.cloudfoundry.org/voldriver"
 )
 
-type DriverRegistry interface {
-	Driver(id string) (voldriver.Plugin, bool)
-	Drivers() map[string]voldriver.Plugin
-	Set(drivers map[string]voldriver.Plugin)
+type PluginRegistry interface {
+	Plugin(id string) (voldriver.Plugin, bool)
+	Plugins() map[string]voldriver.Plugin
+	Set(plugins map[string]voldriver.Plugin)
 	Keys() []string
 }
 
-type driverRegistry struct {
+type pluginRegistry struct {
 	sync.RWMutex
 	registryEntries map[string]voldriver.Plugin
 }
 
-func NewDriverRegistry() DriverRegistry {
-	return &driverRegistry{
+func NewPluginRegistry() PluginRegistry {
+	return &pluginRegistry{
 		registryEntries: map[string]voldriver.Plugin{},
 	}
 }
 
-func NewDriverRegistryWith(initialMap map[string]voldriver.Plugin) DriverRegistry {
-	return &driverRegistry{
+func NewPluginRegistryWith(initialMap map[string]voldriver.Plugin) PluginRegistry {
+	return &pluginRegistry{
 		registryEntries: initialMap,
 	}
 }
 
-func (d *driverRegistry) Driver(id string) (voldriver.Plugin, bool) {
+func (d *pluginRegistry) Plugin(id string) (voldriver.Plugin, bool) {
 	d.RLock()
 	defer d.RUnlock()
 
-	if !d.containsDriver(id) {
+	if !d.containsPlugin(id) {
 		return nil, false
 	}
 
 	return d.registryEntries[id], true
 }
 
-func (d *driverRegistry) Drivers() map[string]voldriver.Plugin {
+func (d *pluginRegistry) Plugins() map[string]voldriver.Plugin {
 	d.RLock()
 	defer d.RUnlock()
 
 	return d.registryEntries
 }
 
-func (d *driverRegistry) Set(drivers map[string]voldriver.Plugin) {
+func (d *pluginRegistry) Set(plugins map[string]voldriver.Plugin) {
 	d.Lock()
 	defer d.Unlock()
 
-	d.registryEntries = drivers
+	d.registryEntries = plugins
 }
 
-func (d *driverRegistry) Keys() []string {
+func (d *pluginRegistry) Keys() []string {
 	d.Lock()
 	defer d.Unlock()
 
@@ -67,7 +67,7 @@ func (d *driverRegistry) Keys() []string {
 	return keys
 }
 
-func (d *driverRegistry) containsDriver(id string) bool {
+func (d *pluginRegistry) containsPlugin(id string) bool {
 	_, ok := d.registryEntries[id]
 	return ok
 }
