@@ -20,12 +20,12 @@ import (
 	"github.com/tedsuo/ifrit"
 )
 
-type DriverSyncer interface {
+type DockerDriverSyncer interface {
 	Runner() ifrit.Runner
 	Discover(logger lager.Logger) (map[string]voldriver.Plugin, error)
 }
 
-type driverSyncer struct {
+type dockerDriverSyncer struct {
 	sync.RWMutex
 	logger         lager.Logger
 	driverFactory  DockerDriverFactory
@@ -36,8 +36,8 @@ type driverSyncer struct {
 	driverPaths    []string
 }
 
-func NewDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *driverSyncer {
-	return &driverSyncer{
+func NewDockerDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock) *dockerDriverSyncer {
+	return &dockerDriverSyncer{
 		logger:        logger,
 		driverFactory: NewDockerDriverFactory(),
 		scanInterval:  scanInterval,
@@ -48,8 +48,8 @@ func NewDriverSyncer(logger lager.Logger, driverRegistry PluginRegistry, driverP
 	}
 }
 
-func NewDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DockerDriverFactory) *driverSyncer {
-	return &driverSyncer{
+func NewDockerDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry PluginRegistry, driverPaths []string, scanInterval time.Duration, clock clock.Clock, factory DockerDriverFactory) *dockerDriverSyncer {
+	return &dockerDriverSyncer{
 		logger:        logger,
 		driverFactory: factory,
 		scanInterval:  scanInterval,
@@ -60,11 +60,11 @@ func NewDriverSyncerWithDriverFactory(logger lager.Logger, driverRegistry Plugin
 	}
 }
 
-func (d *driverSyncer) Runner() ifrit.Runner {
+func (d *dockerDriverSyncer) Runner() ifrit.Runner {
 	return d
 }
 
-func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+func (r *dockerDriverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger := r.logger.Session("sync-drivers")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -76,7 +76,7 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	if err != nil {
 		return err
 	}
-	r.setDrivers(drivers)
+	r.setDockerDrivers(drivers)
 
 	close(ready)
 
@@ -96,7 +96,7 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 			}()
 
 		case drivers := <-newDriverCh:
-			r.setDrivers(drivers)
+			r.setDockerDrivers(drivers)
 			timer.Reset(r.scanInterval)
 
 		case signal := <-signals:
@@ -106,11 +106,11 @@ func (r *driverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	}
 }
 
-func (r *driverSyncer) setDrivers(drivers map[string]voldriver.Plugin) {
+func (r *dockerDriverSyncer) setDockerDrivers(drivers map[string]voldriver.Plugin) {
 	r.driverRegistry.Set(drivers)
 }
 
-func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Plugin, error) {
+func (r *dockerDriverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Plugin, error) {
 	logger = logger.Session("discover")
 	logger.Debug("start")
 	logger.Info("discovering-drivers", lager.Data{"driver-paths": r.driverPaths})
@@ -143,7 +143,7 @@ func (r *driverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Plugi
 	return endpoints, nil
 }
 
-func (r *driverSyncer) getMatchingDriverSpecs(logger lager.Logger, path string, pattern string) ([]string, error) {
+func (r *dockerDriverSyncer) getMatchingDriverSpecs(logger lager.Logger, path string, pattern string) ([]string, error) {
 	logger.Debug("binaries", lager.Data{"path": path, "pattern": pattern})
 	matchingDriverSpecs, err := filepath.Glob(path + "/*." + pattern)
 	if err != nil { // untestable on linux, does glob work differently on windows???
@@ -153,7 +153,7 @@ func (r *driverSyncer) getMatchingDriverSpecs(logger lager.Logger, path string, 
 
 }
 
-func (r *driverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Plugin, driverPath string, specs []string, existing map[string]voldriver.Plugin) map[string]voldriver.Plugin {
+func (r *dockerDriverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Plugin, driverPath string, specs []string, existing map[string]voldriver.Plugin) map[string]voldriver.Plugin {
 	logger = logger.Session("insert-if-not-found")
 	logger.Debug("start")
 	defer logger.Debug("end")

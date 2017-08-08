@@ -30,7 +30,7 @@ var _ = Describe("Driver Syncer", func() {
 		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
 
 		registry vollocal.PluginRegistry
-		syncer   vollocal.DriverSyncer
+		syncer   vollocal.DockerDriverSyncer
 		process  ifrit.Process
 
 		fakeDriver *voldriverfakes.FakeMatchableDriver
@@ -47,7 +47,7 @@ var _ = Describe("Driver Syncer", func() {
 		scanInterval = 10 * time.Second
 
 		registry = vollocal.NewPluginRegistry()
-		syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
+		syncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
 		fakeDriver = new(voldriverfakes.FakeMatchableDriver)
 		fakeDriver.ActivateReturns(voldriver.ActivateResponse{
@@ -83,14 +83,14 @@ var _ = Describe("Driver Syncer", func() {
 			var (
 				fakeDriver *voldriverfakes.FakeMatchableDriver
 				driverName string
-				syncer     vollocal.DriverSyncer
+				syncer     vollocal.DockerDriverSyncer
 			)
 
 			BeforeEach(func() {
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
-				syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
+				syncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
 				fakeDriver = new(voldriverfakes.FakeMatchableDriver)
 				fakeDriver.GetVoldriverReturns(fakeDriver)
@@ -256,7 +256,7 @@ var _ = Describe("Driver Syncer", func() {
 
 		Context("when given a compound driverspath", func() {
 			BeforeEach(func() {
-				syncer = vollocal.NewDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory, secondPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
+				syncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory, secondPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 			})
 
 			Context("with a single driver", func() {
@@ -311,13 +311,13 @@ var _ = Describe("Driver Syncer", func() {
 				fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
 				driverFactory           vollocal.DockerDriverFactory
 				fakeDriver              *voldriverfakes.FakeDriver
-				driverSyncer            vollocal.DriverSyncer
+				driverSyncer            vollocal.DockerDriverSyncer
 			)
 
 			JustBeforeEach(func() {
 				fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 				driverFactory = vollocal.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
-				driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, nil, []string{defaultPluginsDirectory}, time.Second*60, clock.NewClock(), driverFactory)
+				driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, nil, []string{defaultPluginsDirectory}, time.Second*60, clock.NewClock(), driverFactory)
 			})
 
 			TestCanonicalization := func(context, actual, it, expected string) {

@@ -23,7 +23,7 @@ var _ = Describe("MountPurger", func() {
 		logger *lagertest.TestLogger
 
 		driverRegistry vollocal.PluginRegistry
-		driverSyncer   vollocal.DriverSyncer
+		driverSyncer   vollocal.DockerDriverSyncer
 		purger         vollocal.MountPurger
 
 		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
@@ -65,7 +65,7 @@ var _ = Describe("MountPurger", func() {
 
 			scanInterval = 1 * time.Second
 
-			driverSyncer = vollocal.NewDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
+			driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
 
 			fakeDriver = new(voldriverfakes.FakeDriver)

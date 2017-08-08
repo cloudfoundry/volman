@@ -54,7 +54,7 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, c
 	clock := clock.NewClock()
 	registry := NewPluginRegistry()
 
-	syncer := NewDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock)
+	syncer := NewDockerDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock)
 	purger := NewMountPurger(logger, registry)
 
 	grouper := grouper.NewOrdered(os.Kill, grouper.Members{grouper.Member{"volman-syncer", syncer.Runner()}, grouper.Member{"volman-purger", purger.Runner()}})
