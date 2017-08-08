@@ -94,7 +94,6 @@ var _ = Describe("Driver Syncer", func() {
 				syncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
 
 				fakeDriver = new(voldriverfakes.FakeMatchableDriver)
-				fakeDriver.GetVoldriverReturns(fakeDriver)
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{
 					Implements: []string{"VolumeDriver"},
 				})
