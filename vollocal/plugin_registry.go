@@ -3,34 +3,34 @@ package vollocal
 import (
 	"sync"
 
-	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/volman"
 )
 
 type PluginRegistry interface {
-	Plugin(id string) (voldriver.Plugin, bool)
-	Plugins() map[string]voldriver.Plugin
-	Set(plugins map[string]voldriver.Plugin)
+	Plugin(id string) (volman.Plugin, bool)
+	Plugins() map[string]volman.Plugin
+	Set(plugins map[string]volman.Plugin)
 	Keys() []string
 }
 
 type pluginRegistry struct {
 	sync.RWMutex
-	registryEntries map[string]voldriver.Plugin
+	registryEntries map[string]volman.Plugin
 }
 
 func NewPluginRegistry() PluginRegistry {
 	return &pluginRegistry{
-		registryEntries: map[string]voldriver.Plugin{},
+		registryEntries: map[string]volman.Plugin{},
 	}
 }
 
-func NewPluginRegistryWith(initialMap map[string]voldriver.Plugin) PluginRegistry {
+func NewPluginRegistryWith(initialMap map[string]volman.Plugin) PluginRegistry {
 	return &pluginRegistry{
 		registryEntries: initialMap,
 	}
 }
 
-func (d *pluginRegistry) Plugin(id string) (voldriver.Plugin, bool) {
+func (d *pluginRegistry) Plugin(id string) (volman.Plugin, bool) {
 	d.RLock()
 	defer d.RUnlock()
 
@@ -41,14 +41,14 @@ func (d *pluginRegistry) Plugin(id string) (voldriver.Plugin, bool) {
 	return d.registryEntries[id], true
 }
 
-func (d *pluginRegistry) Plugins() map[string]voldriver.Plugin {
+func (d *pluginRegistry) Plugins() map[string]volman.Plugin {
 	d.RLock()
 	defer d.RUnlock()
 
 	return d.registryEntries
 }
 
-func (d *pluginRegistry) Set(plugins map[string]voldriver.Plugin) {
+func (d *pluginRegistry) Set(plugins map[string]volman.Plugin) {
 	d.Lock()
 	defer d.Unlock()
 

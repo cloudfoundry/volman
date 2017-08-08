@@ -18,11 +18,12 @@ import (
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
 	"github.com/tedsuo/ifrit"
+	"code.cloudfoundry.org/volman"
 )
 
 type DockerDriverSyncer interface {
 	Runner() ifrit.Runner
-	Discover(logger lager.Logger) (map[string]voldriver.Plugin, error)
+	Discover(logger lager.Logger) (map[string]volman.Plugin, error)
 }
 
 type dockerDriverSyncer struct {
@@ -80,7 +81,7 @@ func (r *dockerDriverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}
 
 	close(ready)
 
-	newDriverCh := make(chan map[string]voldriver.Plugin, 1)
+	newDriverCh := make(chan map[string]volman.Plugin, 1)
 
 	for {
 		select {
@@ -106,17 +107,17 @@ func (r *dockerDriverSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}
 	}
 }
 
-func (r *dockerDriverSyncer) setDockerDrivers(drivers map[string]voldriver.Plugin) {
+func (r *dockerDriverSyncer) setDockerDrivers(drivers map[string]volman.Plugin) {
 	r.driverRegistry.Set(drivers)
 }
 
-func (r *dockerDriverSyncer) Discover(logger lager.Logger) (map[string]voldriver.Plugin, error) {
+func (r *dockerDriverSyncer) Discover(logger lager.Logger) (map[string]volman.Plugin, error) {
 	logger = logger.Session("discover")
 	logger.Debug("start")
 	logger.Info("discovering-drivers", lager.Data{"driver-paths": r.driverPaths})
 	defer logger.Debug("end")
 
-	endpoints := make(map[string]voldriver.Plugin)
+	endpoints := make(map[string]volman.Plugin)
 
 	for _, driverPath := range r.driverPaths {
 		//precedence order: sock -> spec -> json
@@ -126,11 +127,11 @@ func (r *dockerDriverSyncer) Discover(logger lager.Logger) (map[string]voldriver
 
 			if err != nil {
 				// untestable on linux, does glob work differently on windows???
-				return map[string]voldriver.Plugin{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
+				return map[string]volman.Plugin{}, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", driverPath, err.Error())
 			}
 			if len(matchingDriverSpecs) > 0 {
 				logger.Debug("driver-specs", lager.Data{"drivers": matchingDriverSpecs})
-				var existing map[string]voldriver.Plugin
+				var existing map[string]volman.Plugin
 				if r.driverRegistry != nil {
 					existing = r.driverRegistry.Plugins()
 					logger.Debug("existing-drivers", lager.Data{"len": len(existing)})
@@ -153,12 +154,12 @@ func (r *dockerDriverSyncer) getMatchingDriverSpecs(logger lager.Logger, path st
 
 }
 
-func (r *dockerDriverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]voldriver.Plugin, driverPath string, specs []string, existing map[string]voldriver.Plugin) map[string]voldriver.Plugin {
+func (r *dockerDriverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]volman.Plugin, driverPath string, specs []string, existing map[string]volman.Plugin) map[string]volman.Plugin {
 	logger = logger.Session("insert-if-not-found")
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	var plugin voldriver.Plugin
+	var plugin volman.Plugin
 	var ok bool
 
 	for _, spec := range specs {
@@ -181,7 +182,19 @@ func (r *dockerDriverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpo
 					logger.Error("error-reading-driver-spec", err)
 					continue
 				}
-				if !plugin.Matches(logger, driverSpec.Address, driverSpec.TLSConfig) {
+				pluginSpec := volman.PluginSpec{
+					Name: driverSpec.Name,
+					Address: driverSpec.Address,
+				}
+				if driverSpec.TLSConfig != nil {
+					pluginSpec.TLSConfig = &volman.TLSConfig{
+						InsecureSkipVerify: driverSpec.TLSConfig.InsecureSkipVerify,
+						CAFile: driverSpec.TLSConfig.CAFile,
+						CertFile: driverSpec.TLSConfig.CertFile,
+						KeyFile: driverSpec.TLSConfig.KeyFile,
+					}
+				}
+				if !plugin.Matches(logger, pluginSpec) {
 					logger.Info("existing-driver-mismatch", lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
 					plugin = nil
 				}
@@ -198,7 +211,7 @@ func (r *dockerDriverSyncer) insertIfAliveAndNotFound(logger lager.Logger, endpo
 				plugin = voldriver.NewVoldriverPlugin(driver)
 
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-				resp := plugin.GetVoldriver().Activate(env)
+				resp := plugin.GetImplementation().(voldriver.Driver).Activate(env)
 				if resp.Err != "" {
 					logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
 					continue

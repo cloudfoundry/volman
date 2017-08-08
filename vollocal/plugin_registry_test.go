@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/volman"
 )
 
 var _ = Describe("PluginRegistry", func() {
@@ -18,11 +19,11 @@ var _ = Describe("PluginRegistry", func() {
 	BeforeEach(func() {
 		emptyRegistry = NewPluginRegistry()
 
-		oneRegistry = NewPluginRegistryWith(map[string]voldriver.Plugin{
+		oneRegistry = NewPluginRegistryWith(map[string]volman.Plugin{
 			"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 		})
 
-		manyRegistry = NewPluginRegistryWith(map[string]voldriver.Plugin{
+		manyRegistry = NewPluginRegistryWith(map[string]volman.Plugin{
 			"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 			"two": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 		})
@@ -56,7 +57,7 @@ var _ = Describe("PluginRegistry", func() {
 
 	Describe("#Set", func() {
 		It("replaces plugin if it already exists", func() {
-			newPlugin := map[string]voldriver.Plugin{
+			newPlugin := map[string]volman.Plugin{
 				"one": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 			}
 			oneRegistry.Set(newPlugin)
@@ -66,7 +67,7 @@ var _ = Describe("PluginRegistry", func() {
 		})
 
 		It("adds plugin that does not exists", func() {
-			newPlugin := map[string]voldriver.Plugin{
+			newPlugin := map[string]volman.Plugin{
 				"one":   voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 				"two":   voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),
 				"three": voldriver.NewVoldriverPlugin(new(voldriverfakes.FakeDriver)),

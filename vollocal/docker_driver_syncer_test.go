@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/volman/volmanfakes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
+	"code.cloudfoundry.org/volman"
 )
 
 var _ = Describe("Driver Syncer", func() {
@@ -117,7 +118,7 @@ var _ = Describe("Driver Syncer", func() {
 			Context("when the same driver is added", func() {
 				var (
 					err error
-					drivers map[string]voldriver.Plugin
+					drivers map[string]volman.Plugin
 					ok bool
 
 				)
@@ -204,7 +205,7 @@ var _ = Describe("Driver Syncer", func() {
 
 		Context("with a single driver", func() {
 			var (
-				drivers map[string]voldriver.Plugin
+				drivers map[string]volman.Plugin
 				err     error
 			)
 			BeforeEach(func() {

@@ -1,5 +1,21 @@
 package volman
 
+import "code.cloudfoundry.org/lager"
+
+//go:generate counterfeiter -o volmanfakes/fake_plugin.go . Plugin
+type Plugin interface {
+	// Eventually this method will have List, Mount, Unmount and Matches methods
+	// allowing LocalClient and Purger to interact with Plugin without having
+	// to know if they are a docker volume driver or a CSI plugin.
+	//
+	// However, in order to do a step-wise refactor we are initially introducing
+	// the interface with a method that allows LocalClient and Purger to get at the
+	// underlying Voldriver
+	GetImplementation() interface{}
+
+	Matches(lager.Logger, PluginSpec) bool
+}
+
 type ListDriversResponse struct {
 	Drivers []InfoResponse `json:"drivers"`
 }
@@ -21,4 +37,17 @@ type InfoResponse struct {
 type UnmountRequest struct {
 	DriverId string `json:"driverId"`
 	VolumeId string `json:"volumeId"`
+}
+
+type PluginSpec struct {
+	Name      string     `json:"Name"`
+	Address   string     `json:"Addr"`
+	TLSConfig *TLSConfig `json:"TLSConfig"`
+}
+
+type TLSConfig struct {
+	InsecureSkipVerify bool   `json:"InsecureSkipVerify"`
+	CAFile             string `json:"CAFile"`
+	CertFile           string `json:"CertFile"`
+	KeyFile            string `json:"KeyFile"`
 }
