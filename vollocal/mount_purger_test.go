@@ -37,19 +37,34 @@ var _ = Describe("MountPurger", func() {
 		scanInterval time.Duration
 
 		process ifrit.Process
+
+		err error
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("mount-purger")
 
 		driverRegistry = vollocal.NewPluginRegistry()
+	})
 
+	JustBeforeEach(func() {
 		purger = vollocal.NewMountPurger(logger, driverRegistry)
+		err = purger.PurgeMounts(logger)
 	})
 
 	It("should succeed when there are no drivers", func() {
-		err := purger.PurgeMounts(logger)
+		//err := purger.PurgeMounts(logger)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	Context("when there is a non-voldriver plugin", func() {
+		BeforeEach(func() {
+			driverRegistry.Set(map[string]volman.Plugin{"not-a-voldriver": new(volmanfakes.FakePlugin)})
+		})
+
+		It("should succeed", func() {
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Context("when there is a driver", func() {
@@ -82,7 +97,6 @@ var _ = Describe("MountPurger", func() {
 		})
 
 		It("should succeed when there are no mounts", func() {
-			err := purger.PurgeMounts(logger)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -97,7 +111,6 @@ var _ = Describe("MountPurger", func() {
 			})
 
 			It("should unmount the volume", func() {
-				err := purger.PurgeMounts(logger)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
@@ -109,7 +122,6 @@ var _ = Describe("MountPurger", func() {
 				})
 
 				It("should log but not fail", func() {
-					err := purger.PurgeMounts(logger)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.TestSink.LogMessages()).To(ContainElement("mount-purger.purge-mounts.failed-purging-volume-mount"))

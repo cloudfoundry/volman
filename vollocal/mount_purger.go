@@ -54,12 +54,14 @@ func (p *mountPurger) PurgeMounts(logger lager.Logger) error {
 
 	for _, driver := range drivers {
 		env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-		listResponse := driver.GetImplementation().(voldriver.Driver).List(env)
-		for _, mount := range listResponse.Volumes {
-			env = driverhttp.NewHttpDriverEnv(logger, context.TODO())
-			errorResponse := driver.GetImplementation().(voldriver.Driver).Unmount(env, voldriver.UnmountRequest{Name: mount.Name})
-			if errorResponse.Err != "" {
-				logger.Error("failed-purging-volume-mount", errors.New(errorResponse.Err))
+		if impl, ok := driver.GetImplementation().(voldriver.Driver); ok {
+			listResponse := impl.List(env)
+			for _, mount := range listResponse.Volumes {
+				env = driverhttp.NewHttpDriverEnv(logger, context.TODO())
+				errorResponse := impl.Unmount(env, voldriver.UnmountRequest{Name: mount.Name})
+				if errorResponse.Err != "" {
+					logger.Error("failed-purging-volume-mount", errors.New(errorResponse.Err))
+				}
 			}
 		}
 	}
