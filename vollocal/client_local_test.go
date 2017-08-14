@@ -17,10 +17,10 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/volman"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
-	"code.cloudfoundry.org/volman"
 )
 
 var _ = Describe("Volman", func() {
@@ -34,10 +34,10 @@ var _ = Describe("Volman", func() {
 
 		scanInterval time.Duration
 
-		driverRegistry    volman.PluginRegistry
-		driverSyncer      vollocal.DockerDriverSyncer
-		durationMetricMap map[string]time.Duration
-		counterMetricMap  map[string]int
+		driverRegistry         volman.PluginRegistry
+		dockerDriverDiscoverer volman.Discoverer
+		durationMetricMap      map[string]time.Duration
+		counterMetricMap       map[string]int
 
 		process ifrit.Process
 	)
@@ -73,10 +73,11 @@ var _ = Describe("Volman", func() {
 
 	Describe("ListDrivers", func() {
 		BeforeEach(func() {
-			driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
+			dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
 			client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
-			process = ginkgomon.Invoke(driverSyncer.Runner())
+			syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
+			process = ginkgomon.Invoke(syncer.Runner())
 		})
 
 		It("should report empty list of drivers", func() {
@@ -108,7 +109,7 @@ var _ = Describe("Volman", func() {
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
-				driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
+				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				fakeDriver := new(voldriverfakes.FakeDriver)
@@ -125,7 +126,8 @@ var _ = Describe("Volman", func() {
 
 			Context("after running drivers discovery", func() {
 				BeforeEach(func() {
-					process = ginkgomon.Invoke(driverSyncer.Runner())
+					syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
+					process = ginkgomon.Invoke(syncer.Runner())
 				})
 
 				AfterEach(func() {
@@ -164,13 +166,14 @@ var _ = Describe("Volman", func() {
 
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
-				driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
+				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 			})
 
 			JustBeforeEach(func() {
-				process = ginkgomon.Invoke(driverSyncer.Runner())
+				syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
+				process = ginkgomon.Invoke(syncer.Runner())
 			})
 
 			AfterEach(func() {
@@ -311,10 +314,11 @@ var _ = Describe("Volman", func() {
 				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				driverRegistry := vollocal.NewPluginRegistry()
-				driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
+				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
-				process = ginkgomon.Invoke(driverSyncer.Runner())
+				syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
+				process = ginkgomon.Invoke(syncer.Runner())
 
 				calls := 0
 				fakeDriverFactory.DockerDriverStub = func(lager.Logger, string, string, string) (voldriver.Driver, error) {
@@ -348,10 +352,11 @@ var _ = Describe("Volman", func() {
 				fakeDriver.CreateReturns(voldriver.ErrorResponse{"create fails"})
 
 				driverRegistry := vollocal.NewPluginRegistry()
-				driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, scanInterval, fakeClock, fakeDriverFactory)
+				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
-				process = ginkgomon.Invoke(driverSyncer.Runner())
+				syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
+				process = ginkgomon.Invoke(syncer.Runner())
 			})
 
 			AfterEach(func() {

@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
+	"github.com/Kaixiang/csiplugin"
 	"github.com/tedsuo/ifrit/grouper"
 )
 
@@ -35,6 +36,7 @@ var (
 
 type DriverConfig struct {
 	DriverPaths  []string
+	CsiPaths     []string
 	SyncInterval time.Duration
 }
 
@@ -54,7 +56,10 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, c
 	clock := clock.NewClock()
 	registry := NewPluginRegistry()
 
-	syncer := NewDockerDriverSyncer(logger, registry, config.DriverPaths, config.SyncInterval, clock)
+	dockerDiscoverer := NewDockerDriverDiscoverer(logger, registry, config.DriverPaths)
+	csiDiscoverer := csiplugin.NewCsiPluginDiscoverer(logger, registry, config.CsiPaths)
+
+	syncer := NewSyncer(logger, registry, []volman.Discoverer{dockerDiscoverer, csiDiscoverer}, config.SyncInterval, clock)
 	purger := NewMountPurger(logger, registry)
 
 	grouper := grouper.NewOrdered(os.Kill, grouper.Members{grouper.Member{"volman-syncer", syncer.Runner()}, grouper.Member{"volman-purger", purger.Runner()}})

@@ -24,8 +24,8 @@ type DockerDriverFactory interface {
 }
 
 type dockerDriverFactory struct {
-	Factory         driverhttp.RemoteClientFactory
-	useOs           osshim.Os
+	Factory driverhttp.RemoteClientFactory
+	useOs   osshim.Os
 }
 
 func NewDockerDriverFactory() DockerDriverFactory {

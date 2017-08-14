@@ -9,8 +9,8 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
-	"github.com/tedsuo/ifrit"
 	"code.cloudfoundry.org/volman"
+	"github.com/tedsuo/ifrit"
 )
 
 type MountPurger interface {

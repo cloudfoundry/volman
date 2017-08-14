@@ -18,6 +18,11 @@ type Plugin interface {
 	Matches(lager.Logger, PluginSpec) bool
 }
 
+//go:generate counterfeiter -o volmanfakes/fake_discoverer.go . Discoverer
+type Discoverer interface {
+	Discover(logger lager.Logger) (map[string]Plugin, error)
+}
+
 type ListDriversResponse struct {
 	Drivers []InfoResponse `json:"drivers"`
 }
@@ -53,7 +58,6 @@ type TLSConfig struct {
 	CertFile           string `json:"CertFile"`
 	KeyFile            string `json:"KeyFile"`
 }
-
 
 type PluginRegistry interface {
 	Plugin(id string) (Plugin, bool)

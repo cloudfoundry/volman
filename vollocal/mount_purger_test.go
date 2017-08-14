@@ -10,12 +10,12 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
-	"code.cloudfoundry.org/volman"
 )
 
 var _ = Describe("MountPurger", func() {
@@ -23,9 +23,9 @@ var _ = Describe("MountPurger", func() {
 	var (
 		logger *lagertest.TestLogger
 
-		driverRegistry volman.PluginRegistry
-		driverSyncer   vollocal.DockerDriverSyncer
-		purger         vollocal.MountPurger
+		driverRegistry         volman.PluginRegistry
+		dockerDriverDiscoverer volman.Discoverer
+		purger                 vollocal.MountPurger
 
 		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
 		fakeDriver        *voldriverfakes.FakeDriver
@@ -81,15 +81,15 @@ var _ = Describe("MountPurger", func() {
 
 			scanInterval = 1 * time.Second
 
-			driverSyncer = vollocal.NewDockerDriverSyncerWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, scanInterval, fakeClock, fakeDriverFactory)
+			dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
-
+			syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
 			fakeDriver = new(voldriverfakes.FakeDriver)
 			fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 			fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
-			process = ginkgomon.Invoke(driverSyncer.Runner())
+			process = ginkgomon.Invoke(syncer.Runner())
 		})
 
 		AfterEach(func() {

@@ -6,7 +6,6 @@ import (
 	"code.cloudfoundry.org/volman"
 )
 
-
 type pluginRegistry struct {
 	sync.RWMutex
 	registryEntries map[string]volman.Plugin
