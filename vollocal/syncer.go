@@ -4,7 +4,6 @@ import (
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/volman"
-	"fmt"
 	"github.com/tedsuo/ifrit"
 	"os"
 	"time"
@@ -43,14 +42,13 @@ func (p *Syncer) Runner() ifrit.Runner {
 }
 
 func (p *Syncer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	logger := p.logger.Session("sync-csi-plugin")
+	logger := p.logger.Session("sync-plugin")
 	logger.Info("start")
 	defer logger.Info("end")
 
 	logger.Info("running-discovery")
 	allPlugins := map[string]volman.Plugin{}
 	for _, discoverer := range p.discoverer {
-		logger.Info(fmt.Sprintf("discover"), lager.Data{"discoverer": fmt.Sprintf("%p", discoverer)})
 		plugins, err := discoverer.Discover(logger)
 		if err != nil {
 			logger.Error("failed-discover", err)
@@ -74,11 +72,9 @@ func (p *Syncer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				logger.Info("running-re-discovery")
 				allPlugins := map[string]volman.Plugin{}
 				for _, discoverer := range p.discoverer {
-					logger.Info(fmt.Sprintf("rediscover"), lager.Data{"discoverer": fmt.Sprintf("%p", discoverer)})
 					plugins, err := discoverer.Discover(logger)
 					if err != nil {
 						logger.Error("failed-discover", err)
-						//return err
 					}
 					for k, v := range plugins {
 						allPlugins[k] = v
