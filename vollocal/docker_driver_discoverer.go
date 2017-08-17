@@ -138,7 +138,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 					continue
 				}
 
-				plugin = voldriver.NewVoldriverPlugin(driver)
+				plugin = driverhttp.NewDockerPluginWithDriver(driver)
 
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 				resp := plugin.GetImplementation().(voldriver.Driver).Activate(env)

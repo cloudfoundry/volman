@@ -8,9 +8,7 @@ import (
 
 	"context"
 
-	"fmt"
 	"os"
-	"strings"
 
 	"code.cloudfoundry.org/clock"
 	loggregator_v2 "code.cloudfoundry.org/go-loggregator/compatibility"
@@ -62,7 +60,7 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, c
 	syncer := NewSyncer(logger, registry, []volman.Discoverer{dockerDiscoverer, csiDiscoverer}, config.SyncInterval, clock)
 	purger := NewMountPurger(logger, registry)
 
-	grouper := grouper.NewOrdered(os.Kill, grouper.Members{grouper.Member{"volman-syncer", syncer.Runner()}, grouper.Member{"volman-purger", purger.Runner()}})
+	grouper := grouper.NewOrdered(os.Kill, grouper.Members{grouper.Member{Name: "volman-syncer", Runner: syncer.Runner()}, grouper.Member{Name: "volman-purger", Runner: purger.Runner()}})
 
 	return NewLocalClient(logger, registry, metronClient, clock), grouper
 }
@@ -88,7 +86,7 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	}
 
 	logger.Debug("listing-drivers", lager.Data{"drivers": infoResponses})
-	return volman.ListDriversResponse{infoResponses}, nil
+	return volman.ListDriversResponse{Drivers: infoResponses}, nil
 }
 
 func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
@@ -112,29 +110,13 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 		return volman.MountResponse{}, err
 	}
 
-	err := client.create(logger, driverId, volumeId, config)
+	mountResponse, err := driver.Mount(logger, driverId, volumeId, config)
 	if err != nil {
 		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
 		return volman.MountResponse{}, err
 	}
 
-	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-
-	mountRequest := voldriver.MountRequest{Name: volumeId}
-	logger.Debug("calling-driver-with-mount-request", lager.Data{"driverId": driverId, "mountRequest": mountRequest})
-	mountResponse := driver.GetImplementation().(voldriver.Driver).Mount(env, mountRequest)
-	logger.Debug("response-from-driver", lager.Data{"response": mountResponse})
-
-	if !strings.HasPrefix(mountResponse.Mountpoint, "/var/vcap/data") {
-		logger.Info("invalid-mountpath", lager.Data{"detail": fmt.Sprintf("Invalid or dangerous mountpath %s outside of /var/vcap/data", mountResponse.Mountpoint)})
-	}
-
-	if mountResponse.Err != "" {
-		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
-		return volman.MountResponse{}, errors.New(mountResponse.Err)
-	}
-
-	return volman.MountResponse{mountResponse.Mountpoint}, nil
+	return mountResponse, nil
 }
 
 func sendMountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.IngressClient, duration time.Duration, driverId string) {

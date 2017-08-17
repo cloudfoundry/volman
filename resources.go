@@ -15,6 +15,7 @@ type Plugin interface {
 	// underlying Voldriver
 	GetImplementation() interface{}
 
+	Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (MountResponse, error)
 	Matches(lager.Logger, PluginSpec) bool
 }
 
