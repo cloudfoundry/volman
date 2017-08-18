@@ -33,9 +33,10 @@ var (
 )
 
 type DriverConfig struct {
-	DriverPaths  []string
-	CsiPaths     []string
-	SyncInterval time.Duration
+	DriverPaths     []string
+	CsiPaths        []string
+	SyncInterval    time.Duration
+	CsiMountRootDir string
 }
 
 func NewDriverConfig() DriverConfig {
@@ -55,7 +56,7 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, c
 	registry := NewPluginRegistry()
 
 	dockerDiscoverer := NewDockerDriverDiscoverer(logger, registry, config.DriverPaths)
-	csiDiscoverer := csiplugin.NewCsiPluginDiscoverer(logger, registry, config.CsiPaths)
+	csiDiscoverer := csiplugin.NewCsiPluginDiscoverer(logger, registry, config.CsiPaths, config.CsiMountRootDir)
 
 	syncer := NewSyncer(logger, registry, []volman.Discoverer{dockerDiscoverer, csiDiscoverer}, config.SyncInterval, clock)
 	purger := NewMountPurger(logger, registry)
