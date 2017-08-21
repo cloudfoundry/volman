@@ -141,7 +141,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 				plugin = driverhttp.NewDockerPluginWithDriver(driver)
 
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-				resp := plugin.GetImplementation().(voldriver.Driver).Activate(env)
+				resp := driver.Activate(env)
 				if resp.Err != "" {
 					logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
 					continue

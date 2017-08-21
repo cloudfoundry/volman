@@ -6,15 +6,11 @@ import (
 
 	"github.com/tedsuo/ifrit"
 
-	"context"
-
 	"os"
 
 	"code.cloudfoundry.org/clock"
 	loggregator_v2 "code.cloudfoundry.org/go-loggregator/compatibility"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
 	"github.com/Kaixiang/csiplugin"
 	"github.com/tedsuo/ifrit/grouper"
@@ -28,8 +24,8 @@ const (
 )
 
 var (
-	driverMountDurations   = map[string]string{}
-	driverUnmountDurations = map[string]string{}
+	pluginMountDurations   = map[string]string{}
+	pluginUnmountDurations = map[string]string{}
 )
 
 type DriverConfig struct {
@@ -46,7 +42,7 @@ func NewDriverConfig() DriverConfig {
 }
 
 type localClient struct {
-	driverRegistry volman.PluginRegistry
+	pluginRegistry volman.PluginRegistry
 	metronClient   loggregator_v2.IngressClient
 	clock          clock.Clock
 }
@@ -68,7 +64,7 @@ func NewServer(logger lager.Logger, metronClient loggregator_v2.IngressClient, c
 
 func NewLocalClient(logger lager.Logger, registry volman.PluginRegistry, metronClient loggregator_v2.IngressClient, clock clock.Clock) volman.Manager {
 	return &localClient{
-		driverRegistry: registry,
+		pluginRegistry: registry,
 		metronClient:   metronClient,
 		clock:          clock,
 	}
@@ -80,9 +76,9 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	defer logger.Info("end")
 
 	var infoResponses []volman.InfoResponse
-	drivers := client.driverRegistry.Plugins()
+	plugins := client.pluginRegistry.Plugins()
 
-	for name, _ := range drivers {
+	for name, _ := range plugins {
 		infoResponses = append(infoResponses, volman.InfoResponse{Name: name})
 	}
 
@@ -90,7 +86,7 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	return volman.ListDriversResponse{Drivers: infoResponses}, nil
 }
 
-func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
+func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -98,20 +94,20 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	mountStart := client.clock.Now()
 
 	defer func() {
-		sendMountDurationMetrics(logger, client.metronClient, time.Since(mountStart), driverId)
+		sendMountDurationMetrics(logger, client.metronClient, time.Since(mountStart), pluginId)
 	}()
 
-	logger.Debug("driver-mounting-volume", lager.Data{"driverId": driverId, "volumeId": volumeId})
+	logger.Debug("plugin-mounting-volume", lager.Data{"pluginId": pluginId, "volumeId": volumeId})
 
-	driver, found := client.driverRegistry.Plugin(driverId)
+	plugin, found := client.pluginRegistry.Plugin(pluginId)
 	if !found {
-		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
-		logger.Error("mount-driver-lookup-error", err)
+		err := errors.New("Plugin '" + pluginId + "' not found in list of known plugins")
+		logger.Error("mount-plugin-lookup-error", err)
 		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
 		return volman.MountResponse{}, err
 	}
 
-	mountResponse, err := driver.Mount(logger, driverId, volumeId, config)
+	mountResponse, err := plugin.Mount(logger, pluginId, volumeId, config)
 	if err != nil {
 		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
 		return volman.MountResponse{}, err
@@ -120,16 +116,16 @@ func (client *localClient) Mount(logger lager.Logger, driverId string, volumeId 
 	return mountResponse, nil
 }
 
-func sendMountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.IngressClient, duration time.Duration, driverId string) {
+func sendMountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.IngressClient, duration time.Duration, pluginId string) {
 	err := metronClient.SendDuration(volmanMountDuration, duration)
 	if err != nil {
 		logger.Error("failed-to-send-volman-mount-duration-metric", err)
 	}
 
-	m, ok := driverMountDurations[driverId]
+	m, ok := pluginMountDurations[pluginId]
 	if !ok {
-		m = "VolmanMountDurationFor" + driverId
-		driverMountDurations[driverId] = m
+		m = "VolmanMountDurationFor" + pluginId
+		pluginMountDurations[pluginId] = m
 	}
 	err = metronClient.SendDuration(m, duration)
 	if err != nil {
@@ -137,16 +133,16 @@ func sendMountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.I
 	}
 }
 
-func sendUnmountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.IngressClient, duration time.Duration, driverId string) {
+func sendUnmountDurationMetrics(logger lager.Logger, metronClient loggregator_v2.IngressClient, duration time.Duration, pluginId string) {
 	err := metronClient.SendDuration(volmanUnmountDuration, duration)
 	if err != nil {
 		logger.Error("failed-to-send-volman-unmount-duration-metric", err)
 	}
 
-	m, ok := driverUnmountDurations[driverId]
+	m, ok := pluginUnmountDurations[pluginId]
 	if !ok {
-		m = "VolmanUnmountDurationFor" + driverId
-		driverUnmountDurations[driverId] = m
+		m = "VolmanUnmountDurationFor" + pluginId
+		pluginUnmountDurations[pluginId] = m
 	}
 	err = metronClient.SendDuration(m, duration)
 	if err != nil {
@@ -154,55 +150,32 @@ func sendUnmountDurationMetrics(logger lager.Logger, metronClient loggregator_v2
 	}
 }
 
-func (client *localClient) Unmount(logger lager.Logger, driverId string, volumeName string) error {
+func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeId string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
 	defer logger.Info("end")
-	logger.Debug("unmounting-volume", lager.Data{"volumeName": volumeName})
+	logger.Debug("unmounting-volume", lager.Data{"volumeName": volumeId})
 
 	unmountStart := client.clock.Now()
 
 	defer func() {
-		sendUnmountDurationMetrics(logger, client.metronClient, time.Since(unmountStart), driverId)
+		sendUnmountDurationMetrics(logger, client.metronClient, time.Since(unmountStart), pluginId)
 	}()
 
-	driver, found := client.driverRegistry.Plugin(driverId)
+	plugin, found := client.pluginRegistry.Plugin(pluginId)
 	if !found {
-		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
-		logger.Error("mount-driver-lookup-error", err)
+		err := errors.New("Plugin '" + pluginId + "' not found in list of known plugins")
+		logger.Error("mount-plugin-lookup-error", err)
 		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
 		return err
 	}
 
-	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-
-	if response := driver.GetImplementation().(voldriver.Driver).Unmount(env, voldriver.UnmountRequest{Name: volumeName}); response.Err != "" {
-		err := errors.New(response.Err)
+	err := plugin.Unmount(logger, pluginId, volumeId)
+	if err != nil {
 		logger.Error("unmount-failed", err)
 		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
 		return err
 	}
 
-	return nil
-}
-
-func (client *localClient) create(logger lager.Logger, driverId string, volumeName string, opts map[string]interface{}) error {
-	logger = logger.Session("create")
-	logger.Info("start")
-	defer logger.Info("end")
-	driver, found := client.driverRegistry.Plugin(driverId)
-	if !found {
-		err := errors.New("Driver '" + driverId + "' not found in list of known drivers")
-		logger.Error("mount-driver-lookup-error", err)
-		return err
-	}
-
-	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-
-	logger.Debug("creating-volume", lager.Data{"volumeName": volumeName, "driverId": driverId})
-	response := driver.GetImplementation().(voldriver.Driver).Create(env, voldriver.CreateRequest{Name: volumeName, Opts: opts})
-	if response.Err != "" {
-		return errors.New(response.Err)
-	}
 	return nil
 }
