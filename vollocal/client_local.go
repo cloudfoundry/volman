@@ -107,7 +107,7 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 		return volman.MountResponse{}, err
 	}
 
-	mountResponse, err := plugin.Mount(logger, pluginId, volumeId, config)
+	mountResponse, err := plugin.Mount(logger, volumeId, config)
 	if err != nil {
 		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
 		return volman.MountResponse{}, err
@@ -170,7 +170,7 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 		return err
 	}
 
-	err := plugin.Unmount(logger, pluginId, volumeId)
+	err := plugin.Unmount(logger, volumeId)
 	if err != nil {
 		logger.Error("unmount-failed", err)
 		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)

@@ -18,11 +18,10 @@ type FakePlugin struct {
 	getImplementationReturnsOnCall map[int]struct {
 		result1 interface{}
 	}
-	MountStub        func(logger lager.Logger, pluginId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error)
+	MountStub        func(logger lager.Logger, volumeId string, config map[string]interface{}) (volman.MountResponse, error)
 	mountMutex       sync.RWMutex
 	mountArgsForCall []struct {
 		logger   lager.Logger
-		pluginId string
 		volumeId string
 		config   map[string]interface{}
 	}
@@ -34,11 +33,10 @@ type FakePlugin struct {
 		result1 volman.MountResponse
 		result2 error
 	}
-	UnmountStub        func(logger lager.Logger, pluginId string, volumeId string) error
+	UnmountStub        func(logger lager.Logger, volumeId string) error
 	unmountMutex       sync.RWMutex
 	unmountArgsForCall []struct {
 		logger   lager.Logger
-		pluginId string
 		volumeId string
 	}
 	unmountReturns struct {
@@ -103,19 +101,18 @@ func (fake *FakePlugin) GetImplementationReturnsOnCall(i int, result1 interface{
 	}{result1}
 }
 
-func (fake *FakePlugin) Mount(logger lager.Logger, pluginId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
+func (fake *FakePlugin) Mount(logger lager.Logger, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
 	fake.mountMutex.Lock()
 	ret, specificReturn := fake.mountReturnsOnCall[len(fake.mountArgsForCall)]
 	fake.mountArgsForCall = append(fake.mountArgsForCall, struct {
 		logger   lager.Logger
-		pluginId string
 		volumeId string
 		config   map[string]interface{}
-	}{logger, pluginId, volumeId, config})
-	fake.recordInvocation("Mount", []interface{}{logger, pluginId, volumeId, config})
+	}{logger, volumeId, config})
+	fake.recordInvocation("Mount", []interface{}{logger, volumeId, config})
 	fake.mountMutex.Unlock()
 	if fake.MountStub != nil {
-		return fake.MountStub(logger, pluginId, volumeId, config)
+		return fake.MountStub(logger, volumeId, config)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -129,10 +126,10 @@ func (fake *FakePlugin) MountCallCount() int {
 	return len(fake.mountArgsForCall)
 }
 
-func (fake *FakePlugin) MountArgsForCall(i int) (lager.Logger, string, string, map[string]interface{}) {
+func (fake *FakePlugin) MountArgsForCall(i int) (lager.Logger, string, map[string]interface{}) {
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
-	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].pluginId, fake.mountArgsForCall[i].volumeId, fake.mountArgsForCall[i].config
+	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].volumeId, fake.mountArgsForCall[i].config
 }
 
 func (fake *FakePlugin) MountReturns(result1 volman.MountResponse, result2 error) {
@@ -157,18 +154,17 @@ func (fake *FakePlugin) MountReturnsOnCall(i int, result1 volman.MountResponse, 
 	}{result1, result2}
 }
 
-func (fake *FakePlugin) Unmount(logger lager.Logger, pluginId string, volumeId string) error {
+func (fake *FakePlugin) Unmount(logger lager.Logger, volumeId string) error {
 	fake.unmountMutex.Lock()
 	ret, specificReturn := fake.unmountReturnsOnCall[len(fake.unmountArgsForCall)]
 	fake.unmountArgsForCall = append(fake.unmountArgsForCall, struct {
 		logger   lager.Logger
-		pluginId string
 		volumeId string
-	}{logger, pluginId, volumeId})
-	fake.recordInvocation("Unmount", []interface{}{logger, pluginId, volumeId})
+	}{logger, volumeId})
+	fake.recordInvocation("Unmount", []interface{}{logger, volumeId})
 	fake.unmountMutex.Unlock()
 	if fake.UnmountStub != nil {
-		return fake.UnmountStub(logger, pluginId, volumeId)
+		return fake.UnmountStub(logger, volumeId)
 	}
 	if specificReturn {
 		return ret.result1
@@ -182,10 +178,10 @@ func (fake *FakePlugin) UnmountCallCount() int {
 	return len(fake.unmountArgsForCall)
 }
 
-func (fake *FakePlugin) UnmountArgsForCall(i int) (lager.Logger, string, string) {
+func (fake *FakePlugin) UnmountArgsForCall(i int) (lager.Logger, string) {
 	fake.unmountMutex.RLock()
 	defer fake.unmountMutex.RUnlock()
-	return fake.unmountArgsForCall[i].logger, fake.unmountArgsForCall[i].pluginId, fake.unmountArgsForCall[i].volumeId
+	return fake.unmountArgsForCall[i].logger, fake.unmountArgsForCall[i].volumeId
 }
 
 func (fake *FakePlugin) UnmountReturns(result1 error) {
