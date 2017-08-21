@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	mfakes "code.cloudfoundry.org/go-loggregator/testhelpers/fakes/v1"
+	mfakes "code.cloudfoundry.org/diego-logging-client/testhelpers"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
