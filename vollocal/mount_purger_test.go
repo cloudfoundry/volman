@@ -124,7 +124,7 @@ var _ = Describe("MountPurger", func() {
 				It("should log but not fail", func() {
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(logger.TestSink.LogMessages()).To(ContainElement("mount-purger.purge-mounts.failed-purging-volume-mount"))
+					Expect(logger.TestSink.LogMessages()).To(ContainElement("mount-purger.purge-mounts.failed-unmounting-volume-mount a-volume"))
 				})
 			})
 		})

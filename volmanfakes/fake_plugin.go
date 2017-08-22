@@ -9,14 +9,18 @@ import (
 )
 
 type FakePlugin struct {
-	GetImplementationStub        func() interface{}
-	getImplementationMutex       sync.RWMutex
-	getImplementationArgsForCall []struct{}
-	getImplementationReturns     struct {
-		result1 interface{}
+	ListVolumesStub        func(logger lager.Logger) ([]string, error)
+	listVolumesMutex       sync.RWMutex
+	listVolumesArgsForCall []struct {
+		logger lager.Logger
 	}
-	getImplementationReturnsOnCall map[int]struct {
-		result1 interface{}
+	listVolumesReturns struct {
+		result1 []string
+		result2 error
+	}
+	listVolumesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
 	}
 	MountStub        func(logger lager.Logger, volumeId string, config map[string]interface{}) (volman.MountResponse, error)
 	mountMutex       sync.RWMutex
@@ -61,44 +65,55 @@ type FakePlugin struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePlugin) GetImplementation() interface{} {
-	fake.getImplementationMutex.Lock()
-	ret, specificReturn := fake.getImplementationReturnsOnCall[len(fake.getImplementationArgsForCall)]
-	fake.getImplementationArgsForCall = append(fake.getImplementationArgsForCall, struct{}{})
-	fake.recordInvocation("GetImplementation", []interface{}{})
-	fake.getImplementationMutex.Unlock()
-	if fake.GetImplementationStub != nil {
-		return fake.GetImplementationStub()
+func (fake *FakePlugin) ListVolumes(logger lager.Logger) ([]string, error) {
+	fake.listVolumesMutex.Lock()
+	ret, specificReturn := fake.listVolumesReturnsOnCall[len(fake.listVolumesArgsForCall)]
+	fake.listVolumesArgsForCall = append(fake.listVolumesArgsForCall, struct {
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("ListVolumes", []interface{}{logger})
+	fake.listVolumesMutex.Unlock()
+	if fake.ListVolumesStub != nil {
+		return fake.ListVolumesStub(logger)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fake.getImplementationReturns.result1
+	return fake.listVolumesReturns.result1, fake.listVolumesReturns.result2
 }
 
-func (fake *FakePlugin) GetImplementationCallCount() int {
-	fake.getImplementationMutex.RLock()
-	defer fake.getImplementationMutex.RUnlock()
-	return len(fake.getImplementationArgsForCall)
+func (fake *FakePlugin) ListVolumesCallCount() int {
+	fake.listVolumesMutex.RLock()
+	defer fake.listVolumesMutex.RUnlock()
+	return len(fake.listVolumesArgsForCall)
 }
 
-func (fake *FakePlugin) GetImplementationReturns(result1 interface{}) {
-	fake.GetImplementationStub = nil
-	fake.getImplementationReturns = struct {
-		result1 interface{}
-	}{result1}
+func (fake *FakePlugin) ListVolumesArgsForCall(i int) lager.Logger {
+	fake.listVolumesMutex.RLock()
+	defer fake.listVolumesMutex.RUnlock()
+	return fake.listVolumesArgsForCall[i].logger
 }
 
-func (fake *FakePlugin) GetImplementationReturnsOnCall(i int, result1 interface{}) {
-	fake.GetImplementationStub = nil
-	if fake.getImplementationReturnsOnCall == nil {
-		fake.getImplementationReturnsOnCall = make(map[int]struct {
-			result1 interface{}
+func (fake *FakePlugin) ListVolumesReturns(result1 []string, result2 error) {
+	fake.ListVolumesStub = nil
+	fake.listVolumesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakePlugin) ListVolumesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.ListVolumesStub = nil
+	if fake.listVolumesReturnsOnCall == nil {
+		fake.listVolumesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
 		})
 	}
-	fake.getImplementationReturnsOnCall[i] = struct {
-		result1 interface{}
-	}{result1}
+	fake.listVolumesReturnsOnCall[i] = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakePlugin) Mount(logger lager.Logger, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
@@ -255,8 +270,8 @@ func (fake *FakePlugin) MatchesReturnsOnCall(i int, result1 bool) {
 func (fake *FakePlugin) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getImplementationMutex.RLock()
-	defer fake.getImplementationMutex.RUnlock()
+	fake.listVolumesMutex.RLock()
+	defer fake.listVolumesMutex.RUnlock()
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
 	fake.unmountMutex.RLock()

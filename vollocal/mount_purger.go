@@ -1,14 +1,10 @@
 package vollocal
 
 import (
-	"errors"
+	"fmt"
 	"os"
 
-	"context"
-
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
 	"github.com/tedsuo/ifrit"
 )
@@ -50,21 +46,21 @@ func (p *mountPurger) PurgeMounts(logger lager.Logger) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	drivers := p.registry.Plugins()
+	plugins := p.registry.Plugins()
 
-	for _, driver := range drivers {
-		env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-		if impl, ok := driver.GetImplementation().(voldriver.Driver); ok {
-			listResponse := impl.List(env)
-			for _, mount := range listResponse.Volumes {
-				env = driverhttp.NewHttpDriverEnv(logger, context.TODO())
-				errorResponse := impl.Unmount(env, voldriver.UnmountRequest{Name: mount.Name})
-				if errorResponse.Err != "" {
-					logger.Error("failed-purging-volume-mount", errors.New(errorResponse.Err))
-				}
+	for _, plugin := range plugins {
+		volumes, err := plugin.ListVolumes(logger)
+		if err != nil {
+			logger.Error("failed-listing-volume-mount", err)
+			continue
+		}
+
+		for _, volume := range volumes {
+			err = plugin.Unmount(logger, volume)
+			if err != nil {
+				logger.Error(fmt.Sprintf("failed-unmounting-volume-mount %s", volume), err)
 			}
 		}
 	}
-
 	return nil
 }
