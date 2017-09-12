@@ -74,7 +74,7 @@ func (p *Syncer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				timer.Reset(p.scanInterval)
 			}()
 		case signal := <-signals:
-			logger.Info("received-signal", lager.Data{"signal": signal.String()})
+			logger.Info("signalled", lager.Data{"signal": signal.String()})
 			return nil
 		}
 	}
