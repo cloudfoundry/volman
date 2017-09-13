@@ -8,10 +8,8 @@ import (
 
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/goshims/filepathshim/filepath_fake"
-	"code.cloudfoundry.org/goshims/grpcshim/grpc_fake"
 	. "code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
-	"github.com/paulcwarren/spec/csishim/csi_fake"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 	"io/ioutil"
@@ -30,9 +28,6 @@ var _ = Describe("Syncer", func() {
 		scanInterval            time.Duration
 		fakeClock               *fakeclock.FakeClock
 		fakeFilePath            *filepath_fake.FakeFilepath
-		fakeGrpc                *grpc_fake.FakeGrpc
-		fakeCsi                 *csi_fake.FakeCsi
-		fakeNodePlugin          *csi_fake.FakeNodeClient
 		fakeDiscoverer1         *volmanfakes.FakeDiscoverer
 		fakeDiscoverer2         *volmanfakes.FakeDiscoverer
 		fakeDiscoverer3         *volmanfakes.FakeDiscoverer
@@ -46,9 +41,6 @@ var _ = Describe("Syncer", func() {
 		scanInterval = 10 * time.Second
 		fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
 		fakeFilePath = &filepath_fake.FakeFilepath{}
-		fakeGrpc = &grpc_fake.FakeGrpc{}
-		fakeCsi = &csi_fake.FakeCsi{}
-		fakeNodePlugin = &csi_fake.FakeNodeClient{}
 
 		logger = lagertest.NewTestLogger("csi-plugin-syncer-test")
 
