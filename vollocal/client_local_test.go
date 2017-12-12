@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	mfakes "code.cloudfoundry.org/diego-logging-client/testhelpers"
+	loggregator "code.cloudfoundry.org/go-loggregator"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
@@ -55,7 +56,7 @@ var _ = Describe("Volman", func() {
 		counterMetricMap = make(map[string]int)
 
 		fakeMetronClient = new(mfakes.FakeIngressClient)
-		fakeMetronClient.SendDurationStub = func(name string, value time.Duration) error {
+		fakeMetronClient.SendDurationStub = func(name string, value time.Duration, opts ...loggregator.EmitGaugeOption) error {
 			durationMetricMap[name] = value
 			return nil
 		}
