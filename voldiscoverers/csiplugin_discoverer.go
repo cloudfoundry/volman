@@ -98,11 +98,11 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 				}
 
 				nodePlugin := p.csiShim.NewNodeClient(conn)
-				_, err = nodePlugin.ProbeNode(context.TODO(), &csi.ProbeNodeRequest{
+				_, err = nodePlugin.NodeProbe(context.TODO(), &csi.NodeProbeRequest{
 					Version: &csi.Version{
 						Major: 0,
-						Minor: 0,
-						Patch: 1,
+						Minor: 1,
+						Patch: 0,
 					},
 				})
 				if err != nil {

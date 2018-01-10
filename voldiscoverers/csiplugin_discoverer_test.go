@@ -101,7 +101,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					BeforeEach(func() {
 						conn = new(grpc_fake.FakeClientConn)
 						fakeGrpc.DialReturns(conn, nil)
-						fakeNodePlugin.ProbeNodeReturns(&csi.ProbeNodeResponse{}, nil)
+						fakeNodePlugin.NodeProbeReturns(&csi.NodeProbeResponse{}, nil)
 					})
 
 					It("should discover it and add it to the plugin registry", func() {
@@ -109,7 +109,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 						actualAddr, _ := fakeGrpc.DialArgsForCall(0)
 						Expect(actualAddr).To(Equal(address))
 
-						Expect(fakeNodePlugin.ProbeNodeCallCount()).To(Equal(1))
+						Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(1))
 
 						Expect(len(drivers)).To(Equal(1))
 
@@ -157,7 +157,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 							Expect(actualAddr2).To(Equal(updatedAddress))
 
 							Expect(fakeCsi.NewNodeClientCallCount()).To(Equal(2))
-							Expect(fakeNodePlugin.ProbeNodeCallCount()).To(Equal(2))
+							Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(2))
 
 							Expect(conn.CloseCallCount()).To(Equal(2))
 
@@ -176,7 +176,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					BeforeEach(func() {
 						conn = new(grpc_fake.FakeClientConn)
 						fakeGrpc.DialReturns(conn, nil)
-						fakeNodePlugin.ProbeNodeReturns(nil, errors.New("connection-refused"))
+						fakeNodePlugin.NodeProbeReturns(nil, errors.New("connection-refused"))
 					})
 
 					It("should have discover it and add it to the plugin registry", func() {
@@ -184,7 +184,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 						actualAddr, _ := fakeGrpc.DialArgsForCall(0)
 						Expect(actualAddr).To(Equal(address))
 
-						Expect(fakeNodePlugin.ProbeNodeCallCount()).To(Equal(1))
+						Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(1))
 
 						Expect(conn.CloseCallCount()).To(Equal(1))
 
@@ -238,7 +238,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 
 					// make both plugins active
 					fakeCsi.NewNodeClientReturns(fakeNodePlugin)
-					fakeNodePlugin.ProbeNodeReturns(&csi.ProbeNodeResponse{}, nil)
+					fakeNodePlugin.NodeProbeReturns(&csi.NodeProbeResponse{}, nil)
 				})
 
 				It("should discover both plugins", func() {
@@ -279,7 +279,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 
 					// make both plugins active
 					fakeCsi.NewNodeClientReturns(fakeNodePlugin)
-					fakeNodePlugin.ProbeNodeReturns(&csi.ProbeNodeResponse{}, nil)
+					fakeNodePlugin.NodeProbeReturns(&csi.NodeProbeResponse{}, nil)
 				})
 
 				It("should discover the plugin and add it to the registry once only", func() {
