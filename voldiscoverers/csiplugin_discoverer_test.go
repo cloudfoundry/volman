@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"code.cloudfoundry.org/csishim/csi_fake"
 	"code.cloudfoundry.org/goshims/filepathshim"
 	"code.cloudfoundry.org/goshims/filepathshim/filepath_fake"
 	"code.cloudfoundry.org/goshims/grpcshim/grpc_fake"
@@ -14,12 +15,12 @@ import (
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/vollocal"
 	"github.com/Kaixiang/csiplugin"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/csishim/csi_fake"
-	"github.com/container-storage-interface/spec/lib/go/csi"
 
+	"code.cloudfoundry.org/csishim"
 	"code.cloudfoundry.org/volman/voldiscoverers"
 )
 
@@ -35,6 +36,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 		fakeCsi                *csi_fake.FakeCsi
 		fakeOs                 *os_fake.FakeOs
 		fakeNodePlugin         *csi_fake.FakeNodeClient
+		fakeIdentityPlugin     *csi_fake.FakeIdentityClient
 		pluginPaths            []string
 		drivers                map[string]volman.Plugin
 		err                    error
@@ -50,6 +52,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 		fakeCsi = &csi_fake.FakeCsi{}
 		fakeOs = &os_fake.FakeOs{}
 		fakeNodePlugin = &csi_fake.FakeNodeClient{}
+		fakeIdentityPlugin = &csi_fake.FakeIdentityClient{}
 		pluginPaths = []string{firstPluginsDirectory}
 		volumesRootDir = "/var/vcap/data/mounts"
 
@@ -92,6 +95,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					fakeCsi.NewNodeClientReturns(fakeNodePlugin)
+					fakeCsi.NewIdentityClientReturns(fakeIdentityPlugin)
 				})
 
 				Context("given the node is available", func() {
@@ -104,67 +108,95 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 						fakeNodePlugin.NodeProbeReturns(&csi.NodeProbeResponse{}, nil)
 					})
 
-					It("should discover it and add it to the plugin registry", func() {
-						Expect(fakeGrpc.DialCallCount()).To(Equal(1))
-						actualAddr, _ := fakeGrpc.DialArgsForCall(0)
-						Expect(actualAddr).To(Equal(address))
-
-						Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(1))
-
-						Expect(len(drivers)).To(Equal(1))
-
-						_, pluginFound := drivers[driverName]
-						Expect(pluginFound).To(Equal(true))
-
-						Expect(conn.CloseCallCount()).To(Equal(1))
-					})
-
-					Context("given re-discovery", func() {
-						JustBeforeEach(func() {
-							drivers, err = discoverer.Discover(logger)
-							registry.Set(drivers)
+					Context("when the node supports our version of CSI", func() {
+						BeforeEach(func() {
+							fakeIdentityPlugin.GetSupportedVersionsReturns(&csi.GetSupportedVersionsResponse{
+								SupportedVersions: []*csi.Version{&csishim.CsiVersion},
+							}, nil)
 						})
 
-						It("should not update the plugin registry", func() {
-							Expect(drivers).To(HaveLen(1))
-							Expect(fakeCsi.NewNodeClientCallCount()).To(Equal(1))
-						})
-					})
+						It("should discover it and add it to the plugin registry", func() {
+							Expect(fakeGrpc.DialCallCount()).To(Equal(1))
+							actualAddr, _ := fakeGrpc.DialArgsForCall(0)
+							Expect(actualAddr).To(Equal(address))
 
-					Context("when the plugin's spec is changed", func() {
-						var (
-							updatedAddress string
-						)
-						JustBeforeEach(func() {
-							updatedAddress = "127.0.0.1:99999"
-							spec := csiplugin.CsiPluginSpec{
-								Name:    driverName,
-								Address: updatedAddress,
-							}
-							err := csiplugin.WriteSpec(logger, firstPluginsDirectory, spec)
-							Expect(err).NotTo(HaveOccurred())
+							Expect(fakeIdentityPlugin.GetSupportedVersionsCallCount()).To(BeNumerically(">", 0))
 
-							drivers, err = discoverer.Discover(logger)
-							Expect(drivers).To(HaveLen(1))
-							registry.Set(drivers)
-						})
-
-						It("should re-discover the plugin and update the registry", func() {
-							Expect(fakeGrpc.DialCallCount()).To(Equal(2))
-							actualAddr1, _ := fakeGrpc.DialArgsForCall(0)
-							Expect(actualAddr1).To(Equal(address))
-							actualAddr2, _ := fakeGrpc.DialArgsForCall(1)
-							Expect(actualAddr2).To(Equal(updatedAddress))
-
-							Expect(fakeCsi.NewNodeClientCallCount()).To(Equal(2))
-							Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(2))
-
-							Expect(conn.CloseCallCount()).To(Equal(2))
+							Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(1))
 
 							Expect(len(drivers)).To(Equal(1))
 
 							_, pluginFound := drivers[driverName]
 							Expect(pluginFound).To(Equal(true))
+
+							Expect(conn.CloseCallCount()).To(Equal(1))
+						})
+
+						Context("given re-discovery", func() {
+							JustBeforeEach(func() {
+								drivers, err = discoverer.Discover(logger)
+								registry.Set(drivers)
+							})
+
+							It("should not update the plugin registry", func() {
+								Expect(drivers).To(HaveLen(1))
+								Expect(fakeCsi.NewNodeClientCallCount()).To(Equal(1))
+							})
+						})
+
+						Context("when the plugin's spec is changed", func() {
+							var (
+								updatedAddress string
+							)
+							JustBeforeEach(func() {
+								updatedAddress = "127.0.0.1:99999"
+								spec := csiplugin.CsiPluginSpec{
+									Name:    driverName,
+									Address: updatedAddress,
+								}
+								err := csiplugin.WriteSpec(logger, firstPluginsDirectory, spec)
+								Expect(err).NotTo(HaveOccurred())
+
+								drivers, err = discoverer.Discover(logger)
+								Expect(drivers).To(HaveLen(1))
+								registry.Set(drivers)
+							})
+
+							It("should re-discover the plugin and update the registry", func() {
+								Expect(fakeGrpc.DialCallCount()).To(Equal(2))
+								actualAddr1, _ := fakeGrpc.DialArgsForCall(0)
+								Expect(actualAddr1).To(Equal(address))
+								actualAddr2, _ := fakeGrpc.DialArgsForCall(1)
+								Expect(actualAddr2).To(Equal(updatedAddress))
+
+								Expect(fakeCsi.NewNodeClientCallCount()).To(Equal(2))
+								Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(2))
+
+								Expect(conn.CloseCallCount()).To(Equal(2))
+
+								Expect(len(drivers)).To(Equal(1))
+
+								_, pluginFound := drivers[driverName]
+								Expect(pluginFound).To(Equal(true))
+							})
+						})
+					})
+
+					Context("when the node does not support our version of CSI", func() {
+						BeforeEach(func() {
+							fakeIdentityPlugin.GetSupportedVersionsReturns(&csi.GetSupportedVersionsResponse{
+								SupportedVersions: []*csi.Version{{Major: 9, Minor: 9, Patch: 9}},
+							}, nil)
+						})
+
+						It("should not discover the plugin", func() {
+							Expect(fakeGrpc.DialCallCount()).To(Equal(1))
+							actualAddr, _ := fakeGrpc.DialArgsForCall(0)
+							Expect(actualAddr).To(Equal(address))
+
+							Expect(fakeIdentityPlugin.GetSupportedVersionsCallCount()).To(BeNumerically(">", 0))
+
+							Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(0))
 						})
 					})
 				})
@@ -176,15 +208,18 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					BeforeEach(func() {
 						conn = new(grpc_fake.FakeClientConn)
 						fakeGrpc.DialReturns(conn, nil)
-						fakeNodePlugin.NodeProbeReturns(nil, errors.New("connection-refused"))
+
+						fakeCsi.NewIdentityClientReturns(fakeIdentityPlugin)
+						fakeIdentityPlugin.GetSupportedVersionsReturns(nil, errors.New("connection-refused"))
 					})
 
-					It("should have discover it and add it to the plugin registry", func() {
+					It("should have discover it but not add it to the plugin registry", func() {
 						Expect(fakeGrpc.DialCallCount()).To(Equal(1))
 						actualAddr, _ := fakeGrpc.DialArgsForCall(0)
 						Expect(actualAddr).To(Equal(address))
 
-						Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(1))
+						Expect(fakeIdentityPlugin.GetSupportedVersionsCallCount()).To(Equal(1))
+						Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(0))
 
 						Expect(conn.CloseCallCount()).To(Equal(1))
 
@@ -239,6 +274,11 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					// make both plugins active
 					fakeCsi.NewNodeClientReturns(fakeNodePlugin)
 					fakeNodePlugin.NodeProbeReturns(&csi.NodeProbeResponse{}, nil)
+
+					fakeCsi.NewIdentityClientReturns(fakeIdentityPlugin)
+					fakeIdentityPlugin.GetSupportedVersionsReturns(&csi.GetSupportedVersionsResponse{
+						SupportedVersions: []*csi.Version{&csishim.CsiVersion},
+					}, nil)
 				})
 
 				It("should discover both plugins", func() {
@@ -280,6 +320,12 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					// make both plugins active
 					fakeCsi.NewNodeClientReturns(fakeNodePlugin)
 					fakeNodePlugin.NodeProbeReturns(&csi.NodeProbeResponse{}, nil)
+
+					fakeCsi.NewIdentityClientReturns(fakeIdentityPlugin)
+					fakeCsi.NewIdentityClientReturns(fakeIdentityPlugin)
+					fakeIdentityPlugin.GetSupportedVersionsReturns(&csi.GetSupportedVersionsResponse{
+						SupportedVersions: []*csi.Version{&csishim.CsiVersion},
+					}, nil)
 				})
 
 				It("should discover the plugin and add it to the registry once only", func() {

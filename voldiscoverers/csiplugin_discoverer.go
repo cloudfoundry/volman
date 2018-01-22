@@ -1,17 +1,17 @@
 package voldiscoverers
 
 import (
-	"path/filepath"
+	"code.cloudfoundry.org/csishim"
 	"code.cloudfoundry.org/goshims/filepathshim"
 	"code.cloudfoundry.org/goshims/grpcshim"
 	"code.cloudfoundry.org/goshims/osshim"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/volman"
-	"github.com/container-storage-interface/spec/lib/go/csi"
-	"code.cloudfoundry.org/csishim"
 	. "github.com/Kaixiang/csiplugin"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"path/filepath"
 )
 
 type csiPluginDiscoverer struct {
@@ -97,21 +97,39 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 					continue
 				}
 
-				nodePlugin := p.csiShim.NewNodeClient(conn)
-				_, err = nodePlugin.NodeProbe(context.TODO(), &csi.NodeProbeRequest{
-					Version: &csi.Version{
-						Major: 0,
-						Minor: 1,
-						Patch: 0,
-					},
-				})
+				identityPlugin := p.csiShim.NewIdentityClient(conn)
+				supportedVersions, err := identityPlugin.GetSupportedVersions(context.TODO(), &csi.GetSupportedVersionsRequest{})
 				if err != nil {
-					logger.Info("probe-node-unresponsive", lager.Data{"name": csiPluginSpec.Name, "address": csiPluginSpec.Address})
+					logger.Error("supported-versions", err)
 					continue
 				}
 
-				plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir)
-				plugins[csiPluginSpec.Name] = plugin
+				var compatible bool
+				for _, version := range supportedVersions.SupportedVersions {
+					if version.Major == csishim.CsiVersion.Major &&
+						version.Minor == csishim.CsiVersion.Minor &&
+						version.Patch == csishim.CsiVersion.Patch {
+						compatible = true
+					}
+				}
+
+				if compatible {
+					nodePlugin := p.csiShim.NewNodeClient(conn)
+					_, err = nodePlugin.NodeProbe(context.TODO(), &csi.NodeProbeRequest{
+						Version: &csi.Version{
+							Major: 0,
+							Minor: 1,
+							Patch: 0,
+						},
+					})
+					if err != nil {
+						logger.Info("probe-node-unresponsive", lager.Data{"name": csiPluginSpec.Name, "address": csiPluginSpec.Address})
+						continue
+					}
+
+					plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir)
+					plugins[csiPluginSpec.Name] = plugin
+				}
 			} else {
 				logger.Info("discovered-plugin-ignored", lager.Data{"name": pluginSpec.Name, "address": pluginSpec.Address})
 				plugins[csiPluginSpec.Name] = existingPlugin
