@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"code.cloudfoundry.org/csiplugin"
 	"code.cloudfoundry.org/csishim/csi_fake"
 	"code.cloudfoundry.org/goshims/filepathshim"
 	"code.cloudfoundry.org/goshims/filepathshim/filepath_fake"
@@ -14,7 +15,6 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/vollocal"
-	"github.com/Kaixiang/csiplugin"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
