@@ -6,6 +6,10 @@ import (
 	"io/ioutil"
 	"os"
 
+	"google.golang.org/grpc"
+
+	"golang.org/x/net/context"
+
 	"code.cloudfoundry.org/csiplugin"
 	"code.cloudfoundry.org/csishim/csi_fake"
 	"code.cloudfoundry.org/goshims/filepathshim"
@@ -80,15 +84,19 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 
 			Context("given there is a csi plugin to be discovered", func() {
 				var (
-					driverName string
-					address    string
+					fileName      string
+					pluginName    string
+					vendorVersion string
+					address       string
 				)
 
 				BeforeEach(func() {
-					driverName = fmt.Sprintf("csi-plugin-%d", config.GinkgoConfig.ParallelNode)
+					fileName = fmt.Sprintf("csi-spec-file-%d", config.GinkgoConfig.ParallelNode)
+					pluginName = fmt.Sprintf("csi-plugin-%d", config.GinkgoConfig.ParallelNode)
+					vendorVersion = fmt.Sprintf("vendor-version-%d", config.GinkgoConfig.ParallelNode)
 					address = "127.0.0.1:50051"
 					spec := csiplugin.CsiPluginSpec{
-						Name:    driverName,
+						Name:    fileName,
 						Address: address,
 					}
 					err := csiplugin.WriteSpec(logger, firstPluginsDirectory, spec)
@@ -96,6 +104,11 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 
 					fakeCsi.NewNodeClientReturns(fakeNodePlugin)
 					fakeCsi.NewIdentityClientReturns(fakeIdentityPlugin)
+					fakeIdentityPlugin.GetPluginInfoReturns(
+						&csi.GetPluginInfoResponse{
+							Name:          pluginName,
+							VendorVersion: vendorVersion,
+						}, nil)
 				})
 
 				Context("given the node is available", func() {
@@ -121,12 +134,13 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 							Expect(actualAddr).To(Equal(address))
 
 							Expect(fakeIdentityPlugin.GetSupportedVersionsCallCount()).To(BeNumerically(">", 0))
+							Expect(fakeIdentityPlugin.GetPluginInfoCallCount()).To(BeNumerically(">", 0))
 
 							Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(1))
 
 							Expect(len(drivers)).To(Equal(1))
 
-							_, pluginFound := drivers[driverName]
+							_, pluginFound := drivers[pluginName]
 							Expect(pluginFound).To(Equal(true))
 
 							Expect(conn.CloseCallCount()).To(Equal(1))
@@ -151,7 +165,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 							JustBeforeEach(func() {
 								updatedAddress = "127.0.0.1:99999"
 								spec := csiplugin.CsiPluginSpec{
-									Name:    driverName,
+									Name:    fileName,
 									Address: updatedAddress,
 								}
 								err := csiplugin.WriteSpec(logger, firstPluginsDirectory, spec)
@@ -176,7 +190,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 
 								Expect(len(drivers)).To(Equal(1))
 
-								_, pluginFound := drivers[driverName]
+								_, pluginFound := drivers[pluginName]
 								Expect(pluginFound).To(Equal(true))
 							})
 						})
@@ -195,6 +209,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 							Expect(actualAddr).To(Equal(address))
 
 							Expect(fakeIdentityPlugin.GetSupportedVersionsCallCount()).To(BeNumerically(">", 0))
+							Expect(fakeIdentityPlugin.GetPluginInfoCallCount()).To(Equal(0))
 
 							Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(0))
 						})
@@ -219,6 +234,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 						Expect(actualAddr).To(Equal(address))
 
 						Expect(fakeIdentityPlugin.GetSupportedVersionsCallCount()).To(Equal(1))
+						Expect(fakeIdentityPlugin.GetPluginInfoCallCount()).To(Equal(0))
 						Expect(fakeNodePlugin.NodeProbeCallCount()).To(Equal(0))
 
 						Expect(conn.CloseCallCount()).To(Equal(1))
@@ -240,29 +256,33 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 
 			Context("given multiple plugins to be discovered, in multiple directories", func() {
 				var (
-					pluginName  string
-					address     string
-					spec        csiplugin.CsiPluginSpec
-					pluginName2 string
-					address2    string
-					spec2       csiplugin.CsiPluginSpec
-					err         error
+					specFileName  string
+					pluginName    string
+					address       string
+					spec          csiplugin.CsiPluginSpec
+					specFileName2 string
+					pluginName2   string
+					address2      string
+					spec2         csiplugin.CsiPluginSpec
+					err           error
 				)
 
 				BeforeEach(func() {
+					specFileName = fmt.Sprintf("csi-spec-file-%d", config.GinkgoConfig.ParallelNode)
 					pluginName = fmt.Sprintf("csi-plugin-%d", config.GinkgoConfig.ParallelNode)
 					address = "127.0.0.1:50051"
 					spec = csiplugin.CsiPluginSpec{
-						Name:    pluginName,
+						Name:    specFileName,
 						Address: address,
 					}
 					err = csiplugin.WriteSpec(logger, firstPluginsDirectory, spec)
 					Expect(err).NotTo(HaveOccurred())
 
+					specFileName2 = fmt.Sprintf("csi-spec-file-2-%d", config.GinkgoConfig.ParallelNode)
 					pluginName2 = fmt.Sprintf("csi-plugin-2-%d", config.GinkgoConfig.ParallelNode)
 					address2 = "127.0.0.1:50061"
 					spec2 = csiplugin.CsiPluginSpec{
-						Name:    pluginName2,
+						Name:    specFileName2,
 						Address: address2,
 					}
 					err = csiplugin.WriteSpec(logger, secondPluginsDirectory, spec2)
@@ -279,6 +299,22 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					fakeIdentityPlugin.GetSupportedVersionsReturns(&csi.GetSupportedVersionsResponse{
 						SupportedVersions: []*csi.Version{&csishim.CsiVersion},
 					}, nil)
+
+					i := 0
+					fakeIdentityPlugin.GetPluginInfoStub = func(ctx context.Context, req *csi.GetPluginInfoRequest, options ...grpc.CallOption) (*csi.GetPluginInfoResponse, error) {
+						if i == 0 {
+							i++
+							return &csi.GetPluginInfoResponse{
+								Name:          pluginName,
+								VendorVersion: "9.9.9",
+							}, nil
+
+						}
+						return &csi.GetPluginInfoResponse{
+							Name:          pluginName2,
+							VendorVersion: "9.9.9",
+						}, nil
+					}
 				})
 
 				It("should discover both plugins", func() {
@@ -294,17 +330,21 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 
 			Context("given the same plugin in multiple directories", func() {
 				var (
-					pluginName string
-					address    string
-					spec       csiplugin.CsiPluginSpec
-					err        error
+					pluginName    string
+					vendorVersion string
+					address       string
+					spec          csiplugin.CsiPluginSpec
+					fileName      string
+					err           error
 				)
 
 				BeforeEach(func() {
+					fileName = fmt.Sprintf("csi-file-name-%d", config.GinkgoConfig.ParallelNode)
 					pluginName = fmt.Sprintf("csi-plugin-%d", config.GinkgoConfig.ParallelNode)
+					vendorVersion = fmt.Sprintf("csi-vendor-%d", config.GinkgoConfig.ParallelNode)
 					address = "127.0.0.1:50051"
 					spec = csiplugin.CsiPluginSpec{
-						Name:    pluginName,
+						Name:    fileName,
 						Address: address,
 					}
 					err = csiplugin.WriteSpec(logger, firstPluginsDirectory, spec)
@@ -326,6 +366,13 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 					fakeIdentityPlugin.GetSupportedVersionsReturns(&csi.GetSupportedVersionsResponse{
 						SupportedVersions: []*csi.Version{&csishim.CsiVersion},
 					}, nil)
+
+					fakeIdentityPlugin.GetPluginInfoReturns(
+						&csi.GetPluginInfoResponse{
+							Name:          pluginName,
+							VendorVersion: vendorVersion,
+						}, nil)
+
 				})
 
 				It("should discover the plugin and add it to the registry once only", func() {

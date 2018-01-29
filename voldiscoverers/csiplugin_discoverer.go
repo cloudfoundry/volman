@@ -80,47 +80,59 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 				logger.Error("read-spec-failed", err, lager.Data{"plugin-path": pluginPath, "plugin-spec-file": pluginSpecFile})
 				continue
 			}
-
-			existingPlugin, found := p.pluginRegistry.Plugins()[csiPluginSpec.Name]
-			pluginSpec := volman.PluginSpec{
-				Name:    csiPluginSpec.Name,
-				Address: csiPluginSpec.Address,
+			// instantiate a volman.Plugin implementation of a csi.NodePlugin
+			logger.Debug("rpc-dial", lager.Data{"address": csiPluginSpec.Address})
+			conn, err := p.grpcShim.Dial(csiPluginSpec.Address, grpc.WithInsecure())
+			conns = append(conns, conn)
+			if err != nil {
+				logger.Error("grpc-dial", err, lager.Data{"address": csiPluginSpec.Address})
+				continue
 			}
 
-			if !found || !existingPlugin.Matches(logger, pluginSpec) {
-				logger.Info("new-plugin", lager.Data{"name": pluginSpec.Name, "address": pluginSpec.Address})
+			identityPlugin := p.csiShim.NewIdentityClient(conn)
+			supportedVersions, err := identityPlugin.GetSupportedVersions(context.TODO(), &csi.GetSupportedVersionsRequest{})
+			if err != nil {
+				logger.Error("supported-versions", err)
+				continue
+			}
 
-				// instantiate a volman.Plugin implementation of a csi.NodePlugin
-				conn, err := p.grpcShim.Dial(csiPluginSpec.Address, grpc.WithInsecure())
-				conns = append(conns, conn)
+			var compatible bool
+			for _, version := range supportedVersions.SupportedVersions {
+				if version.Major == csishim.CsiVersion.Major &&
+					version.Minor == csishim.CsiVersion.Minor &&
+					version.Patch == csishim.CsiVersion.Patch {
+					compatible = true
+				}
+			}
+			if compatible {
+				pluginInfo, err := identityPlugin.GetPluginInfo(context.TODO(), &csi.GetPluginInfoRequest{
+					Version: &csi.Version{
+						Major: csishim.CsiVersion.Major,
+						Minor: csishim.CsiVersion.Minor,
+						Patch: csishim.CsiVersion.Patch,
+					},
+				})
 				if err != nil {
-					logger.Error("grpc-dial", err, lager.Data{"address": csiPluginSpec.Address})
+					logger.Error("plugin-info-error", err)
 					continue
 				}
 
-				identityPlugin := p.csiShim.NewIdentityClient(conn)
-				supportedVersions, err := identityPlugin.GetSupportedVersions(context.TODO(), &csi.GetSupportedVersionsRequest{})
-				if err != nil {
-					logger.Error("supported-versions", err)
-					continue
+				csiPluginName := pluginInfo.Name
+				existingPlugin, found := p.pluginRegistry.Plugins()[csiPluginName]
+				pluginSpec := volman.PluginSpec{
+					Name:    csiPluginName,
+					Address: csiPluginSpec.Address,
 				}
 
-				var compatible bool
-				for _, version := range supportedVersions.SupportedVersions {
-					if version.Major == csishim.CsiVersion.Major &&
-						version.Minor == csishim.CsiVersion.Minor &&
-						version.Patch == csishim.CsiVersion.Patch {
-						compatible = true
-					}
-				}
+				if !found || !existingPlugin.Matches(logger, pluginSpec) {
+					logger.Info("new-plugin", lager.Data{"address": pluginSpec.Address, "csi-plugin-name": csiPluginName})
 
-				if compatible {
 					nodePlugin := p.csiShim.NewNodeClient(conn)
 					_, err = nodePlugin.NodeProbe(context.TODO(), &csi.NodeProbeRequest{
 						Version: &csi.Version{
-							Major: 0,
-							Minor: 1,
-							Patch: 0,
+							Major: csishim.CsiVersion.Major,
+							Minor: csishim.CsiVersion.Minor,
+							Patch: csishim.CsiVersion.Patch,
 						},
 					})
 					if err != nil {
@@ -129,11 +141,11 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 					}
 
 					plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir)
-					plugins[csiPluginSpec.Name] = plugin
+					plugins[csiPluginName] = plugin
+				} else {
+					logger.Info("discovered-plugin-ignored", lager.Data{"address": pluginSpec.Address})
+					plugins[csiPluginName] = existingPlugin
 				}
-			} else {
-				logger.Info("discovered-plugin-ignored", lager.Data{"name": pluginSpec.Name, "address": pluginSpec.Address})
-				plugins[csiPluginSpec.Name] = existingPlugin
 			}
 		}
 	}
