@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -99,25 +101,27 @@ var _ = Describe("DriverFactory", func() {
 			})
 		})
 
-		Context("when a sock driver spec is discovered", func() {
-			BeforeEach(func() {
-				f, err := os.Create(defaultPluginsDirectory + string(os.PathSeparator) + driverName + ".sock")
-				defer f.Close()
-				Expect(err).ToNot(HaveOccurred())
+		if runtime.GOOS != "windows" {
+			Context("when a sock driver spec is discovered", func() {
+				BeforeEach(func() {
+					f, err := os.Create(filepath.Join(defaultPluginsDirectory, driverName+".sock"))
+					defer f.Close()
+					Expect(err).ToNot(HaveOccurred())
+				})
+				It("should return the correct driver", func() {
+					driver, err := driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
+					Expect(err).ToNot(HaveOccurred())
+					Expect(driver).To(Equal(localDriver))
+					address := path.Join(defaultPluginsDirectory, driverName+".sock")
+					Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal(address))
+				})
+				It("should error for invalid sock endpoint address", func() {
+					fakeRemoteClientFactory.NewRemoteClientReturns(nil, fmt.Errorf("invalid address"))
+					_, err := driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
+					Expect(err).To(HaveOccurred())
+				})
 			})
-			It("should return the correct driver", func() {
-				driver, err := driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(driver).To(Equal(localDriver))
-				address := path.Join(defaultPluginsDirectory, driverName+".sock")
-				Expect(fakeRemoteClientFactory.NewRemoteClientArgsForCall(0)).To(Equal(address))
-			})
-			It("should error for invalid sock endpoint address", func() {
-				fakeRemoteClientFactory.NewRemoteClientReturns(nil, fmt.Errorf("invalid address"))
-				_, err := driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
-				Expect(err).To(HaveOccurred())
-			})
-		})
+		}
 	})
 
 	Context("when valid driver spec is not discovered", func() {
