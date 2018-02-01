@@ -97,7 +97,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 
 	for _, spec := range specs {
 		if runtime.GOOS == "windows" {
-			re = regexp.MustCompile(`([^\]*\)?([^\]*)\.(sock|spec|json)$`)
+			re = regexp.MustCompile(`([^\\]*\\)?([^\\]*)\.(sock|spec|json)$`)
 		} else {
 			re = regexp.MustCompile(`([^/]*/)?([^/]*)\.(sock|spec|json)$`)
 		}
