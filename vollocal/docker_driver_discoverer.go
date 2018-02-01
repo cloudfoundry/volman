@@ -2,8 +2,10 @@ package vollocal
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 
 	"context"
 
@@ -76,7 +78,7 @@ func (r *dockerDriverDiscoverer) Discover(logger lager.Logger) (map[string]volma
 
 func (r *dockerDriverDiscoverer) getMatchingDriverSpecs(logger lager.Logger, path string, pattern string) ([]string, error) {
 	logger.Debug("binaries", lager.Data{"path": path, "pattern": pattern})
-	matchingDriverSpecs, err := filepath.Glob(path + "/*." + pattern)
+	matchingDriverSpecs, err := filepath.Glob(path + string(os.PathSeparator) + "*." + pattern)
 	if err != nil { // untestable on linux, does glob work differently on windows???
 		return nil, fmt.Errorf("Volman configured with an invalid driver path '%s', error occured list files (%s)", path, err.Error())
 	}
@@ -91,9 +93,14 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 
 	var plugin volman.Plugin
 	var ok bool
+	var re *regexp.Regexp
 
 	for _, spec := range specs {
-		re := regexp.MustCompile("([^/]*/)?([^/]*)\\.(sock|spec|json)$")
+		if runtime.GOOS == "windows" {
+			re = regexp.MustCompile(`([^\]*\)?([^\]*)\.(sock|spec|json)$`)
+		} else {
+			re = regexp.MustCompile(`([^/]*/)?([^/]*)\.(sock|spec|json)$`)
+		}
 
 		segs2 := re.FindAllStringSubmatch(spec, 1)
 		if len(segs2) <= 0 {
