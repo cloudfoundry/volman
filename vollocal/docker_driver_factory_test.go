@@ -101,7 +101,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when a sock driver spec is discovered", func() {
 			BeforeEach(func() {
-				f, err := os.Create(defaultPluginsDirectory + "/" + driverName + ".sock")
+				f, err := os.Create(defaultPluginsDirectory + string(os.PathSeparator) + driverName + ".sock")
 				defer f.Close()
 				Expect(err).ToNot(HaveOccurred())
 			})
