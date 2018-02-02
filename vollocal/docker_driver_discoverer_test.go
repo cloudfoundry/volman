@@ -109,7 +109,17 @@ var _ = Describe("Docker Driver Discoverer", func() {
 					// Expect SetDrivers not to be called
 					Expect(len(drivers)).To(Equal(1))
 					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
-					Expect(fakeDriver.ActivateCallCount()).To(Equal(1))
+					Expect(fakeDriver.ActivateCallCount()).To(Equal(2))
+				})
+				Context("when the existing driver connection is broken", func(){
+					BeforeEach(func(){
+						fakeDriver.ActivateReturnsOnCall(1, voldriver.ActivateResponse{Err: "badness"})
+					})
+					It("should replace the driver in the registry", func() {
+						Expect(len(drivers)).To(Equal(1))
+						Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(2))
+						Expect(fakeDriver.ActivateCallCount()).To(Equal(3))
+					})
 				})
 			})
 

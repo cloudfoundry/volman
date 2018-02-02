@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-
+	"errors"
 	"context"
 
 	"code.cloudfoundry.org/lager"
@@ -134,6 +134,16 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 				if !plugin.Matches(logger, pluginSpec) {
 					logger.Info("existing-driver-mismatch", lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
 					plugin = nil
+				}
+				if plugin != nil {
+					dockerPlugin := plugin.(*driverhttp.DockerDriverPlugin)
+					dockerDriver := dockerPlugin.DockerDriver.(voldriver.Driver)
+					env := driverhttp.NewHttpDriverEnv(logger, context.Background())
+					resp := dockerDriver.Activate(env)
+					if resp.Err != "" {
+						logger.Error("existing-driver-unreachable", errors.New(resp.Err), lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
+						plugin = nil
+					}
 				}
 			}
 
