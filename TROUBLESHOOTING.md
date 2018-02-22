@@ -6,8 +6,9 @@
 - If your application still won't start, try unbinding it from the volume service and see if it starts when it is *not* bound.  (Most of our test applications like [pora](https://github.com/cloudfoundry-incubator/persi-acceptance-tests/tree/master/assets/pora) and [kitty](https://github.com/EMC-Dojo/Kitty) will start up even when no volume is available.)
   If the application starts up, then that indicates the problem is volume services related.  If you still see the same error regardless, then that indicates that the problem is elsewhere, and you should go through the [Troubleshooting Application Deployment and Health](https://docs.cloudfoundry.org/devguide/deploy-apps/troubleshoot-app-health.html) steps.
 - Simple errors may turn up in the application logs.  Try `cf logs <app name>`.  Even if there are no errors in evidence, make a note of the application guid in this log--it could be useful later.
-- If you're specifying a `mount` on the bind and you see application logs detailing that the creation of the container fails, then it's possible that you're trying to mount into a path that isn't currently allowed by AUFS. See the [note](https://github.com/cloudfoundry-incubator/nfs-volume-release#deploy-the-pora-test-app-first-by-pushing-the-source-code-to-cloudfoundry) on mount parameters.
-- If you're running a Docker application, and you see application logs detailing that the creation of the container fails, then it's possible that your application image does not inclue a `/var` directory.  Most volume drivers will default to put the mounted volume under `/var/vcap/data` so your application will crash for the same reason as the bullet above in the event that the `/var` directory does not exist in your application image. If you are using such an application, you can either modify it to include a `/var` folder, or provide a `mount` value in the `cf bind` configuration that falls under an existing root level folder in your docker image.
+- If you're specifying a `mount` on the bind and you see application logs detailing that the creation of the container fails, then it's possible that you're trying to mount into a path that isn't currently allowed by AUFS. This bug does not exist in GrootFS which is used by more recent versions of cf-deployment, but older versions using AUFS cannot support mount paths that do not already exist in the container.  Try again using a root level folder that already exists in the container. (`/home`, `/usr` or `/var` are reasonable choices.)
+- If you're running a Docker application, and you see application logs detailing that the creation of the container fails, then it's possible that your application image does not inclue a `/var` directory.  Most volume drivers will default to put the mounted volume under `/var/vcap/data` so your application will crash for the same reason as the bullet above in the event that the `/var` directory does not exist in your application image. If you are using such an application, you can either modify it to include a `/var` folder, or provide a `mount` value in the `cf bind` configuration that falls under an existing root level folder in your docker image.  Again, this issue only applies to older versions of Cloud Foundry not using GrootFS.
+- If you are specifying an NFS mount point in your service instance, note that the `share` address accepted by nfs-volume-release **should not** contain a `:` character between the host and the export.  In other words, if you would ordinarily mount `myserver.mycompany.com:/my/share` you should use `myserver.mycompany.com/my/share` when creating your nfs service instance.
 - More detailed logging is available by restaging your app with `CF_TRACE`.  To do this, type  
    ```bash
    CF_TRACE=true cf restage <app name>
@@ -38,7 +39,7 @@ If your application requires data to be mounted in a specific location, you can 
    ```bash
    cf bind-service <app name> <service name> -c '{"mount":"/path/in/container"}'
    ```
-This mount configuration is supported by all of the volume service brokers in the cloudfoundry-incubator.
+This mount configuration is supported by all of the volume service brokers in the `cloudfoundry-incubator` and `cloudfoundry` github orgs.
 
 ## When BOSH deployment fails
 
@@ -56,7 +57,7 @@ Assuming that the broker is not showing as running, you should see some type of 
 
 ### Driver deployment
 
-Diagnosing failures in driver deployment is quite similar to bosh deployed broker diagnosis as described above.  The principal difference is that the driver is deployed alongside diego, so you must use the diego deployment manifest when calling `bosh ssh` and you must ssh into the diego cell vm to gather logs.  
+Diagnosing failures in driver deployment is quite similar to bosh deployed broker diagnosis as described above.  The principal difference is that the driver is deployed alongside diego, so you must ssh into the diego-cell VM to find the driver job.  
 In a multi-cell deployment, sometimes it is necessary to try different cell vms to find the failed one, but most of the time if configuration is not right, all cells will fail in the same way.
 
 ## When the service broker cannot be registered with `cf create-service-broker`
