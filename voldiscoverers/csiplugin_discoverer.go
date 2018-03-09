@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/goshims/osshim"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/volman"
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -90,62 +90,35 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 			}
 
 			identityPlugin := p.csiShim.NewIdentityClient(conn)
-			supportedVersions, err := identityPlugin.GetSupportedVersions(context.TODO(), &csi.GetSupportedVersionsRequest{})
+
+			pluginInfo, err := identityPlugin.GetPluginInfo(context.TODO(), &csi.GetPluginInfoRequest{})
 			if err != nil {
-				logger.Error("supported-versions", err)
+				logger.Error("plugin-info-error", err)
 				continue
 			}
 
-			var compatible bool
-			for _, version := range supportedVersions.SupportedVersions {
-				if version.Major == csishim.CsiVersion.Major &&
-					version.Minor == csishim.CsiVersion.Minor &&
-					version.Patch == csishim.CsiVersion.Patch {
-					compatible = true
-				}
+			csiPluginName := pluginInfo.Name
+			existingPlugin, found := p.pluginRegistry.Plugins()[csiPluginName]
+			pluginSpec := volman.PluginSpec{
+				Name:    csiPluginName,
+				Address: csiPluginSpec.Address,
 			}
-			if compatible {
-				pluginInfo, err := identityPlugin.GetPluginInfo(context.TODO(), &csi.GetPluginInfoRequest{
-					Version: &csi.Version{
-						Major: csishim.CsiVersion.Major,
-						Minor: csishim.CsiVersion.Minor,
-						Patch: csishim.CsiVersion.Patch,
-					},
-				})
+
+			if !found || !existingPlugin.Matches(logger, pluginSpec) {
+				logger.Info("new-plugin", lager.Data{"address": pluginSpec.Address, "csi-plugin-name": csiPluginName})
+
+				nodePlugin := p.csiShim.NewNodeClient(conn)
+				_, err = identityPlugin.Probe(context.TODO(), &csi.ProbeRequest{})
 				if err != nil {
-					logger.Error("plugin-info-error", err)
+					logger.Info("probe-node-unresponsive", lager.Data{"name": csiPluginSpec.Name, "address": csiPluginSpec.Address})
 					continue
 				}
 
-				csiPluginName := pluginInfo.Name
-				existingPlugin, found := p.pluginRegistry.Plugins()[csiPluginName]
-				pluginSpec := volman.PluginSpec{
-					Name:    csiPluginName,
-					Address: csiPluginSpec.Address,
-				}
-
-				if !found || !existingPlugin.Matches(logger, pluginSpec) {
-					logger.Info("new-plugin", lager.Data{"address": pluginSpec.Address, "csi-plugin-name": csiPluginName})
-
-					nodePlugin := p.csiShim.NewNodeClient(conn)
-					_, err = nodePlugin.NodeProbe(context.TODO(), &csi.NodeProbeRequest{
-						Version: &csi.Version{
-							Major: csishim.CsiVersion.Major,
-							Minor: csishim.CsiVersion.Minor,
-							Patch: csishim.CsiVersion.Patch,
-						},
-					})
-					if err != nil {
-						logger.Info("probe-node-unresponsive", lager.Data{"name": csiPluginSpec.Name, "address": csiPluginSpec.Address})
-						continue
-					}
-
-					plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir)
-					plugins[csiPluginName] = plugin
-				} else {
-					logger.Info("discovered-plugin-ignored", lager.Data{"address": pluginSpec.Address})
-					plugins[csiPluginName] = existingPlugin
-				}
+				plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir)
+				plugins[csiPluginName] = plugin
+			} else {
+				logger.Info("discovered-plugin-ignored", lager.Data{"address": pluginSpec.Address})
+				plugins[csiPluginName] = existingPlugin
 			}
 		}
 	}
