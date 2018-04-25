@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	. "code.cloudfoundry.org/csiplugin"
+	"code.cloudfoundry.org/csiplugin/oshelper"
 	"code.cloudfoundry.org/csishim"
 	"code.cloudfoundry.org/goshims/filepathshim"
 	"code.cloudfoundry.org/goshims/grpcshim"
@@ -114,7 +115,7 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 					continue
 				}
 
-				plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir)
+				plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir, oshelper.NewOsHelper())
 				plugins[csiPluginName] = plugin
 			} else {
 				logger.Info("discovered-plugin-ignored", lager.Data{"address": pluginSpec.Address})
