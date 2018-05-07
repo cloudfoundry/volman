@@ -177,8 +177,12 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 
 	err := plugin.Unmount(logger, volumeId)
 	if err != nil {
-		logger.Error("unmount-failed", err)
 		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
+		logger.Error("unmount-failed", err)
+
+		if voldriverSafeErr, ok := err.(voldriver.SafeError); ok {
+			return volman.SafeError{SafeDescription: voldriverSafeErr.SafeDescription}
+		}
 		return err
 	}
 

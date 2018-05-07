@@ -268,7 +268,24 @@ var _ = Describe("Volman", func() {
 					fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
 					err := client.Unmount(logger, "fakedriver", volumeId)
 					Expect(err).To(HaveOccurred())
+
+					_, isVolmanSafeError := err.(volman.SafeError)
+					Expect(isVolmanSafeError).To(Equal(false))
 				})
+
+				It("should wrap voldriver safeError to volman safeError", func() {
+					voldriverSafeError := voldriver.SafeError{SafeDescription: "safe-badness"}
+					safeErrBytes, err := json.Marshal(voldriverSafeError)
+					Expect(err).NotTo(HaveOccurred())
+					unmountResponse := voldriver.ErrorResponse{Err: string(safeErrBytes[:])}
+					fakeDriver.UnmountReturns(unmountResponse)
+
+					err = client.Unmount(logger, "fakedriver", volumeId)
+					Expect(err).To(HaveOccurred())
+					_, isVolmanSafeError := err.(volman.SafeError)
+					Expect(isVolmanSafeError).To(Equal(true))
+				})
+
 				Context("with metrics", func() {
 					It("should emit unmount time on successful unmount", func() {
 						client.Unmount(logger, "fakedriver", volumeId)
