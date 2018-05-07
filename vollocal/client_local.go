@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/clock"
 	loggingclient "code.cloudfoundry.org/diego-logging-client"
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman"
 	csiplugin "code.cloudfoundry.org/volman/voldiscoverers"
 	"github.com/tedsuo/ifrit/grouper"
@@ -108,8 +109,12 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 	}
 
 	mountResponse, err := plugin.Mount(logger, volumeId, config)
+
 	if err != nil {
 		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
+		if voldriverSafeErr, ok := err.(voldriver.SafeError); ok {
+			return volman.MountResponse{}, volman.SafeError{SafeDescription: voldriverSafeErr.SafeDescription}
+		}
 		return volman.MountResponse{}, err
 	}
 

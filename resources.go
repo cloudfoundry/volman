@@ -59,3 +59,11 @@ type PluginRegistry interface {
 	Set(plugins map[string]Plugin)
 	Keys() []string
 }
+
+type SafeError struct {
+	SafeDescription string `json:"SafeDescription"`
+}
+
+func (s SafeError) Error() string {
+	return s.SafeDescription
+}

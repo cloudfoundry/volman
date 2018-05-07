@@ -1,6 +1,7 @@
 package vollocal_test
 
 import (
+	"encoding/json"
 	"time"
 
 	"fmt"
@@ -200,6 +201,22 @@ var _ = Describe("Volman", func() {
 
 					_, err := client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).To(HaveOccurred())
+					_, isVolmanSafeError := err.(volman.SafeError)
+					Expect(isVolmanSafeError).To(Equal(false))
+
+				})
+
+				It("should wrap voldriver safeError to volman safeError", func() {
+					voldriverSafeError := voldriver.SafeError{SafeDescription: "safe-badness"}
+					safeErrBytes, err := json.Marshal(voldriverSafeError)
+					Expect(err).NotTo(HaveOccurred())
+					mountResponse := voldriver.MountResponse{Err: string(safeErrBytes[:])}
+					fakeDriver.MountReturns(mountResponse)
+
+					_, err = client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+					Expect(err).To(HaveOccurred())
+					_, isVolmanSafeError := err.(volman.SafeError)
+					Expect(isVolmanSafeError).To(Equal(true))
 				})
 
 				Context("with bad mount path", func() {
