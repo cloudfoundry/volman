@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/volman/vollocal"
+	"code.cloudfoundry.org/volman/voldiscoverers"
 )
 
 type FakeDockerDriverFactory struct {
@@ -108,4 +108,4 @@ func (fake *FakeDockerDriverFactory) recordInvocation(key string, args []interfa
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ vollocal.DockerDriverFactory = new(FakeDockerDriverFactory)
+var _ voldiscoverers.DockerDriverFactory = new(FakeDockerDriverFactory)

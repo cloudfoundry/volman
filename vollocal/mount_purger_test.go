@@ -1,6 +1,7 @@
 package vollocal_test
 
 import (
+	"code.cloudfoundry.org/volman/voldiscoverers"
 	"code.cloudfoundry.org/volman/vollocal"
 
 	"time"
@@ -81,7 +82,7 @@ var _ = Describe("MountPurger", func() {
 
 			scanInterval = 1 * time.Second
 
-			dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
+			dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
 			syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
 			fakeDriver = new(voldriverfakes.FakeDriver)

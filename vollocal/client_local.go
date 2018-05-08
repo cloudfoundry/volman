@@ -13,7 +13,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman"
-	csiplugin "code.cloudfoundry.org/volman/voldiscoverers"
+	"code.cloudfoundry.org/volman/voldiscoverers"
 	"github.com/tedsuo/ifrit/grouper"
 )
 
@@ -52,8 +52,8 @@ func NewServer(logger lager.Logger, metronClient loggingclient.IngressClient, co
 	clock := clock.NewClock()
 	registry := NewPluginRegistry()
 
-	dockerDiscoverer := NewDockerDriverDiscoverer(logger, registry, config.DriverPaths)
-	csiDiscoverer := csiplugin.NewCsiPluginDiscoverer(logger, registry, config.CSIPaths, config.CSIMountRootDir)
+	dockerDiscoverer := voldiscoverers.NewDockerDriverDiscoverer(logger, registry, config.DriverPaths)
+	csiDiscoverer := voldiscoverers.NewCsiPluginDiscoverer(logger, registry, config.CSIPaths, config.CSIMountRootDir)
 
 	syncer := NewSyncer(logger, registry, []volman.Discoverer{dockerDiscoverer, csiDiscoverer}, config.SyncInterval, clock)
 	purger := NewMountPurger(logger, registry)

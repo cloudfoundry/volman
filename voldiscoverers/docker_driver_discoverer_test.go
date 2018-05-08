@@ -1,4 +1,4 @@
-package vollocal_test
+package voldiscoverers_test
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman"
+	"code.cloudfoundry.org/volman/voldiscoverers"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
 )
@@ -36,7 +37,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 		fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 
 		registry = vollocal.NewPluginRegistry()
-		discoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, fakeDriverFactory)
+		discoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 
 		fakeDriver = new(voldriverfakes.FakeMatchableDriver)
 		fakeDriver.ActivateReturns(voldriver.ActivateResponse{
@@ -111,8 +112,8 @@ var _ = Describe("Docker Driver Discoverer", func() {
 					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 					Expect(fakeDriver.ActivateCallCount()).To(Equal(2))
 				})
-				Context("when the existing driver connection is broken", func(){
-					BeforeEach(func(){
+				Context("when the existing driver connection is broken", func() {
+					BeforeEach(func() {
 						fakeDriver.ActivateReturnsOnCall(1, voldriver.ActivateResponse{Err: "badness"})
 					})
 					It("should replace the driver in the registry", func() {
@@ -169,7 +170,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 		Context("when given a compound driverspath", func() {
 			BeforeEach(func() {
-				discoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, registry, []string{defaultPluginsDirectory, secondPluginsDirectory}, fakeDriverFactory)
+				discoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, registry, []string{defaultPluginsDirectory, secondPluginsDirectory}, fakeDriverFactory)
 			})
 
 			Context("with a single driver", func() {
@@ -222,15 +223,15 @@ var _ = Describe("Docker Driver Discoverer", func() {
 		Context("when given a driver spec not in canonical form", func() {
 			var (
 				fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
-				driverFactory           vollocal.DockerDriverFactory
+				driverFactory           voldiscoverers.DockerDriverFactory
 				fakeDriver              *voldriverfakes.FakeDriver
 				driverDiscoverer        volman.Discoverer
 			)
 
 			JustBeforeEach(func() {
 				fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
-				driverFactory = vollocal.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
-				driverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, nil, []string{defaultPluginsDirectory}, driverFactory)
+				driverFactory = voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
+				driverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, nil, []string{defaultPluginsDirectory}, driverFactory)
 			})
 
 			TestCanonicalization := func(context, actual, it, expected string) {

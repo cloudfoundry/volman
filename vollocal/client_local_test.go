@@ -12,6 +12,7 @@ import (
 	mfakes "code.cloudfoundry.org/diego-logging-client/testhelpers"
 	loggregator "code.cloudfoundry.org/go-loggregator"
 	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/volman/voldiscoverers"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
 
@@ -75,7 +76,7 @@ var _ = Describe("Volman", func() {
 
 	Describe("ListDrivers", func() {
 		BeforeEach(func() {
-			dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
+			dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
 			client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 			syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
@@ -111,7 +112,7 @@ var _ = Describe("Volman", func() {
 				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
-				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
+				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				fakeDriver := new(voldriverfakes.FakeDriver)
@@ -168,7 +169,7 @@ var _ = Describe("Volman", func() {
 
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
-				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
+				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 			})
@@ -349,7 +350,7 @@ var _ = Describe("Volman", func() {
 				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				driverRegistry := vollocal.NewPluginRegistry()
-				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
+				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
@@ -387,7 +388,7 @@ var _ = Describe("Volman", func() {
 				fakeDriver.CreateReturns(voldriver.ErrorResponse{"create fails"})
 
 				driverRegistry := vollocal.NewPluginRegistry()
-				dockerDriverDiscoverer = vollocal.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
+				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
 				syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)

@@ -1,18 +1,19 @@
-package vollocal
+package voldiscoverers
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"errors"
-	"context"
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
+	"code.cloudfoundry.org/volman/voldocker"
 )
 
 type dockerDriverDiscoverer struct {
@@ -136,7 +137,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 					plugin = nil
 				}
 				if plugin != nil {
-					dockerPlugin := plugin.(*driverhttp.DockerDriverPlugin)
+					dockerPlugin := plugin.(*voldocker.DockerDriverPlugin)
 					dockerDriver := dockerPlugin.DockerDriver.(voldriver.Driver)
 					env := driverhttp.NewHttpDriverEnv(logger, context.Background())
 					resp := dockerDriver.Activate(env)
@@ -155,7 +156,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 					continue
 				}
 
-				plugin = driverhttp.NewDockerPluginWithDriver(driver)
+				plugin = voldocker.NewDockerPluginWithDriver(driver)
 
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 				resp := driver.Activate(env)

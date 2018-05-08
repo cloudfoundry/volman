@@ -1,4 +1,4 @@
-package vollocal
+package voldiscoverers
 
 import (
 	"bufio"

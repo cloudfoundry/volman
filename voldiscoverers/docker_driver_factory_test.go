@@ -1,4 +1,4 @@
-package vollocal_test
+package voldiscoverers_test
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
-	"code.cloudfoundry.org/volman/vollocal"
+	"code.cloudfoundry.org/volman/voldiscoverers"
 )
 
 var _ = Describe("DriverFactory", func() {
@@ -32,14 +32,14 @@ var _ = Describe("DriverFactory", func() {
 			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
 			localDriver             *voldriverfakes.FakeDriver
 			driver                  voldriver.Driver
-			driverFactory           vollocal.DockerDriverFactory
+			driverFactory           voldiscoverers.DockerDriverFactory
 		)
 		BeforeEach(func() {
 			driverName = "some-driver-name"
 			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 			localDriver = new(voldriverfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(localDriver, nil)
-			driverFactory = vollocal.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
+			driverFactory = voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 
 		})
 
@@ -56,7 +56,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 			It("should fail if unable to open file", func() {
 				fakeOs := new(os_fake.FakeOs)
-				driverFactory := vollocal.NewDockerDriverFactoryWithOs(fakeOs)
+				driverFactory := voldiscoverers.NewDockerDriverFactoryWithOs(fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".json")
 				Expect(err).To(HaveOccurred())
@@ -87,7 +87,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 			It("should fail if unable to open file", func() {
 				fakeOs := new(os_fake.FakeOs)
-				driverFactory := vollocal.NewDockerDriverFactoryWithOs(fakeOs)
+				driverFactory := voldiscoverers.NewDockerDriverFactoryWithOs(fakeOs)
 				fakeOs.OpenReturns(nil, fmt.Errorf("error opening file"))
 				_, err := driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".spec")
 				Expect(err).To(HaveOccurred())
@@ -95,7 +95,7 @@ var _ = Describe("DriverFactory", func() {
 
 			It("should error if driver id doesn't match found driver", func() {
 				fakeRemoteClientFactory := new(voldriverfakes.FakeRemoteClientFactory)
-				driverFactory := vollocal.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
+				driverFactory := voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 				_, err := driverFactory.DockerDriver(testLogger, "garbage", defaultPluginsDirectory, "garbage.garbage")
 				Expect(err).To(HaveOccurred())
 			})
@@ -128,14 +128,14 @@ var _ = Describe("DriverFactory", func() {
 		var (
 			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
 			fakeDriver              *voldriverfakes.FakeDriver
-			driverFactory           vollocal.DockerDriverFactory
+			driverFactory           voldiscoverers.DockerDriverFactory
 		)
 		BeforeEach(func() {
 			driverName = "some-driver-name"
 			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
 			fakeDriver = new(voldriverfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
-			driverFactory = vollocal.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
+			driverFactory = voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 
 		})
 		It("should error", func() {
