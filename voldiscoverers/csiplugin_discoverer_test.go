@@ -42,6 +42,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 		drivers                map[string]volman.Plugin
 		err                    error
 		volumesRootDir         string
+		mapfsPath              string
 	)
 
 	BeforeEach(func() {
@@ -55,13 +56,14 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 		fakeIdentityPlugin = &csi_fake.FakeIdentityClient{}
 		pluginPaths = []string{firstPluginsDirectory}
 		volumesRootDir = "/var/vcap/data/mounts"
+		mapfsPath = "/var/vcap/packages/mapfs/bin/mapfs"
 
 		logger = lagertest.NewTestLogger("csi-plugin-discoverer-test")
 		registry = vollocal.NewPluginRegistry()
 	})
 
 	JustBeforeEach(func() {
-		discoverer = voldiscoverers.NewCsiPluginDiscovererWithShims(logger, registry, pluginPaths, &filepathshim.FilepathShim{}, fakeGrpc, fakeCsi, fakeOs, volumesRootDir)
+		discoverer = voldiscoverers.NewCsiPluginDiscovererWithShims(logger, registry, pluginPaths, &filepathshim.FilepathShim{}, fakeGrpc, fakeCsi, fakeOs, volumesRootDir, mapfsPath)
 	})
 
 	Describe("#Discover", func() {
