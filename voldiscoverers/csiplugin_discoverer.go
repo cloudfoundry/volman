@@ -25,10 +25,9 @@ type csiPluginDiscoverer struct {
 	csiShim         csishim.Csi
 	osShim          osshim.Os
 	csiMountRootDir string
-	mapfsPath       string
 }
 
-func NewCsiPluginDiscoverer(logger lager.Logger, pluginRegistry volman.PluginRegistry, pluginPaths []string, csiMountRootDir string, mapfsPath string) volman.Discoverer {
+func NewCsiPluginDiscoverer(logger lager.Logger, pluginRegistry volman.PluginRegistry, pluginPaths []string, csiMountRootDir string) volman.Discoverer {
 	return &csiPluginDiscoverer{
 		logger:          logger,
 		pluginRegistry:  pluginRegistry,
@@ -38,11 +37,10 @@ func NewCsiPluginDiscoverer(logger lager.Logger, pluginRegistry volman.PluginReg
 		csiShim:         &csishim.CsiShim{},
 		osShim:          &osshim.OsShim{},
 		csiMountRootDir: csiMountRootDir,
-		mapfsPath:       mapfsPath,
 	}
 }
 
-func NewCsiPluginDiscovererWithShims(logger lager.Logger, pluginRegistry volman.PluginRegistry, pluginPaths []string, filepathShim filepathshim.Filepath, grpcShim grpcshim.Grpc, csiShim csishim.Csi, osShim osshim.Os, csiMountRootDir string, mapfsPath string) volman.Discoverer {
+func NewCsiPluginDiscovererWithShims(logger lager.Logger, pluginRegistry volman.PluginRegistry, pluginPaths []string, filepathShim filepathshim.Filepath, grpcShim grpcshim.Grpc, csiShim csishim.Csi, osShim osshim.Os, csiMountRootDir string) volman.Discoverer {
 	return &csiPluginDiscoverer{
 		logger:          logger,
 		pluginRegistry:  pluginRegistry,
@@ -52,7 +50,6 @@ func NewCsiPluginDiscovererWithShims(logger lager.Logger, pluginRegistry volman.
 		csiShim:         csiShim,
 		osShim:          osShim,
 		csiMountRootDir: csiMountRootDir,
-		mapfsPath:       mapfsPath,
 	}
 }
 
@@ -118,7 +115,7 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 					continue
 				}
 
-				plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir, oshelper.NewOsHelper(), p.mapfsPath)
+				plugin := NewCsiPlugin(nodePlugin, pluginSpec, p.grpcShim, p.csiShim, p.osShim, p.csiMountRootDir, oshelper.NewOsHelper())
 				plugins[csiPluginName] = plugin
 			} else {
 				logger.Info("discovered-plugin-ignored", lager.Data{"address": pluginSpec.Address})
