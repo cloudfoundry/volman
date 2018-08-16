@@ -14,6 +14,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"errors"
 )
 
 type csiPluginDiscoverer struct {
@@ -95,6 +96,27 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 			pluginInfo, err := identityPlugin.GetPluginInfo(context.TODO(), &csi.GetPluginInfoRequest{})
 			if err != nil {
 				logger.Error("plugin-info-error", err)
+				continue
+			}
+
+			pluginCapabilities, err := identityPlugin.GetPluginCapabilities(context.TODO(), &csi.GetPluginCapabilitiesRequest{})
+			if err != nil {
+				logger.Error("plugin-capabilities-error", err)
+				continue
+			}
+
+			pluginHasAccessibilityConstraints := false
+
+			for _, capability := range pluginCapabilities.GetCapabilities() {
+				service := capability.GetService()
+
+				if service.GetType() == csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS {
+					pluginHasAccessibilityConstraints = true
+				}
+			}
+
+			if pluginHasAccessibilityConstraints {
+				logger.Error("plugin-capability-check", errors.New("accessibility constraints unsupported"))
 				continue
 			}
 

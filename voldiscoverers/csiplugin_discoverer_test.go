@@ -134,6 +134,36 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 						Expect(conn.CloseCallCount()).To(Equal(1))
 					})
 
+					Context("when the plugin supports topology capabilities", func() {
+						BeforeEach(func() {
+							fakeIdentityPlugin.GetPluginCapabilitiesReturns(&csi.GetPluginCapabilitiesResponse{
+								Capabilities: []*csi.PluginCapability{{
+									Type: &csi.PluginCapability_Service_{
+										Service: &csi.PluginCapability_Service{
+											Type: csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS,
+										},
+									},
+								}},
+							}, nil)
+						})
+
+						It("should not discover the plugin", func() {
+							Expect(fakeIdentityPlugin.ProbeCallCount()).To(Equal(0))
+							Expect(len(drivers)).To(Equal(0))
+						})
+					})
+
+					Context("when we cannot retrieve the list of plugio capabilities", func() {
+						BeforeEach(func() {
+							fakeIdentityPlugin.GetPluginCapabilitiesReturns(&csi.GetPluginCapabilitiesResponse{}, errors.New("some-error"))
+						})
+
+						It("should not discover the plugin", func() {
+							Expect(fakeIdentityPlugin.ProbeCallCount()).To(Equal(0))
+							Expect(len(drivers)).To(Equal(0))
+						})
+					})
+
 					Context("given re-discovery", func() {
 						JustBeforeEach(func() {
 							drivers, err = discoverer.Discover(logger)
