@@ -161,7 +161,7 @@ func sendUnmountDurationMetrics(logger lager.Logger, metronClient loggingclient.
 	}
 }
 
-func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeId string) error {
+func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeId string, containerId string) error {
 	logger = logger.Session("unmount")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -179,6 +179,11 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 		logger.Error("mount-plugin-lookup-error", err)
 		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
 		return err
+	}
+
+	if plugin.GetPluginSpec().UniqueVolumeIds {
+		logger.Debug("appending-container-to-volume-id")
+		volumeId = fmt.Sprintf("%s-%s", volumeId, containerId)
 	}
 
 	err := plugin.Unmount(logger, volumeId)

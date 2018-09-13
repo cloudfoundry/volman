@@ -298,7 +298,7 @@ var _ = Describe("Volman", func() {
 
 			Context("umount", func() {
 				It("should be able to unmount", func() {
-					err := client.Unmount(logger, fakeDriverId, volumeId)
+					err := client.Unmount(logger, fakeDriverId, volumeId, "")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
 					Expect(fakeDriver.RemoveCallCount()).To(Equal(0))
@@ -306,7 +306,7 @@ var _ = Describe("Volman", func() {
 
 				It("should not be able to unmount when driver unmount fails", func() {
 					fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
-					err := client.Unmount(logger, fakeDriverId, volumeId)
+					err := client.Unmount(logger, fakeDriverId, volumeId, "")
 					Expect(err).To(HaveOccurred())
 
 					_, isVolmanSafeError := err.(volman.SafeError)
@@ -320,7 +320,7 @@ var _ = Describe("Volman", func() {
 					unmountResponse := voldriver.ErrorResponse{Err: string(safeErrBytes[:])}
 					fakeDriver.UnmountReturns(unmountResponse)
 
-					err = client.Unmount(logger, fakeDriverId, volumeId)
+					err = client.Unmount(logger, fakeDriverId, volumeId, "")
 					Expect(err).To(HaveOccurred())
 					_, isVolmanSafeError := err.(volman.SafeError)
 					Expect(isVolmanSafeError).To(Equal(true))
@@ -328,7 +328,7 @@ var _ = Describe("Volman", func() {
 
 				Context("with metrics", func() {
 					It("should emit unmount time on successful unmount", func() {
-						client.Unmount(logger, fakeDriverId, volumeId)
+						client.Unmount(logger, fakeDriverId, volumeId, "")
 
 						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanUnmountDuration", Not(BeZero())))
 						Eventually(durationMetricMap).Should(HaveKeyWithValue(fmt.Sprintf("VolmanUnmountDurationFor%s", fakeDriverId), Not(BeZero())))
@@ -337,10 +337,25 @@ var _ = Describe("Volman", func() {
 					It("should increment error count on unmount failure", func() {
 						fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
 
-						client.Unmount(logger, fakeDriverId, volumeId)
+						client.Unmount(logger, fakeDriverId, volumeId, "")
 						Expect(counterMetricMap).Should(HaveKeyWithValue("VolmanUnmountErrors", 1))
 					})
+				})
 
+				Context("when UniqueVolumeIds is set", func() {
+					BeforeEach(func() {
+						driverSpecExtension = "json"
+						driverSpecContents = []byte(fmt.Sprintf("{\"Addr\":\"http://0.0.0.0:%d\",\"UniqueVolumeIds\": true}", fakeDriver))
+					})
+
+					It("should append the container ID to the volume ID passed to the plugin's Unmount() call", func() {
+						err := client.Unmount(logger, fakeDriverId, volumeId, "some-container-id")
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
+						_, unmountRequest := fakeDriver.UnmountArgsForCall(0)
+						Expect(unmountRequest.Name).To(Equal(volumeId + "-some-container-id"))
+					})
 				})
 			})
 
@@ -355,7 +370,7 @@ var _ = Describe("Volman", func() {
 				})
 
 				It("should not be able to unmount", func() {
-					err := client.Unmount(logger, fakeDriverId, "fake-volume")
+					err := client.Unmount(logger, fakeDriverId, "fake-volume", "")
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -371,7 +386,7 @@ var _ = Describe("Volman", func() {
 				})
 
 				It("should not be able to unmount", func() {
-					err := client.Unmount(logger, fakeDriverId, "fake-volume")
+					err := client.Unmount(logger, fakeDriverId, "fake-volume", "")
 					Expect(err).To(HaveOccurred())
 				})
 			})

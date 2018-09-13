@@ -7,5 +7,5 @@ import "code.cloudfoundry.org/lager"
 type Manager interface {
 	ListDrivers(logger lager.Logger) (ListDriversResponse, error)
 	Mount(logger lager.Logger, driverId string, volumeId string, containerId string, config map[string]interface{}) (MountResponse, error)
-	Unmount(logger lager.Logger, driverId string, volumeId string) error
+	Unmount(logger lager.Logger, driverId string, volumeId string, containerId string) error
 }
