@@ -60,15 +60,21 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 		Context("with a single driver", func() {
 			var (
-				drivers map[string]volman.Plugin
-				err     error
+				drivers             map[string]volman.Plugin
+				err                 error
+				driverSpecContents  []byte
+				driverSpecExtension string
 			)
+
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
-				Expect(err).NotTo(HaveOccurred())
+				driverSpecContents = []byte("http://0.0.0.0:8080")
+				driverSpecExtension = "spec"
 			})
 
 			JustBeforeEach(func() {
+				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, driverSpecExtension, driverSpecContents)
+				Expect(err).NotTo(HaveOccurred())
+
 				drivers, err = discoverer.Discover(logger)
 				registry.Set(drivers)
 			})
@@ -98,9 +104,6 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				JustBeforeEach(func() {
 					Expect(len(drivers)).To(Equal(1))
 					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
-
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
-					Expect(err).NotTo(HaveOccurred())
 
 					drivers, err = discoverer.Discover(logger)
 					registry.Set(drivers)
@@ -133,9 +136,6 @@ var _ = Describe("Docker Driver Discoverer", func() {
 					Expect(len(drivers)).To(Equal(1))
 					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
-					Expect(err).NotTo(HaveOccurred())
-
 					drivers, err = discoverer.Discover(logger)
 					registry.Set(drivers)
 				})
@@ -145,6 +145,23 @@ var _ = Describe("Docker Driver Discoverer", func() {
 					Expect(len(drivers)).To(Equal(1))
 					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(2))
 					Expect(fakeDriver.ActivateCallCount()).To(Equal(2))
+				})
+			})
+
+			Context("when the driver opts in to unique volume IDs", func() {
+				BeforeEach(func() {
+					driverSpecContents = []byte("{\"Addr\":\"http://0.0.0.0:8080\",\"UniqueVolumeIds\": true}")
+					driverSpecExtension = "json"
+				})
+
+				It("discovers the driver and sets the flag on the plugin state", func() {
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(len(drivers)).To(Equal(1))
+					plugin := drivers[driverName]
+					Expect(plugin.GetPluginSpec().UniqueVolumeIds).To(BeTrue())
+
+					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 				})
 			})
 		})

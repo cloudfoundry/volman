@@ -61,6 +61,15 @@ type FakePlugin struct {
 	matchesReturnsOnCall map[int]struct {
 		result1 bool
 	}
+	GetPluginSpecStub        func() volman.PluginSpec
+	getPluginSpecMutex       sync.RWMutex
+	getPluginSpecArgsForCall []struct{}
+	getPluginSpecReturns     struct {
+		result1 volman.PluginSpec
+	}
+	getPluginSpecReturnsOnCall map[int]struct {
+		result1 volman.PluginSpec
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -267,6 +276,46 @@ func (fake *FakePlugin) MatchesReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
+func (fake *FakePlugin) GetPluginSpec() volman.PluginSpec {
+	fake.getPluginSpecMutex.Lock()
+	ret, specificReturn := fake.getPluginSpecReturnsOnCall[len(fake.getPluginSpecArgsForCall)]
+	fake.getPluginSpecArgsForCall = append(fake.getPluginSpecArgsForCall, struct{}{})
+	fake.recordInvocation("GetPluginSpec", []interface{}{})
+	fake.getPluginSpecMutex.Unlock()
+	if fake.GetPluginSpecStub != nil {
+		return fake.GetPluginSpecStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.getPluginSpecReturns.result1
+}
+
+func (fake *FakePlugin) GetPluginSpecCallCount() int {
+	fake.getPluginSpecMutex.RLock()
+	defer fake.getPluginSpecMutex.RUnlock()
+	return len(fake.getPluginSpecArgsForCall)
+}
+
+func (fake *FakePlugin) GetPluginSpecReturns(result1 volman.PluginSpec) {
+	fake.GetPluginSpecStub = nil
+	fake.getPluginSpecReturns = struct {
+		result1 volman.PluginSpec
+	}{result1}
+}
+
+func (fake *FakePlugin) GetPluginSpecReturnsOnCall(i int, result1 volman.PluginSpec) {
+	fake.GetPluginSpecStub = nil
+	if fake.getPluginSpecReturnsOnCall == nil {
+		fake.getPluginSpecReturnsOnCall = make(map[int]struct {
+			result1 volman.PluginSpec
+		})
+	}
+	fake.getPluginSpecReturnsOnCall[i] = struct {
+		result1 volman.PluginSpec
+	}{result1}
+}
+
 func (fake *FakePlugin) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -278,6 +327,8 @@ func (fake *FakePlugin) Invocations() map[string][][]interface{} {
 	defer fake.unmountMutex.RUnlock()
 	fake.matchesMutex.RLock()
 	defer fake.matchesMutex.RUnlock()
+	fake.getPluginSpecMutex.RLock()
+	defer fake.getPluginSpecMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -28,7 +28,7 @@ var _ = Describe("DockerDriverMounter", func() {
 		volumeId = "fake-volume"
 		logger = lagertest.NewTestLogger("docker-mounter-test")
 		fakeVoldriver = &voldriverfakes.FakeDriver{}
-		dockerPlugin = voldocker.NewDockerPluginWithDriver(fakeVoldriver)
+		dockerPlugin = voldocker.NewDockerPluginWithDriver(fakeVoldriver, volman.PluginSpec{})
 	})
 
 	Describe("Mount", func() {

@@ -2,6 +2,7 @@ package vollocal
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/tedsuo/ifrit"
@@ -87,7 +88,7 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	return volman.ListDriversResponse{Drivers: infoResponses}, nil
 }
 
-func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
+func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId string, containerId string, config map[string]interface{}) (volman.MountResponse, error) {
 	logger = logger.Session("mount")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -98,7 +99,7 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 		sendMountDurationMetrics(logger, client.metronClient, time.Since(mountStart), pluginId)
 	}()
 
-	logger.Debug("plugin-mounting-volume", lager.Data{"pluginId": pluginId, "volumeId": volumeId})
+	logger.Debug("plugin-mounting-volume", lager.Data{"pluginId": pluginId, "volumeId": volumeId, "containerId": containerId})
 
 	plugin, found := client.pluginRegistry.Plugin(pluginId)
 	if !found {
@@ -106,6 +107,11 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 		logger.Error("mount-plugin-lookup-error", err)
 		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
 		return volman.MountResponse{}, err
+	}
+
+	if plugin.GetPluginSpec().UniqueVolumeIds {
+		logger.Debug("appending-container-to-volume-id")
+		volumeId = fmt.Sprintf("%s-%s", volumeId, containerId)
 	}
 
 	mountResponse, err := plugin.Mount(logger, volumeId, config)

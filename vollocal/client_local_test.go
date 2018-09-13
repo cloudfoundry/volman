@@ -2,6 +2,7 @@ package vollocal_test
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 
 	"fmt"
@@ -26,6 +27,17 @@ import (
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
+var fakeDriverId = 0
+var mutex = &sync.Mutex{}
+
+func GetNextFakeDriverId() string {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	fakeDriverId = fakeDriverId + 1
+	return fmt.Sprintf("fakedriver-%d", fakeDriverId)
+}
+
 var _ = Describe("Volman", func() {
 	var (
 		logger *lagertest.TestLogger
@@ -43,6 +55,8 @@ var _ = Describe("Volman", func() {
 		counterMetricMap       map[string]int
 
 		process ifrit.Process
+
+		fakeDriverId string
 	)
 
 	BeforeEach(func() {
@@ -72,6 +86,7 @@ var _ = Describe("Volman", func() {
 			return nil
 		}
 
+		fakeDriverId = GetNextFakeDriverId()
 	})
 
 	Describe("ListDrivers", func() {
@@ -109,7 +124,7 @@ var _ = Describe("Volman", func() {
 
 		Context("has driver in location", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
+				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, fakeDriverId, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
 				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
@@ -141,7 +156,7 @@ var _ = Describe("Volman", func() {
 					drivers, err := client.ListDrivers(logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(drivers.Drivers)).ToNot(Equal(0))
-					Expect(drivers.Drivers[0].Name).To(Equal("fakedriver"))
+					Expect(drivers.Drivers[0].Name).To(Equal(fakeDriverId))
 				})
 
 			})
@@ -156,16 +171,20 @@ var _ = Describe("Volman", func() {
 			volumeId = "fake-volume"
 		})
 		Context("when given a driver", func() {
+			var (
+				driverSpecExtension string
+				driverSpecContents  []byte
+			)
 			BeforeEach(func() {
 				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 				fakeDriver = new(voldriverfakes.FakeDriver)
 				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
 				drivers := make(map[string]voldriver.Driver)
-				drivers["fakedriver"] = fakeDriver
+				drivers[fakeDriverId] = fakeDriver
 
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte(fmt.Sprintf("http://0.0.0.0:%d", fakeDriver)))
-				Expect(err).NotTo(HaveOccurred())
+				driverSpecExtension = "spec"
+				driverSpecContents = []byte("http://0.0.0.0:8080")
 
 				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
@@ -175,6 +194,9 @@ var _ = Describe("Volman", func() {
 			})
 
 			JustBeforeEach(func() {
+				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, fakeDriverId, driverSpecExtension, driverSpecContents)
+				Expect(err).NotTo(HaveOccurred())
+
 				syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
 				process = ginkgomon.Invoke(syncer.Runner())
 			})
@@ -190,7 +212,7 @@ var _ = Describe("Volman", func() {
 				})
 
 				It("should be able to mount without warning", func() {
-					mountPath, err := client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+					mountPath, err := client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(mountPath).NotTo(Equal(""))
 					Expect(logger.Buffer()).NotTo(gbytes.Say("Invalid or dangerous mountpath"))
@@ -200,7 +222,7 @@ var _ = Describe("Volman", func() {
 					mountResponse := voldriver.MountResponse{Err: "an error"}
 					fakeDriver.MountReturns(mountResponse)
 
-					_, err := client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+					_, err := client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{})
 					Expect(err).To(HaveOccurred())
 					_, isVolmanSafeError := err.(volman.SafeError)
 					Expect(isVolmanSafeError).To(Equal(false))
@@ -214,7 +236,7 @@ var _ = Describe("Volman", func() {
 					mountResponse := voldriver.MountResponse{Err: string(safeErrBytes[:])}
 					fakeDriver.MountReturns(mountResponse)
 
-					_, err = client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+					_, err = client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{})
 					Expect(err).To(HaveOccurred())
 					_, isVolmanSafeError := err.(volman.SafeError)
 					Expect(isVolmanSafeError).To(Equal(true))
@@ -228,7 +250,7 @@ var _ = Describe("Volman", func() {
 					})
 
 					JustBeforeEach(func() {
-						_, err = client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+						_, err = client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{})
 					})
 
 					It("should return a warning in the log", func() {
@@ -240,10 +262,10 @@ var _ = Describe("Volman", func() {
 				Context("with metrics", func() {
 					It("should emit mount time on successful mount", func() {
 
-						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+						client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{"volume_id": volumeId})
 
 						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanMountDuration", Not(BeZero())))
-						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanMountDurationForfakedriver", Not(BeZero())))
+						Eventually(durationMetricMap).Should(HaveKeyWithValue(fmt.Sprintf("VolmanMountDurationFor%s", fakeDriverId), Not(BeZero())))
 					})
 
 					It("should increment error count on mount failure", func() {
@@ -251,15 +273,32 @@ var _ = Describe("Volman", func() {
 						mountResponse := voldriver.MountResponse{Err: "an error"}
 						fakeDriver.MountReturns(mountResponse)
 
-						client.Mount(logger, "fakedriver", volumeId, map[string]interface{}{"volume_id": volumeId})
+						client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{"volume_id": volumeId})
 						Expect(counterMetricMap).Should(HaveKeyWithValue("VolmanMountErrors", 1))
+					})
+				})
+
+				Context("when UniqueVolumeIds is set", func() {
+					BeforeEach(func() {
+						driverSpecExtension = "json"
+						driverSpecContents = []byte(fmt.Sprintf("{\"Addr\":\"http://0.0.0.0:%d\",\"UniqueVolumeIds\": true}", fakeDriver))
+					})
+
+					It("should append the container ID to the volume ID passed to the plugin's Mount() call", func() {
+						mountResponse, err := client.Mount(logger, fakeDriverId, volumeId, "some-container-id", map[string]interface{}{})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(mountResponse.Path).To(Equal("/var/vcap/data/mounts/" + volumeId))
+
+						Expect(fakeDriver.MountCallCount()).To(Equal(1))
+						_, mountRequest := fakeDriver.MountArgsForCall(0)
+						Expect(mountRequest.Name).To(Equal(volumeId + "-some-container-id"))
 					})
 				})
 			})
 
 			Context("umount", func() {
 				It("should be able to unmount", func() {
-					err := client.Unmount(logger, "fakedriver", volumeId)
+					err := client.Unmount(logger, fakeDriverId, volumeId)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
 					Expect(fakeDriver.RemoveCallCount()).To(Equal(0))
@@ -267,7 +306,7 @@ var _ = Describe("Volman", func() {
 
 				It("should not be able to unmount when driver unmount fails", func() {
 					fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
-					err := client.Unmount(logger, "fakedriver", volumeId)
+					err := client.Unmount(logger, fakeDriverId, volumeId)
 					Expect(err).To(HaveOccurred())
 
 					_, isVolmanSafeError := err.(volman.SafeError)
@@ -281,7 +320,7 @@ var _ = Describe("Volman", func() {
 					unmountResponse := voldriver.ErrorResponse{Err: string(safeErrBytes[:])}
 					fakeDriver.UnmountReturns(unmountResponse)
 
-					err = client.Unmount(logger, "fakedriver", volumeId)
+					err = client.Unmount(logger, fakeDriverId, volumeId)
 					Expect(err).To(HaveOccurred())
 					_, isVolmanSafeError := err.(volman.SafeError)
 					Expect(isVolmanSafeError).To(Equal(true))
@@ -289,16 +328,16 @@ var _ = Describe("Volman", func() {
 
 				Context("with metrics", func() {
 					It("should emit unmount time on successful unmount", func() {
-						client.Unmount(logger, "fakedriver", volumeId)
+						client.Unmount(logger, fakeDriverId, volumeId)
 
 						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanUnmountDuration", Not(BeZero())))
-						Eventually(durationMetricMap).Should(HaveKeyWithValue("VolmanUnmountDurationForfakedriver", Not(BeZero())))
+						Eventually(durationMetricMap).Should(HaveKeyWithValue(fmt.Sprintf("VolmanUnmountDurationFor%s", fakeDriverId), Not(BeZero())))
 					})
 
 					It("should increment error count on unmount failure", func() {
 						fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
 
-						client.Unmount(logger, "fakedriver", volumeId)
+						client.Unmount(logger, fakeDriverId, volumeId)
 						Expect(counterMetricMap).Should(HaveKeyWithValue("VolmanUnmountErrors", 1))
 					})
 
@@ -311,12 +350,12 @@ var _ = Describe("Volman", func() {
 				})
 
 				It("should not be able to mount", func() {
-					_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
+					_, err := client.Mount(logger, fakeDriverId, "fake-volume", "", map[string]interface{}{})
 					Expect(err).To(HaveOccurred())
 				})
 
 				It("should not be able to unmount", func() {
-					err := client.Unmount(logger, "fakedriver", "fake-volume")
+					err := client.Unmount(logger, fakeDriverId, "fake-volume")
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -327,12 +366,12 @@ var _ = Describe("Volman", func() {
 				})
 
 				It("should not be able to mount", func() {
-					_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
+					_, err := client.Mount(logger, fakeDriverId, "fake-volume", "", map[string]interface{}{})
 					Expect(err).To(HaveOccurred())
 				})
 
 				It("should not be able to unmount", func() {
-					err := client.Unmount(logger, "fakedriver", "fake-volume")
+					err := client.Unmount(logger, fakeDriverId, "fake-volume")
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -371,7 +410,7 @@ var _ = Describe("Volman", func() {
 			})
 
 			It("should not be able to mount", func() {
-				_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
+				_, err := client.Mount(logger, fakeDriverId, "fake-volume", "", map[string]interface{}{})
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -400,7 +439,7 @@ var _ = Describe("Volman", func() {
 			})
 
 			It("should not be able to mount", func() {
-				_, err := client.Mount(logger, "fakedriver", "fake-volume", map[string]interface{}{"volume_id": "fake-volume"})
+				_, err := client.Mount(logger, fakeDriverId, "fake-volume", "", map[string]interface{}{})
 				Expect(err).To(HaveOccurred())
 			})
 

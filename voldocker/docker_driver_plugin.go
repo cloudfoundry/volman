@@ -15,11 +15,13 @@ import (
 
 type DockerDriverPlugin struct {
 	DockerDriver interface{}
+	PluginSpec   volman.PluginSpec
 }
 
-func NewDockerPluginWithDriver(driver voldriver.Driver) volman.Plugin {
+func NewDockerPluginWithDriver(driver voldriver.Driver, pluginSpec volman.PluginSpec) volman.Plugin {
 	return &DockerDriverPlugin{
 		DockerDriver: driver,
+		PluginSpec:   pluginSpec,
 	}
 }
 
@@ -123,4 +125,8 @@ func (d *DockerDriverPlugin) Unmount(logger lager.Logger, volumeId string) error
 		return err
 	}
 	return nil
+}
+
+func (d *DockerDriverPlugin) GetPluginSpec() volman.PluginSpec {
+	return d.PluginSpec
 }

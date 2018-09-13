@@ -15,7 +15,7 @@ import (
 	"code.cloudfoundry.org/voldriver/driverhttp"
 )
 
-//go:generate counterfeiter -o ../volmanfakes/fake_driver_factory.go . DriverFactory
+//go:generate counterfeiter -o ../volmanfakes/fake_docker_driver_factory.go . DockerDriverFactory
 
 // DriverFactories are responsible for instantiating remote client implementations of the voldriver.Driver interface.
 type DockerDriverFactory interface {

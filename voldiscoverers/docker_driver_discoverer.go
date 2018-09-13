@@ -113,25 +113,27 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 
 		_, ok = endpoints[specName]
 		if !ok {
+			driverSpec, err := voldriver.ReadDriverSpec(logger, specName, driverPath, specFile)
+			if err != nil {
+				logger.Error("error-reading-driver-spec", err)
+				continue
+			}
+			pluginSpec := volman.PluginSpec{
+				Name:            driverSpec.Name,
+				Address:         driverSpec.Address,
+				UniqueVolumeIds: driverSpec.UniqueVolumeIds,
+			}
+			if driverSpec.TLSConfig != nil {
+				pluginSpec.TLSConfig = &volman.TLSConfig{
+					InsecureSkipVerify: driverSpec.TLSConfig.InsecureSkipVerify,
+					CAFile:             driverSpec.TLSConfig.CAFile,
+					CertFile:           driverSpec.TLSConfig.CertFile,
+					KeyFile:            driverSpec.TLSConfig.KeyFile,
+				}
+			}
+
 			plugin, ok = existing[specName]
 			if ok == true {
-				driverSpec, err := voldriver.ReadDriverSpec(logger, specName, driverPath, specFile)
-				if err != nil {
-					logger.Error("error-reading-driver-spec", err)
-					continue
-				}
-				pluginSpec := volman.PluginSpec{
-					Name:    driverSpec.Name,
-					Address: driverSpec.Address,
-				}
-				if driverSpec.TLSConfig != nil {
-					pluginSpec.TLSConfig = &volman.TLSConfig{
-						InsecureSkipVerify: driverSpec.TLSConfig.InsecureSkipVerify,
-						CAFile:             driverSpec.TLSConfig.CAFile,
-						CertFile:           driverSpec.TLSConfig.CertFile,
-						KeyFile:            driverSpec.TLSConfig.KeyFile,
-					}
-				}
 				if !plugin.Matches(logger, pluginSpec) {
 					logger.Info("existing-driver-mismatch", lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
 					plugin = nil
@@ -156,7 +158,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 					continue
 				}
 
-				plugin = voldocker.NewDockerPluginWithDriver(driver)
+				plugin = voldocker.NewDockerPluginWithDriver(driver, pluginSpec)
 
 				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 				resp := driver.Activate(env)

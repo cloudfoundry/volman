@@ -10,6 +10,7 @@ type Plugin interface {
 	Mount(logger lager.Logger, volumeId string, config map[string]interface{}) (MountResponse, error)
 	Unmount(logger lager.Logger, volumeId string) error
 	Matches(lager.Logger, PluginSpec) bool
+	GetPluginSpec() PluginSpec
 }
 
 //go:generate counterfeiter -o volmanfakes/fake_discoverer.go . Discoverer
@@ -41,9 +42,10 @@ type UnmountRequest struct {
 }
 
 type PluginSpec struct {
-	Name      string     `json:"Name"`
-	Address   string     `json:"Addr"`
-	TLSConfig *TLSConfig `json:"TLSConfig"`
+	Name            string     `json:"Name"`
+	Address         string     `json:"Addr"`
+	TLSConfig       *TLSConfig `json:"TLSConfig"`
+	UniqueVolumeIds bool
 }
 
 type TLSConfig struct {
