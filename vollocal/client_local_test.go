@@ -20,6 +20,7 @@ import (
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	voldriverutils "code.cloudfoundry.org/voldriver/utils"
 	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman"
 	"github.com/onsi/gomega/gbytes"
@@ -291,7 +292,8 @@ var _ = Describe("Volman", func() {
 
 						Expect(fakeDriver.MountCallCount()).To(Equal(1))
 						_, mountRequest := fakeDriver.MountArgsForCall(0)
-						Expect(mountRequest.Name).To(Equal(volumeId + "-some-container-id"))
+						uniqueVolId := voldriverutils.NewVolumeId(volumeId, "some-container-id")
+						Expect(mountRequest.Name).To(Equal(uniqueVolId.GetUniqueId()))
 					})
 				})
 			})
@@ -354,7 +356,8 @@ var _ = Describe("Volman", func() {
 
 						Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
 						_, unmountRequest := fakeDriver.UnmountArgsForCall(0)
-						Expect(unmountRequest.Name).To(Equal(volumeId + "-some-container-id"))
+						uniqueVolId := voldriverutils.NewVolumeId(volumeId, "some-container-id")
+						Expect(unmountRequest.Name).To(Equal(uniqueVolId.GetUniqueId()))
 					})
 				})
 			})

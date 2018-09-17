@@ -2,7 +2,6 @@ package vollocal
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/tedsuo/ifrit"
@@ -13,6 +12,7 @@ import (
 	loggingclient "code.cloudfoundry.org/diego-logging-client"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
+	voldriverutils "code.cloudfoundry.org/voldriver/utils"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/voldiscoverers"
 	"github.com/tedsuo/ifrit/grouper"
@@ -110,8 +110,9 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 	}
 
 	if plugin.GetPluginSpec().UniqueVolumeIds {
-		logger.Debug("appending-container-to-volume-id")
-		volumeId = fmt.Sprintf("%s-%s", volumeId, containerId)
+		logger.Debug("generating-unique-volume-id")
+		uniqueVolId := voldriverutils.NewVolumeId(volumeId, containerId)
+		volumeId = uniqueVolId.GetUniqueId()
 	}
 
 	mountResponse, err := plugin.Mount(logger, volumeId, config)
@@ -182,8 +183,9 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 	}
 
 	if plugin.GetPluginSpec().UniqueVolumeIds {
-		logger.Debug("appending-container-to-volume-id")
-		volumeId = fmt.Sprintf("%s-%s", volumeId, containerId)
+		logger.Debug("generating-unique-volume-id")
+		uniqueVolId := voldriverutils.NewVolumeId(volumeId, containerId)
+		volumeId = uniqueVolId.GetUniqueId()
 	}
 
 	err := plugin.Unmount(logger, volumeId)
