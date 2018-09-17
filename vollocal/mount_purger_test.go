@@ -32,9 +32,6 @@ var _ = Describe("MountPurger", func() {
 		fakeDriver        *voldriverfakes.FakeDriver
 		fakeClock         clock.Clock
 
-		durationMetricMap map[string]time.Duration
-		counterMetricMap  map[string]int
-
 		scanInterval time.Duration
 
 		process ifrit.Process
@@ -74,9 +71,6 @@ var _ = Describe("MountPurger", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
-
-			durationMetricMap = make(map[string]time.Duration)
-			counterMetricMap = make(map[string]int)
 
 			fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
 

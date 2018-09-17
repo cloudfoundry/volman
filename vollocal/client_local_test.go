@@ -281,7 +281,7 @@ var _ = Describe("Volman", func() {
 				Context("when UniqueVolumeIds is set", func() {
 					BeforeEach(func() {
 						driverSpecExtension = "json"
-						driverSpecContents = []byte(fmt.Sprintf("{\"Addr\":\"http://0.0.0.0:%d\",\"UniqueVolumeIds\": true}", fakeDriver))
+						driverSpecContents = []byte(`{"Addr":"http://0.0.0.0:8080","UniqueVolumeIds": true}`)
 					})
 
 					It("should append the container ID to the volume ID passed to the plugin's Mount() call", func() {
@@ -345,7 +345,7 @@ var _ = Describe("Volman", func() {
 				Context("when UniqueVolumeIds is set", func() {
 					BeforeEach(func() {
 						driverSpecExtension = "json"
-						driverSpecContents = []byte(fmt.Sprintf("{\"Addr\":\"http://0.0.0.0:%d\",\"UniqueVolumeIds\": true}", fakeDriver))
+						driverSpecContents = []byte(`{"Addr":"http://0.0.0.0:8080","UniqueVolumeIds": true}`)
 					})
 
 					It("should append the container ID to the volume ID passed to the plugin's Unmount() call", func() {
