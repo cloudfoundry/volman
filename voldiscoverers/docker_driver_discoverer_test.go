@@ -167,7 +167,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 		})
 
 		Context("when given a simple driverspath", func() {
-			Context("with hetergeneous driver specifications", func() {
+			Context("with hetergeneous json+spec driver specifications", func() {
 				BeforeEach(func() {
 					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 					Expect(err).NotTo(HaveOccurred())
@@ -175,7 +175,24 @@ var _ = Describe("Docker Driver Discoverer", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("should preferentially select spec over json specification", func() {
+				It("should preferentially select json over spec specification", func() {
+					drivers, err := discoverer.Discover(logger)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(drivers)).To(Equal(1))
+					_, _, _, specFileName := fakeDriverFactory.DockerDriverArgsForCall(0)
+					Expect(specFileName).To(Equal(driverName + ".json"))
+				})
+			})
+
+			Context("with hetergeneous spec+sock driver specifications", func() {
+				BeforeEach(func() {
+					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "sock", []byte("unix:///some.sock"))
+					Expect(err).NotTo(HaveOccurred())
+					err = voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should preferentially select spec over sock specification", func() {
 					drivers, err := discoverer.Discover(logger)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(drivers)).To(Equal(1))

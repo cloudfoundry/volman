@@ -53,8 +53,8 @@ func (r *dockerDriverDiscoverer) Discover(logger lager.Logger) (map[string]volma
 	endpoints := make(map[string]volman.Plugin)
 
 	for _, driverPath := range r.driverPaths {
-		//precedence order: sock -> spec -> json
-		spec_types := [3]string{"sock", "spec", "json"}
+		//precedence order: json -> spec -> sock
+		spec_types := [3]string{"json", "spec", "sock"}
 		for _, spec_type := range spec_types {
 			matchingDriverSpecs, err := r.getMatchingDriverSpecs(logger, driverPath, spec_type)
 
