@@ -2,17 +2,27 @@
 package volmanfakes
 
 import (
-	"sync"
+	sync "sync"
 
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/volman"
+	lager "code.cloudfoundry.org/lager"
+	volman "code.cloudfoundry.org/volman"
 )
 
 type FakePlugin struct {
-	ListVolumesStub        func(logger lager.Logger) ([]string, error)
+	GetPluginSpecStub        func() volman.PluginSpec
+	getPluginSpecMutex       sync.RWMutex
+	getPluginSpecArgsForCall []struct {
+	}
+	getPluginSpecReturns struct {
+		result1 volman.PluginSpec
+	}
+	getPluginSpecReturnsOnCall map[int]struct {
+		result1 volman.PluginSpec
+	}
+	ListVolumesStub        func(lager.Logger) ([]string, error)
 	listVolumesMutex       sync.RWMutex
 	listVolumesArgsForCall []struct {
-		logger lager.Logger
+		arg1 lager.Logger
 	}
 	listVolumesReturns struct {
 		result1 []string
@@ -21,33 +31,6 @@ type FakePlugin struct {
 	listVolumesReturnsOnCall map[int]struct {
 		result1 []string
 		result2 error
-	}
-	MountStub        func(logger lager.Logger, volumeId string, config map[string]interface{}) (volman.MountResponse, error)
-	mountMutex       sync.RWMutex
-	mountArgsForCall []struct {
-		logger   lager.Logger
-		volumeId string
-		config   map[string]interface{}
-	}
-	mountReturns struct {
-		result1 volman.MountResponse
-		result2 error
-	}
-	mountReturnsOnCall map[int]struct {
-		result1 volman.MountResponse
-		result2 error
-	}
-	UnmountStub        func(logger lager.Logger, volumeId string) error
-	unmountMutex       sync.RWMutex
-	unmountArgsForCall []struct {
-		logger   lager.Logger
-		volumeId string
-	}
-	unmountReturns struct {
-		result1 error
-	}
-	unmountReturnsOnCall map[int]struct {
-		result1 error
 	}
 	MatchesStub        func(lager.Logger, volman.PluginSpec) bool
 	matchesMutex       sync.RWMutex
@@ -61,34 +44,105 @@ type FakePlugin struct {
 	matchesReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	GetPluginSpecStub        func() volman.PluginSpec
-	getPluginSpecMutex       sync.RWMutex
-	getPluginSpecArgsForCall []struct{}
-	getPluginSpecReturns     struct {
-		result1 volman.PluginSpec
+	MountStub        func(lager.Logger, string, map[string]interface{}) (volman.MountResponse, error)
+	mountMutex       sync.RWMutex
+	mountArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 map[string]interface{}
 	}
-	getPluginSpecReturnsOnCall map[int]struct {
-		result1 volman.PluginSpec
+	mountReturns struct {
+		result1 volman.MountResponse
+		result2 error
+	}
+	mountReturnsOnCall map[int]struct {
+		result1 volman.MountResponse
+		result2 error
+	}
+	UnmountStub        func(lager.Logger, string) error
+	unmountMutex       sync.RWMutex
+	unmountArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	unmountReturns struct {
+		result1 error
+	}
+	unmountReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePlugin) ListVolumes(logger lager.Logger) ([]string, error) {
+func (fake *FakePlugin) GetPluginSpec() volman.PluginSpec {
+	fake.getPluginSpecMutex.Lock()
+	ret, specificReturn := fake.getPluginSpecReturnsOnCall[len(fake.getPluginSpecArgsForCall)]
+	fake.getPluginSpecArgsForCall = append(fake.getPluginSpecArgsForCall, struct {
+	}{})
+	fake.recordInvocation("GetPluginSpec", []interface{}{})
+	fake.getPluginSpecMutex.Unlock()
+	if fake.GetPluginSpecStub != nil {
+		return fake.GetPluginSpecStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.getPluginSpecReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakePlugin) GetPluginSpecCallCount() int {
+	fake.getPluginSpecMutex.RLock()
+	defer fake.getPluginSpecMutex.RUnlock()
+	return len(fake.getPluginSpecArgsForCall)
+}
+
+func (fake *FakePlugin) GetPluginSpecCalls(stub func() volman.PluginSpec) {
+	fake.getPluginSpecMutex.Lock()
+	defer fake.getPluginSpecMutex.Unlock()
+	fake.GetPluginSpecStub = stub
+}
+
+func (fake *FakePlugin) GetPluginSpecReturns(result1 volman.PluginSpec) {
+	fake.getPluginSpecMutex.Lock()
+	defer fake.getPluginSpecMutex.Unlock()
+	fake.GetPluginSpecStub = nil
+	fake.getPluginSpecReturns = struct {
+		result1 volman.PluginSpec
+	}{result1}
+}
+
+func (fake *FakePlugin) GetPluginSpecReturnsOnCall(i int, result1 volman.PluginSpec) {
+	fake.getPluginSpecMutex.Lock()
+	defer fake.getPluginSpecMutex.Unlock()
+	fake.GetPluginSpecStub = nil
+	if fake.getPluginSpecReturnsOnCall == nil {
+		fake.getPluginSpecReturnsOnCall = make(map[int]struct {
+			result1 volman.PluginSpec
+		})
+	}
+	fake.getPluginSpecReturnsOnCall[i] = struct {
+		result1 volman.PluginSpec
+	}{result1}
+}
+
+func (fake *FakePlugin) ListVolumes(arg1 lager.Logger) ([]string, error) {
 	fake.listVolumesMutex.Lock()
 	ret, specificReturn := fake.listVolumesReturnsOnCall[len(fake.listVolumesArgsForCall)]
 	fake.listVolumesArgsForCall = append(fake.listVolumesArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("ListVolumes", []interface{}{logger})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("ListVolumes", []interface{}{arg1})
 	fake.listVolumesMutex.Unlock()
 	if fake.ListVolumesStub != nil {
-		return fake.ListVolumesStub(logger)
+		return fake.ListVolumesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.listVolumesReturns.result1, fake.listVolumesReturns.result2
+	fakeReturns := fake.listVolumesReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakePlugin) ListVolumesCallCount() int {
@@ -97,13 +151,22 @@ func (fake *FakePlugin) ListVolumesCallCount() int {
 	return len(fake.listVolumesArgsForCall)
 }
 
+func (fake *FakePlugin) ListVolumesCalls(stub func(lager.Logger) ([]string, error)) {
+	fake.listVolumesMutex.Lock()
+	defer fake.listVolumesMutex.Unlock()
+	fake.ListVolumesStub = stub
+}
+
 func (fake *FakePlugin) ListVolumesArgsForCall(i int) lager.Logger {
 	fake.listVolumesMutex.RLock()
 	defer fake.listVolumesMutex.RUnlock()
-	return fake.listVolumesArgsForCall[i].logger
+	argsForCall := fake.listVolumesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakePlugin) ListVolumesReturns(result1 []string, result2 error) {
+	fake.listVolumesMutex.Lock()
+	defer fake.listVolumesMutex.Unlock()
 	fake.ListVolumesStub = nil
 	fake.listVolumesReturns = struct {
 		result1 []string
@@ -112,6 +175,8 @@ func (fake *FakePlugin) ListVolumesReturns(result1 []string, result2 error) {
 }
 
 func (fake *FakePlugin) ListVolumesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.listVolumesMutex.Lock()
+	defer fake.listVolumesMutex.Unlock()
 	fake.ListVolumesStub = nil
 	if fake.listVolumesReturnsOnCall == nil {
 		fake.listVolumesReturnsOnCall = make(map[int]struct {
@@ -123,108 +188,6 @@ func (fake *FakePlugin) ListVolumesReturnsOnCall(i int, result1 []string, result
 		result1 []string
 		result2 error
 	}{result1, result2}
-}
-
-func (fake *FakePlugin) Mount(logger lager.Logger, volumeId string, config map[string]interface{}) (volman.MountResponse, error) {
-	fake.mountMutex.Lock()
-	ret, specificReturn := fake.mountReturnsOnCall[len(fake.mountArgsForCall)]
-	fake.mountArgsForCall = append(fake.mountArgsForCall, struct {
-		logger   lager.Logger
-		volumeId string
-		config   map[string]interface{}
-	}{logger, volumeId, config})
-	fake.recordInvocation("Mount", []interface{}{logger, volumeId, config})
-	fake.mountMutex.Unlock()
-	if fake.MountStub != nil {
-		return fake.MountStub(logger, volumeId, config)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.mountReturns.result1, fake.mountReturns.result2
-}
-
-func (fake *FakePlugin) MountCallCount() int {
-	fake.mountMutex.RLock()
-	defer fake.mountMutex.RUnlock()
-	return len(fake.mountArgsForCall)
-}
-
-func (fake *FakePlugin) MountArgsForCall(i int) (lager.Logger, string, map[string]interface{}) {
-	fake.mountMutex.RLock()
-	defer fake.mountMutex.RUnlock()
-	return fake.mountArgsForCall[i].logger, fake.mountArgsForCall[i].volumeId, fake.mountArgsForCall[i].config
-}
-
-func (fake *FakePlugin) MountReturns(result1 volman.MountResponse, result2 error) {
-	fake.MountStub = nil
-	fake.mountReturns = struct {
-		result1 volman.MountResponse
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakePlugin) MountReturnsOnCall(i int, result1 volman.MountResponse, result2 error) {
-	fake.MountStub = nil
-	if fake.mountReturnsOnCall == nil {
-		fake.mountReturnsOnCall = make(map[int]struct {
-			result1 volman.MountResponse
-			result2 error
-		})
-	}
-	fake.mountReturnsOnCall[i] = struct {
-		result1 volman.MountResponse
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakePlugin) Unmount(logger lager.Logger, volumeId string) error {
-	fake.unmountMutex.Lock()
-	ret, specificReturn := fake.unmountReturnsOnCall[len(fake.unmountArgsForCall)]
-	fake.unmountArgsForCall = append(fake.unmountArgsForCall, struct {
-		logger   lager.Logger
-		volumeId string
-	}{logger, volumeId})
-	fake.recordInvocation("Unmount", []interface{}{logger, volumeId})
-	fake.unmountMutex.Unlock()
-	if fake.UnmountStub != nil {
-		return fake.UnmountStub(logger, volumeId)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.unmountReturns.result1
-}
-
-func (fake *FakePlugin) UnmountCallCount() int {
-	fake.unmountMutex.RLock()
-	defer fake.unmountMutex.RUnlock()
-	return len(fake.unmountArgsForCall)
-}
-
-func (fake *FakePlugin) UnmountArgsForCall(i int) (lager.Logger, string) {
-	fake.unmountMutex.RLock()
-	defer fake.unmountMutex.RUnlock()
-	return fake.unmountArgsForCall[i].logger, fake.unmountArgsForCall[i].volumeId
-}
-
-func (fake *FakePlugin) UnmountReturns(result1 error) {
-	fake.UnmountStub = nil
-	fake.unmountReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakePlugin) UnmountReturnsOnCall(i int, result1 error) {
-	fake.UnmountStub = nil
-	if fake.unmountReturnsOnCall == nil {
-		fake.unmountReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.unmountReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *FakePlugin) Matches(arg1 lager.Logger, arg2 volman.PluginSpec) bool {
@@ -242,7 +205,8 @@ func (fake *FakePlugin) Matches(arg1 lager.Logger, arg2 volman.PluginSpec) bool 
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.matchesReturns.result1
+	fakeReturns := fake.matchesReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakePlugin) MatchesCallCount() int {
@@ -251,13 +215,22 @@ func (fake *FakePlugin) MatchesCallCount() int {
 	return len(fake.matchesArgsForCall)
 }
 
+func (fake *FakePlugin) MatchesCalls(stub func(lager.Logger, volman.PluginSpec) bool) {
+	fake.matchesMutex.Lock()
+	defer fake.matchesMutex.Unlock()
+	fake.MatchesStub = stub
+}
+
 func (fake *FakePlugin) MatchesArgsForCall(i int) (lager.Logger, volman.PluginSpec) {
 	fake.matchesMutex.RLock()
 	defer fake.matchesMutex.RUnlock()
-	return fake.matchesArgsForCall[i].arg1, fake.matchesArgsForCall[i].arg2
+	argsForCall := fake.matchesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakePlugin) MatchesReturns(result1 bool) {
+	fake.matchesMutex.Lock()
+	defer fake.matchesMutex.Unlock()
 	fake.MatchesStub = nil
 	fake.matchesReturns = struct {
 		result1 bool
@@ -265,6 +238,8 @@ func (fake *FakePlugin) MatchesReturns(result1 bool) {
 }
 
 func (fake *FakePlugin) MatchesReturnsOnCall(i int, result1 bool) {
+	fake.matchesMutex.Lock()
+	defer fake.matchesMutex.Unlock()
 	fake.MatchesStub = nil
 	if fake.matchesReturnsOnCall == nil {
 		fake.matchesReturnsOnCall = make(map[int]struct {
@@ -276,59 +251,145 @@ func (fake *FakePlugin) MatchesReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *FakePlugin) GetPluginSpec() volman.PluginSpec {
-	fake.getPluginSpecMutex.Lock()
-	ret, specificReturn := fake.getPluginSpecReturnsOnCall[len(fake.getPluginSpecArgsForCall)]
-	fake.getPluginSpecArgsForCall = append(fake.getPluginSpecArgsForCall, struct{}{})
-	fake.recordInvocation("GetPluginSpec", []interface{}{})
-	fake.getPluginSpecMutex.Unlock()
-	if fake.GetPluginSpecStub != nil {
-		return fake.GetPluginSpecStub()
+func (fake *FakePlugin) Mount(arg1 lager.Logger, arg2 string, arg3 map[string]interface{}) (volman.MountResponse, error) {
+	fake.mountMutex.Lock()
+	ret, specificReturn := fake.mountReturnsOnCall[len(fake.mountArgsForCall)]
+	fake.mountArgsForCall = append(fake.mountArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 map[string]interface{}
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Mount", []interface{}{arg1, arg2, arg3})
+	fake.mountMutex.Unlock()
+	if fake.MountStub != nil {
+		return fake.MountStub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.mountReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakePlugin) MountCallCount() int {
+	fake.mountMutex.RLock()
+	defer fake.mountMutex.RUnlock()
+	return len(fake.mountArgsForCall)
+}
+
+func (fake *FakePlugin) MountCalls(stub func(lager.Logger, string, map[string]interface{}) (volman.MountResponse, error)) {
+	fake.mountMutex.Lock()
+	defer fake.mountMutex.Unlock()
+	fake.MountStub = stub
+}
+
+func (fake *FakePlugin) MountArgsForCall(i int) (lager.Logger, string, map[string]interface{}) {
+	fake.mountMutex.RLock()
+	defer fake.mountMutex.RUnlock()
+	argsForCall := fake.mountArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakePlugin) MountReturns(result1 volman.MountResponse, result2 error) {
+	fake.mountMutex.Lock()
+	defer fake.mountMutex.Unlock()
+	fake.MountStub = nil
+	fake.mountReturns = struct {
+		result1 volman.MountResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakePlugin) MountReturnsOnCall(i int, result1 volman.MountResponse, result2 error) {
+	fake.mountMutex.Lock()
+	defer fake.mountMutex.Unlock()
+	fake.MountStub = nil
+	if fake.mountReturnsOnCall == nil {
+		fake.mountReturnsOnCall = make(map[int]struct {
+			result1 volman.MountResponse
+			result2 error
+		})
+	}
+	fake.mountReturnsOnCall[i] = struct {
+		result1 volman.MountResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakePlugin) Unmount(arg1 lager.Logger, arg2 string) error {
+	fake.unmountMutex.Lock()
+	ret, specificReturn := fake.unmountReturnsOnCall[len(fake.unmountArgsForCall)]
+	fake.unmountArgsForCall = append(fake.unmountArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Unmount", []interface{}{arg1, arg2})
+	fake.unmountMutex.Unlock()
+	if fake.UnmountStub != nil {
+		return fake.UnmountStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.getPluginSpecReturns.result1
+	fakeReturns := fake.unmountReturns
+	return fakeReturns.result1
 }
 
-func (fake *FakePlugin) GetPluginSpecCallCount() int {
-	fake.getPluginSpecMutex.RLock()
-	defer fake.getPluginSpecMutex.RUnlock()
-	return len(fake.getPluginSpecArgsForCall)
+func (fake *FakePlugin) UnmountCallCount() int {
+	fake.unmountMutex.RLock()
+	defer fake.unmountMutex.RUnlock()
+	return len(fake.unmountArgsForCall)
 }
 
-func (fake *FakePlugin) GetPluginSpecReturns(result1 volman.PluginSpec) {
-	fake.GetPluginSpecStub = nil
-	fake.getPluginSpecReturns = struct {
-		result1 volman.PluginSpec
+func (fake *FakePlugin) UnmountCalls(stub func(lager.Logger, string) error) {
+	fake.unmountMutex.Lock()
+	defer fake.unmountMutex.Unlock()
+	fake.UnmountStub = stub
+}
+
+func (fake *FakePlugin) UnmountArgsForCall(i int) (lager.Logger, string) {
+	fake.unmountMutex.RLock()
+	defer fake.unmountMutex.RUnlock()
+	argsForCall := fake.unmountArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakePlugin) UnmountReturns(result1 error) {
+	fake.unmountMutex.Lock()
+	defer fake.unmountMutex.Unlock()
+	fake.UnmountStub = nil
+	fake.unmountReturns = struct {
+		result1 error
 	}{result1}
 }
 
-func (fake *FakePlugin) GetPluginSpecReturnsOnCall(i int, result1 volman.PluginSpec) {
-	fake.GetPluginSpecStub = nil
-	if fake.getPluginSpecReturnsOnCall == nil {
-		fake.getPluginSpecReturnsOnCall = make(map[int]struct {
-			result1 volman.PluginSpec
+func (fake *FakePlugin) UnmountReturnsOnCall(i int, result1 error) {
+	fake.unmountMutex.Lock()
+	defer fake.unmountMutex.Unlock()
+	fake.UnmountStub = nil
+	if fake.unmountReturnsOnCall == nil {
+		fake.unmountReturnsOnCall = make(map[int]struct {
+			result1 error
 		})
 	}
-	fake.getPluginSpecReturnsOnCall[i] = struct {
-		result1 volman.PluginSpec
+	fake.unmountReturnsOnCall[i] = struct {
+		result1 error
 	}{result1}
 }
 
 func (fake *FakePlugin) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.getPluginSpecMutex.RLock()
+	defer fake.getPluginSpecMutex.RUnlock()
 	fake.listVolumesMutex.RLock()
 	defer fake.listVolumesMutex.RUnlock()
+	fake.matchesMutex.RLock()
+	defer fake.matchesMutex.RUnlock()
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
 	fake.unmountMutex.RLock()
 	defer fake.unmountMutex.RUnlock()
-	fake.matchesMutex.RLock()
-	defer fake.matchesMutex.RUnlock()
-	fake.getPluginSpecMutex.RLock()
-	defer fake.getPluginSpecMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

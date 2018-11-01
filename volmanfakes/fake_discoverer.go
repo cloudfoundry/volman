@@ -2,17 +2,17 @@
 package volmanfakes
 
 import (
-	"sync"
+	sync "sync"
 
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/volman"
+	lager "code.cloudfoundry.org/lager"
+	volman "code.cloudfoundry.org/volman"
 )
 
 type FakeDiscoverer struct {
-	DiscoverStub        func(logger lager.Logger) (map[string]volman.Plugin, error)
+	DiscoverStub        func(lager.Logger) (map[string]volman.Plugin, error)
 	discoverMutex       sync.RWMutex
 	discoverArgsForCall []struct {
-		logger lager.Logger
+		arg1 lager.Logger
 	}
 	discoverReturns struct {
 		result1 map[string]volman.Plugin
@@ -26,21 +26,22 @@ type FakeDiscoverer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDiscoverer) Discover(logger lager.Logger) (map[string]volman.Plugin, error) {
+func (fake *FakeDiscoverer) Discover(arg1 lager.Logger) (map[string]volman.Plugin, error) {
 	fake.discoverMutex.Lock()
 	ret, specificReturn := fake.discoverReturnsOnCall[len(fake.discoverArgsForCall)]
 	fake.discoverArgsForCall = append(fake.discoverArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("Discover", []interface{}{logger})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("Discover", []interface{}{arg1})
 	fake.discoverMutex.Unlock()
 	if fake.DiscoverStub != nil {
-		return fake.DiscoverStub(logger)
+		return fake.DiscoverStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.discoverReturns.result1, fake.discoverReturns.result2
+	fakeReturns := fake.discoverReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeDiscoverer) DiscoverCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeDiscoverer) DiscoverCallCount() int {
 	return len(fake.discoverArgsForCall)
 }
 
+func (fake *FakeDiscoverer) DiscoverCalls(stub func(lager.Logger) (map[string]volman.Plugin, error)) {
+	fake.discoverMutex.Lock()
+	defer fake.discoverMutex.Unlock()
+	fake.DiscoverStub = stub
+}
+
 func (fake *FakeDiscoverer) DiscoverArgsForCall(i int) lager.Logger {
 	fake.discoverMutex.RLock()
 	defer fake.discoverMutex.RUnlock()
-	return fake.discoverArgsForCall[i].logger
+	argsForCall := fake.discoverArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeDiscoverer) DiscoverReturns(result1 map[string]volman.Plugin, result2 error) {
+	fake.discoverMutex.Lock()
+	defer fake.discoverMutex.Unlock()
 	fake.DiscoverStub = nil
 	fake.discoverReturns = struct {
 		result1 map[string]volman.Plugin
@@ -64,6 +74,8 @@ func (fake *FakeDiscoverer) DiscoverReturns(result1 map[string]volman.Plugin, re
 }
 
 func (fake *FakeDiscoverer) DiscoverReturnsOnCall(i int, result1 map[string]volman.Plugin, result2 error) {
+	fake.discoverMutex.Lock()
+	defer fake.discoverMutex.Unlock()
 	fake.DiscoverStub = nil
 	if fake.discoverReturnsOnCall == nil {
 		fake.discoverReturnsOnCall = make(map[int]struct {
