@@ -9,18 +9,18 @@ import (
 
 	"net/url"
 
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/driverhttp"
 	"code.cloudfoundry.org/goshims/osshim"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/driverhttp"
 )
 
 //go:generate counterfeiter -o ../volmanfakes/fake_docker_driver_factory.go . DockerDriverFactory
 
-// DriverFactories are responsible for instantiating remote client implementations of the voldriver.Driver interface.
+// DriverFactories are responsible for instantiating remote client implementations of the dockerdriver.Driver interface.
 type DockerDriverFactory interface {
-	// Given a driver id, path and config filename returns a remote client implementation of the voldriver.Driver interface
-	DockerDriver(logger lager.Logger, driverId string, driverPath, driverFileName string) (voldriver.Driver, error)
+	// Given a driver id, path and config filename returns a remote client implementation of the dockerdriver.Driver interface
+	DockerDriver(logger lager.Logger, driverId string, driverPath, driverFileName string) (dockerdriver.Driver, error)
 }
 
 type dockerDriverFactory struct {
@@ -42,13 +42,13 @@ func NewDockerDriverFactoryWithOs(useOs osshim.Os) DockerDriverFactory {
 	return &dockerDriverFactory{remoteClientFactory, useOs}
 }
 
-func (r *dockerDriverFactory) DockerDriver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (voldriver.Driver, error) {
+func (r *dockerDriverFactory) DockerDriver(logger lager.Logger, driverId string, driverPath string, driverFileName string) (dockerdriver.Driver, error) {
 	logger = logger.Session("driver", lager.Data{"driverId": driverId, "driverFileName": driverFileName})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	var address string
-	var tls *voldriver.TLSConfig
+	var tls *dockerdriver.TLSConfig
 	if strings.Contains(driverFileName, ".") {
 		extension := strings.Split(driverFileName, ".")[1]
 		switch extension {
@@ -69,7 +69,7 @@ func (r *dockerDriverFactory) DockerDriver(logger lager.Logger, driverId string,
 			address = string(addressBytes)
 		case "json":
 			// extract url from json file
-			var driverJsonSpec voldriver.DriverSpec
+			var driverJsonSpec dockerdriver.DriverSpec
 			configFile, err := r.useOs.Open(path.Join(driverPath, driverFileName))
 			if err != nil {
 				logger.Error("error-opening-config", err, lager.Data{"DriverFileName": driverFileName})

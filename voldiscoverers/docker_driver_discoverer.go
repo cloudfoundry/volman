@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"runtime"
 
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/driverhttp"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/voldocker"
 )
@@ -113,7 +113,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 
 		_, ok = endpoints[specName]
 		if !ok {
-			driverSpec, err := voldriver.ReadDriverSpec(logger, specName, driverPath, specFile)
+			driverSpec, err := dockerdriver.ReadDriverSpec(logger, specName, driverPath, specFile)
 			if err != nil {
 				logger.Error("error-reading-driver-spec", err)
 				continue
@@ -140,7 +140,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 				}
 				if plugin != nil {
 					dockerPlugin := plugin.(*voldocker.DockerDriverPlugin)
-					dockerDriver := dockerPlugin.DockerDriver.(voldriver.Driver)
+					dockerDriver := dockerPlugin.DockerDriver.(dockerdriver.Driver)
 					env := driverhttp.NewHttpDriverEnv(logger, context.Background())
 					resp := dockerDriver.Activate(env)
 					if resp.Err != "" {

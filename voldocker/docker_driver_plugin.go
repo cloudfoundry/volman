@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/driverhttp"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/driverhttp"
 	"code.cloudfoundry.org/volman"
 )
 
@@ -18,7 +18,7 @@ type DockerDriverPlugin struct {
 	PluginSpec   volman.PluginSpec
 }
 
-func NewDockerPluginWithDriver(driver voldriver.Driver, pluginSpec volman.PluginSpec) volman.Plugin {
+func NewDockerPluginWithDriver(driver dockerdriver.Driver, pluginSpec volman.PluginSpec) volman.Plugin {
 	return &DockerDriverPlugin{
 		DockerDriver: driver,
 		PluginSpec:   pluginSpec,
@@ -31,12 +31,12 @@ func (dw *DockerDriverPlugin) Matches(logger lager.Logger, pluginSpec volman.Plu
 	defer logger.Info("end")
 
 	var matches bool
-	matchableDriver, ok := dw.DockerDriver.(voldriver.MatchableDriver)
+	matchableDriver, ok := dw.DockerDriver.(dockerdriver.MatchableDriver)
 	logger.Info("matches", lager.Data{"is-matchable": ok})
 	if ok {
-		var tlsConfig *voldriver.TLSConfig
+		var tlsConfig *dockerdriver.TLSConfig
 		if pluginSpec.TLSConfig != nil {
-			tlsConfig = &voldriver.TLSConfig{
+			tlsConfig = &dockerdriver.TLSConfig{
 				InsecureSkipVerify: pluginSpec.TLSConfig.InsecureSkipVerify,
 				CAFile:             pluginSpec.TLSConfig.CAFile,
 				CertFile:           pluginSpec.TLSConfig.CertFile,
@@ -57,7 +57,7 @@ func (d *DockerDriverPlugin) ListVolumes(logger lager.Logger) ([]string, error) 
 	volumes := []string{}
 	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 
-	response := d.DockerDriver.(voldriver.Driver).List(env)
+	response := d.DockerDriver.(dockerdriver.Driver).List(env)
 	if response.Err != "" {
 		return volumes, errors.New(response.Err)
 	}
@@ -77,14 +77,14 @@ func (d *DockerDriverPlugin) Mount(logger lager.Logger, volumeId string, opts ma
 	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 
 	logger.Debug("creating-volume", lager.Data{"volumeId": volumeId})
-	response := d.DockerDriver.(voldriver.Driver).Create(env, voldriver.CreateRequest{Name: volumeId, Opts: opts})
+	response := d.DockerDriver.(dockerdriver.Driver).Create(env, dockerdriver.CreateRequest{Name: volumeId, Opts: opts})
 	if response.Err != "" {
 		return volman.MountResponse{}, errors.New(response.Err)
 	}
 
-	mountRequest := voldriver.MountRequest{Name: volumeId}
+	mountRequest := dockerdriver.MountRequest{Name: volumeId}
 	logger.Debug("calling-docker-driver-with-mount-request", lager.Data{"mountRequest": mountRequest})
-	mountResponse := d.DockerDriver.(voldriver.Driver).Mount(env, mountRequest)
+	mountResponse := d.DockerDriver.(dockerdriver.Driver).Mount(env, mountRequest)
 	logger.Debug("response-from-docker-driver", lager.Data{"response": mountResponse})
 
 	if !strings.HasPrefix(mountResponse.Mountpoint, "/var/vcap/data") {
@@ -92,7 +92,7 @@ func (d *DockerDriverPlugin) Mount(logger lager.Logger, volumeId string, opts ma
 	}
 
 	if mountResponse.Err != "" {
-		safeError := voldriver.SafeError{}
+		safeError := dockerdriver.SafeError{}
 		err := json.Unmarshal([]byte(mountResponse.Err), &safeError)
 		if err == nil {
 			return volman.MountResponse{}, safeError
@@ -111,9 +111,9 @@ func (d *DockerDriverPlugin) Unmount(logger lager.Logger, volumeId string) error
 
 	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
 
-	if response := d.DockerDriver.(voldriver.Driver).Unmount(env, voldriver.UnmountRequest{Name: volumeId}); response.Err != "" {
+	if response := d.DockerDriver.(dockerdriver.Driver).Unmount(env, dockerdriver.UnmountRequest{Name: volumeId}); response.Err != "" {
 
-		safeError := voldriver.SafeError{}
+		safeError := dockerdriver.SafeError{}
 		err := json.Unmarshal([]byte(response.Err), &safeError)
 		if err == nil {
 			err = safeError

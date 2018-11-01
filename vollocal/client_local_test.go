@@ -11,17 +11,17 @@ import (
 	. "github.com/onsi/gomega"
 
 	mfakes "code.cloudfoundry.org/diego-logging-client/testhelpers"
+	"code.cloudfoundry.org/dockerdriver"
 	loggregator "code.cloudfoundry.org/go-loggregator"
-	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/volman/voldiscoverers"
 	"code.cloudfoundry.org/volman/vollocal"
 	"code.cloudfoundry.org/volman/volmanfakes"
 
 	"code.cloudfoundry.org/clock/fakeclock"
+	"code.cloudfoundry.org/dockerdriver/dockerdriverfakes"
+	dockerdriverutils "code.cloudfoundry.org/dockerdriver/utils"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	voldriverutils "code.cloudfoundry.org/voldriver/utils"
-	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/tedsuo/ifrit"
@@ -44,7 +44,7 @@ var _ = Describe("Volman", func() {
 		logger *lagertest.TestLogger
 
 		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
-		fakeDriver        *voldriverfakes.FakeDriver
+		fakeDriver        *dockerdriverfakes.FakeDriver
 		fakeClock         *fakeclock.FakeClock
 		fakeMetronClient  *mfakes.FakeIngressClient
 
@@ -125,16 +125,16 @@ var _ = Describe("Volman", func() {
 
 		Context("has driver in location", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, fakeDriverId, "spec", []byte("http://0.0.0.0:8080"))
+				err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, fakeDriverId, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 
 				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
 
-				fakeDriver := new(voldriverfakes.FakeDriver)
+				fakeDriver := new(dockerdriverfakes.FakeDriver)
 				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
+				fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 			})
 
 			It("should report empty list of drivers", func() {
@@ -178,16 +178,16 @@ var _ = Describe("Volman", func() {
 			)
 			BeforeEach(func() {
 				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
-				fakeDriver = new(voldriverfakes.FakeDriver)
+				fakeDriver = new(dockerdriverfakes.FakeDriver)
 				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
-				drivers := make(map[string]voldriver.Driver)
+				drivers := make(map[string]dockerdriver.Driver)
 				drivers[fakeDriverId] = fakeDriver
 
 				driverSpecExtension = "spec"
 				driverSpecContents = []byte("http://0.0.0.0:8080")
 
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
+				fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
 				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 				client = vollocal.NewLocalClient(logger, driverRegistry, fakeMetronClient, fakeClock)
@@ -195,7 +195,7 @@ var _ = Describe("Volman", func() {
 			})
 
 			JustBeforeEach(func() {
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, fakeDriverId, driverSpecExtension, driverSpecContents)
+				err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, fakeDriverId, driverSpecExtension, driverSpecContents)
 				Expect(err).NotTo(HaveOccurred())
 
 				syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
@@ -208,7 +208,7 @@ var _ = Describe("Volman", func() {
 
 			Context("mount", func() {
 				BeforeEach(func() {
-					mountResponse := voldriver.MountResponse{Mountpoint: "/var/vcap/data/mounts/" + volumeId}
+					mountResponse := dockerdriver.MountResponse{Mountpoint: "/var/vcap/data/mounts/" + volumeId}
 					fakeDriver.MountReturns(mountResponse)
 				})
 
@@ -220,7 +220,7 @@ var _ = Describe("Volman", func() {
 				})
 
 				It("should not be able to mount if mount fails", func() {
-					mountResponse := voldriver.MountResponse{Err: "an error"}
+					mountResponse := dockerdriver.MountResponse{Err: "an error"}
 					fakeDriver.MountReturns(mountResponse)
 
 					_, err := client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{})
@@ -230,11 +230,11 @@ var _ = Describe("Volman", func() {
 
 				})
 
-				It("should wrap voldriver safeError to volman safeError", func() {
-					voldriverSafeError := voldriver.SafeError{SafeDescription: "safe-badness"}
-					safeErrBytes, err := json.Marshal(voldriverSafeError)
+				It("should wrap dockerdriver safeError to volman safeError", func() {
+					dockerdriverSafeError := dockerdriver.SafeError{SafeDescription: "safe-badness"}
+					safeErrBytes, err := json.Marshal(dockerdriverSafeError)
 					Expect(err).NotTo(HaveOccurred())
-					mountResponse := voldriver.MountResponse{Err: string(safeErrBytes[:])}
+					mountResponse := dockerdriver.MountResponse{Err: string(safeErrBytes[:])}
 					fakeDriver.MountReturns(mountResponse)
 
 					_, err = client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{})
@@ -246,7 +246,7 @@ var _ = Describe("Volman", func() {
 				Context("with bad mount path", func() {
 					var err error
 					BeforeEach(func() {
-						mountResponse := voldriver.MountResponse{Mountpoint: "/var/tmp"}
+						mountResponse := dockerdriver.MountResponse{Mountpoint: "/var/tmp"}
 						fakeDriver.MountReturns(mountResponse)
 					})
 
@@ -271,7 +271,7 @@ var _ = Describe("Volman", func() {
 
 					It("should increment error count on mount failure", func() {
 						Expect(counterMetricMap).ShouldNot(HaveKey("VolmanMountErrors"))
-						mountResponse := voldriver.MountResponse{Err: "an error"}
+						mountResponse := dockerdriver.MountResponse{Err: "an error"}
 						fakeDriver.MountReturns(mountResponse)
 
 						client.Mount(logger, fakeDriverId, volumeId, "", map[string]interface{}{"volume_id": volumeId})
@@ -292,7 +292,7 @@ var _ = Describe("Volman", func() {
 
 						Expect(fakeDriver.MountCallCount()).To(Equal(1))
 						_, mountRequest := fakeDriver.MountArgsForCall(0)
-						uniqueVolId := voldriverutils.NewVolumeId(volumeId, "some-container-id")
+						uniqueVolId := dockerdriverutils.NewVolumeId(volumeId, "some-container-id")
 						Expect(mountRequest.Name).To(Equal(uniqueVolId.GetUniqueId()))
 					})
 				})
@@ -307,7 +307,7 @@ var _ = Describe("Volman", func() {
 				})
 
 				It("should not be able to unmount when driver unmount fails", func() {
-					fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
+					fakeDriver.UnmountReturns(dockerdriver.ErrorResponse{Err: "unmount failure"})
 					err := client.Unmount(logger, fakeDriverId, volumeId, "")
 					Expect(err).To(HaveOccurred())
 
@@ -315,11 +315,11 @@ var _ = Describe("Volman", func() {
 					Expect(isVolmanSafeError).To(Equal(false))
 				})
 
-				It("should wrap voldriver safeError to volman safeError", func() {
-					voldriverSafeError := voldriver.SafeError{SafeDescription: "safe-badness"}
-					safeErrBytes, err := json.Marshal(voldriverSafeError)
+				It("should wrap dockerdriver safeError to volman safeError", func() {
+					dockerdriverSafeError := dockerdriver.SafeError{SafeDescription: "safe-badness"}
+					safeErrBytes, err := json.Marshal(dockerdriverSafeError)
 					Expect(err).NotTo(HaveOccurred())
-					unmountResponse := voldriver.ErrorResponse{Err: string(safeErrBytes[:])}
+					unmountResponse := dockerdriver.ErrorResponse{Err: string(safeErrBytes[:])}
 					fakeDriver.UnmountReturns(unmountResponse)
 
 					err = client.Unmount(logger, fakeDriverId, volumeId, "")
@@ -337,7 +337,7 @@ var _ = Describe("Volman", func() {
 					})
 
 					It("should increment error count on unmount failure", func() {
-						fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
+						fakeDriver.UnmountReturns(dockerdriver.ErrorResponse{Err: "unmount failure"})
 
 						client.Unmount(logger, fakeDriverId, volumeId, "")
 						Expect(counterMetricMap).Should(HaveKeyWithValue("VolmanUnmountErrors", 1))
@@ -356,7 +356,7 @@ var _ = Describe("Volman", func() {
 
 						Expect(fakeDriver.UnmountCallCount()).To(Equal(1))
 						_, unmountRequest := fakeDriver.UnmountArgsForCall(0)
-						uniqueVolId := voldriverutils.NewVolumeId(volumeId, "some-container-id")
+						uniqueVolId := dockerdriverutils.NewVolumeId(volumeId, "some-container-id")
 						Expect(unmountRequest.Name).To(Equal(uniqueVolId.GetUniqueId()))
 					})
 				})
@@ -380,7 +380,7 @@ var _ = Describe("Volman", func() {
 
 			Context("when driver does not implement VolumeDriver", func() {
 				BeforeEach(func() {
-					fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"nada"}})
+					fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{Implements: []string{"nada"}})
 				})
 
 				It("should not be able to mount", func() {
@@ -399,8 +399,8 @@ var _ = Describe("Volman", func() {
 			BeforeEach(func() {
 
 				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
-				fakeDriver = new(voldriverfakes.FakeDriver)
-				mountReturn := voldriver.MountResponse{Err: "driver not found",
+				fakeDriver = new(dockerdriverfakes.FakeDriver)
+				mountReturn := dockerdriver.MountResponse{Err: "driver not found",
 					Mountpoint: "",
 				}
 				fakeDriver.MountReturns(mountReturn)
@@ -414,7 +414,7 @@ var _ = Describe("Volman", func() {
 				process = ginkgomon.Invoke(syncer.Runner())
 
 				calls := 0
-				fakeDriverFactory.DockerDriverStub = func(lager.Logger, string, string, string) (voldriver.Driver, error) {
+				fakeDriverFactory.DockerDriverStub = func(lager.Logger, string, string, string) (dockerdriver.Driver, error) {
 					calls++
 					if calls > 1 {
 						return nil, fmt.Errorf("driver not found")
@@ -437,12 +437,12 @@ var _ = Describe("Volman", func() {
 		Context("after unsuccessfully creating", func() {
 			BeforeEach(func() {
 				localDriverProcess = ginkgomon.Invoke(localDriverRunner)
-				fakeDriver = new(voldriverfakes.FakeDriver)
+				fakeDriver = new(dockerdriverfakes.FakeDriver)
 
 				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
-				fakeDriver.CreateReturns(voldriver.ErrorResponse{"create fails"})
+				fakeDriver.CreateReturns(dockerdriver.ErrorResponse{"create fails"})
 
 				driverRegistry := vollocal.NewPluginRegistry()
 				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)

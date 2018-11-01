@@ -9,8 +9,8 @@ import (
 
 	"code.cloudfoundry.org/lager/lagertest"
 
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/dockerdriverfakes"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/voldiscoverers"
 	"code.cloudfoundry.org/volman/vollocal"
@@ -26,7 +26,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 		registry   volman.PluginRegistry
 		discoverer volman.Discoverer
 
-		fakeDriver *voldriverfakes.FakeMatchableDriver
+		fakeDriver *dockerdriverfakes.FakeMatchableDriver
 
 		driverName string
 	)
@@ -39,8 +39,8 @@ var _ = Describe("Docker Driver Discoverer", func() {
 		registry = vollocal.NewPluginRegistry()
 		discoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, registry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 
-		fakeDriver = new(voldriverfakes.FakeMatchableDriver)
-		fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+		fakeDriver = new(dockerdriverfakes.FakeMatchableDriver)
+		fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{
 			Implements: []string{"VolumeDriver"},
 		})
 
@@ -72,7 +72,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 			})
 
 			JustBeforeEach(func() {
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, driverSpecExtension, driverSpecContents)
+				err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, driverSpecExtension, driverSpecContents)
 				Expect(err).NotTo(HaveOccurred())
 
 				drivers, err = discoverer.Discover(logger)
@@ -81,7 +81,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 			Context("when activate returns an error", func() {
 				BeforeEach(func() {
-					fakeDriver.ActivateReturns(voldriver.ActivateResponse{Err: "Error"})
+					fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{Err: "Error"})
 				})
 				It("should not find drivers that are unresponsive", func() {
 					Expect(err).ToNot(HaveOccurred())
@@ -117,7 +117,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				})
 				Context("when the existing driver connection is broken", func() {
 					BeforeEach(func() {
-						fakeDriver.ActivateReturnsOnCall(1, voldriver.ActivateResponse{Err: "badness"})
+						fakeDriver.ActivateReturnsOnCall(1, dockerdriver.ActivateResponse{Err: "badness"})
 					})
 					It("should replace the driver in the registry", func() {
 						Expect(len(drivers)).To(Equal(1))
@@ -169,9 +169,9 @@ var _ = Describe("Docker Driver Discoverer", func() {
 		Context("when given a simple driverspath", func() {
 			Context("with hetergeneous json+spec driver specifications", func() {
 				BeforeEach(func() {
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 					Expect(err).NotTo(HaveOccurred())
-					err = voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
+					err = dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -186,9 +186,9 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 			Context("with hetergeneous spec+sock driver specifications", func() {
 				BeforeEach(func() {
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "sock", []byte("unix:///some.sock"))
+					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "sock", []byte("unix:///some.sock"))
 					Expect(err).NotTo(HaveOccurred())
-					err = voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
+					err = dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -209,7 +209,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 			Context("with a single driver", func() {
 				BeforeEach(func() {
-					err := voldriver.WriteDriverSpec(logger, secondPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
+					err := dockerdriver.WriteDriverSpec(logger, secondPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -224,9 +224,9 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 			Context("with multiple drivers in multiple directories", func() {
 				BeforeEach(func() {
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 					Expect(err).NotTo(HaveOccurred())
-					err = voldriver.WriteDriverSpec(logger, secondPluginsDirectory, "some-other-driver-name", "json", []byte("{\"Addr\":\"http://0.0.0.0:9090\"}"))
+					err = dockerdriver.WriteDriverSpec(logger, secondPluginsDirectory, "some-other-driver-name", "json", []byte("{\"Addr\":\"http://0.0.0.0:9090\"}"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -239,9 +239,9 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 			Context("with the same driver but in multiple directories", func() {
 				BeforeEach(func() {
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 					Expect(err).NotTo(HaveOccurred())
-					err = voldriver.WriteDriverSpec(logger, secondPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
+					err = dockerdriver.WriteDriverSpec(logger, secondPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -256,14 +256,14 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 		Context("when given a driver spec not in canonical form", func() {
 			var (
-				fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
+				fakeRemoteClientFactory *dockerdriverfakes.FakeRemoteClientFactory
 				driverFactory           voldiscoverers.DockerDriverFactory
-				fakeDriver              *voldriverfakes.FakeDriver
+				fakeDriver              *dockerdriverfakes.FakeDriver
 				driverDiscoverer        volman.Discoverer
 			)
 
 			JustBeforeEach(func() {
-				fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
+				fakeRemoteClientFactory = new(dockerdriverfakes.FakeRemoteClientFactory)
 				driverFactory = voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 				driverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, nil, []string{defaultPluginsDirectory}, driverFactory)
 			})
@@ -271,13 +271,13 @@ var _ = Describe("Docker Driver Discoverer", func() {
 			TestCanonicalization := func(context, actual, it, expected string) {
 				Context(context, func() {
 					BeforeEach(func() {
-						err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte(actual))
+						err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte(actual))
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 					JustBeforeEach(func() {
-						fakeDriver = new(voldriverfakes.FakeDriver)
-						fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+						fakeDriver = new(dockerdriverfakes.FakeDriver)
+						fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{
 							Implements: []string{"VolumeDriver"},
 						})
 
@@ -302,8 +302,8 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 			Context("with an invalid url", func() {
 				BeforeEach(func() {
-					err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName+"2", "spec", []byte("127.0.0.1:8080"))
-					err = voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("htt%p:\\\\"))
+					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName+"2", "spec", []byte("127.0.0.1:8080"))
+					err = dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("htt%p:\\\\"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -317,12 +317,12 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 		Context("when given a driver spec with a bad driver", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("127.0.0.1:8080"))
+				err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("127.0.0.1:8080"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should return no drivers if the driver doesn't implement VolumeDriver", func() {
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+				fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{
 					Implements: []string{"something-else"},
 				})
 
@@ -332,7 +332,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 			})
 
 			It("should return no drivers if the driver doesn't respond", func() {
-				fakeDriver.ActivateReturns(voldriver.ActivateResponse{
+				fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{
 					Err: "some-error",
 				})
 

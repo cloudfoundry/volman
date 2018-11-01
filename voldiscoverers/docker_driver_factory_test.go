@@ -10,11 +10,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/dockerdriverfakes"
 	"code.cloudfoundry.org/goshims/osshim/os_fake"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman/voldiscoverers"
 )
 
@@ -29,15 +29,15 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when a valid driver spec is discovered", func() {
 		var (
-			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
-			localDriver             *voldriverfakes.FakeDriver
-			driver                  voldriver.Driver
+			fakeRemoteClientFactory *dockerdriverfakes.FakeRemoteClientFactory
+			localDriver             *dockerdriverfakes.FakeDriver
+			driver                  dockerdriver.Driver
 			driverFactory           voldiscoverers.DockerDriverFactory
 		)
 		BeforeEach(func() {
 			driverName = "some-driver-name"
-			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
-			localDriver = new(voldriverfakes.FakeDriver)
+			fakeRemoteClientFactory = new(dockerdriverfakes.FakeRemoteClientFactory)
+			localDriver = new(dockerdriverfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(localDriver, nil)
 			driverFactory = voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 
@@ -45,7 +45,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when a json driver spec is discovered", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
+				err := dockerdriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
 				Expect(err).NotTo(HaveOccurred())
 				driver, err = driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".json")
 				Expect(err).ToNot(HaveOccurred())
@@ -65,7 +65,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when an invalid json spec is discovered", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"invalid\"}"))
+				err := dockerdriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "json", []byte("{\"invalid\"}"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("should error", func() {
@@ -76,7 +76,7 @@ var _ = Describe("DriverFactory", func() {
 
 		Context("when a spec driver spec is discovered", func() {
 			BeforeEach(func() {
-				err := voldriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
+				err := dockerdriver.WriteDriverSpec(testLogger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:8080"))
 				Expect(err).NotTo(HaveOccurred())
 				driver, err = driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".spec")
 				Expect(err).ToNot(HaveOccurred())
@@ -94,7 +94,7 @@ var _ = Describe("DriverFactory", func() {
 			})
 
 			It("should error if driver id doesn't match found driver", func() {
-				fakeRemoteClientFactory := new(voldriverfakes.FakeRemoteClientFactory)
+				fakeRemoteClientFactory := new(dockerdriverfakes.FakeRemoteClientFactory)
 				driverFactory := voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 				_, err := driverFactory.DockerDriver(testLogger, "garbage", defaultPluginsDirectory, "garbage.garbage")
 				Expect(err).To(HaveOccurred())
@@ -126,14 +126,14 @@ var _ = Describe("DriverFactory", func() {
 
 	Context("when valid driver spec is not discovered", func() {
 		var (
-			fakeRemoteClientFactory *voldriverfakes.FakeRemoteClientFactory
-			fakeDriver              *voldriverfakes.FakeDriver
+			fakeRemoteClientFactory *dockerdriverfakes.FakeRemoteClientFactory
+			fakeDriver              *dockerdriverfakes.FakeDriver
 			driverFactory           voldiscoverers.DockerDriverFactory
 		)
 		BeforeEach(func() {
 			driverName = "some-driver-name"
-			fakeRemoteClientFactory = new(voldriverfakes.FakeRemoteClientFactory)
-			fakeDriver = new(voldriverfakes.FakeDriver)
+			fakeRemoteClientFactory = new(dockerdriverfakes.FakeRemoteClientFactory)
+			fakeDriver = new(dockerdriverfakes.FakeDriver)
 			fakeRemoteClientFactory.NewRemoteClientReturns(fakeDriver, nil)
 			driverFactory = voldiscoverers.NewDockerDriverFactoryWithRemoteClientFactory(fakeRemoteClientFactory)
 

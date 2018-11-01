@@ -10,9 +10,9 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	loggingclient "code.cloudfoundry.org/diego-logging-client"
+	"code.cloudfoundry.org/dockerdriver"
+	dockerdriverutils "code.cloudfoundry.org/dockerdriver/utils"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/voldriver"
-	voldriverutils "code.cloudfoundry.org/voldriver/utils"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/voldiscoverers"
 	"github.com/tedsuo/ifrit/grouper"
@@ -111,7 +111,7 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 
 	if plugin.GetPluginSpec().UniqueVolumeIds {
 		logger.Debug("generating-unique-volume-id")
-		uniqueVolId := voldriverutils.NewVolumeId(volumeId, containerId)
+		uniqueVolId := dockerdriverutils.NewVolumeId(volumeId, containerId)
 		volumeId = uniqueVolId.GetUniqueId()
 	}
 
@@ -119,8 +119,8 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 
 	if err != nil {
 		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
-		if voldriverSafeErr, ok := err.(voldriver.SafeError); ok {
-			return volman.MountResponse{}, volman.SafeError{SafeDescription: voldriverSafeErr.SafeDescription}
+		if dockerdriverSafeErr, ok := err.(dockerdriver.SafeError); ok {
+			return volman.MountResponse{}, volman.SafeError{SafeDescription: dockerdriverSafeErr.SafeDescription}
 		}
 		return volman.MountResponse{}, err
 	}
@@ -184,7 +184,7 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 
 	if plugin.GetPluginSpec().UniqueVolumeIds {
 		logger.Debug("generating-unique-volume-id")
-		uniqueVolId := voldriverutils.NewVolumeId(volumeId, containerId)
+		uniqueVolId := dockerdriverutils.NewVolumeId(volumeId, containerId)
 		volumeId = uniqueVolId.GetUniqueId()
 	}
 
@@ -193,8 +193,8 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
 		logger.Error("unmount-failed", err)
 
-		if voldriverSafeErr, ok := err.(voldriver.SafeError); ok {
-			return volman.SafeError{SafeDescription: voldriverSafeErr.SafeDescription}
+		if dockerdriverSafeErr, ok := err.(dockerdriver.SafeError); ok {
+			return volman.SafeError{SafeDescription: dockerdriverSafeErr.SafeDescription}
 		}
 		return err
 	}

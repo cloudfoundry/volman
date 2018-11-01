@@ -8,9 +8,9 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/clock/fakeclock"
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/dockerdriverfakes"
 	"code.cloudfoundry.org/lager/lagertest"
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/voldriverfakes"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/volmanfakes"
 	. "github.com/onsi/ginkgo"
@@ -29,7 +29,7 @@ var _ = Describe("MountPurger", func() {
 		purger                 vollocal.MountPurger
 
 		fakeDriverFactory *volmanfakes.FakeDockerDriverFactory
-		fakeDriver        *voldriverfakes.FakeDriver
+		fakeDriver        *dockerdriverfakes.FakeDriver
 		fakeClock         clock.Clock
 
 		scanInterval time.Duration
@@ -55,9 +55,9 @@ var _ = Describe("MountPurger", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("when there is a non-voldriver plugin", func() {
+	Context("when there is a non-dockerdriver plugin", func() {
 		BeforeEach(func() {
-			driverRegistry.Set(map[string]volman.Plugin{"not-a-voldriver": new(volmanfakes.FakePlugin)})
+			driverRegistry.Set(map[string]volman.Plugin{"not-a-dockerdriver": new(volmanfakes.FakePlugin)})
 		})
 
 		It("should succeed", func() {
@@ -67,7 +67,7 @@ var _ = Describe("MountPurger", func() {
 
 	Context("when there is a driver", func() {
 		BeforeEach(func() {
-			err := voldriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
+			err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, "fakedriver", "spec", []byte("http://0.0.0.0:8080"))
 			Expect(err).NotTo(HaveOccurred())
 
 			fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
@@ -79,10 +79,10 @@ var _ = Describe("MountPurger", func() {
 			dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{defaultPluginsDirectory}, fakeDriverFactory)
 			client = vollocal.NewLocalClient(logger, driverRegistry, nil, fakeClock)
 			syncer := vollocal.NewSyncer(logger, driverRegistry, []volman.Discoverer{dockerDriverDiscoverer}, scanInterval, fakeClock)
-			fakeDriver = new(voldriverfakes.FakeDriver)
+			fakeDriver = new(dockerdriverfakes.FakeDriver)
 			fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
-			fakeDriver.ActivateReturns(voldriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
+			fakeDriver.ActivateReturns(dockerdriver.ActivateResponse{Implements: []string{"VolumeDriver"}})
 
 			process = ginkgomon.Invoke(syncer.Runner())
 		})
@@ -97,7 +97,7 @@ var _ = Describe("MountPurger", func() {
 
 		Context("when there is a mount", func() {
 			BeforeEach(func() {
-				fakeDriver.ListReturns(voldriver.ListResponse{Volumes: []voldriver.VolumeInfo{
+				fakeDriver.ListReturns(dockerdriver.ListResponse{Volumes: []dockerdriver.VolumeInfo{
 					{
 						Name:       "a-volume",
 						Mountpoint: "foo",
@@ -113,7 +113,7 @@ var _ = Describe("MountPurger", func() {
 
 			Context("when the unmount fails", func() {
 				BeforeEach(func() {
-					fakeDriver.UnmountReturns(voldriver.ErrorResponse{Err: "badness"})
+					fakeDriver.UnmountReturns(dockerdriver.ErrorResponse{Err: "badness"})
 				})
 
 				It("should log but not fail", func() {

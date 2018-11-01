@@ -62,14 +62,14 @@ var _ = BeforeEach(func() {
 
 	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
 	localDriverRunner = ginkgomon.New(ginkgomon.Config{
-		Name: "local-driver",
+		Name: "localdriver",
 		Command: exec.Command(
 			localDriverPath,
 			"-listenAddr", fmt.Sprintf("0.0.0.0:%d", localDriverServerPort),
 			"-debugAddr", debugServerAddress,
 			"-driversPath", defaultPluginsDirectory,
 		),
-		StartCheck: "local-driver-server.started",
+		StartCheck: "localdriver-server.started",
 	})
 })
 

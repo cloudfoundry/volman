@@ -7,8 +7,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"code.cloudfoundry.org/voldriver"
-	"code.cloudfoundry.org/voldriver/voldriverfakes"
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/dockerdriverfakes"
 	"code.cloudfoundry.org/volman/voldocker"
 
 	"code.cloudfoundry.org/lager/lagertest"
@@ -18,17 +18,17 @@ import (
 
 var _ = Describe("DockerDriverMounter", func() {
 	var (
-		volumeId      string
-		logger        *lagertest.TestLogger
-		dockerPlugin  volman.Plugin
-		fakeVoldriver *voldriverfakes.FakeDriver
+		volumeId         string
+		logger           *lagertest.TestLogger
+		dockerPlugin     volman.Plugin
+		fakeDockerDriver *dockerdriverfakes.FakeDriver
 	)
 
 	BeforeEach(func() {
 		volumeId = "fake-volume"
 		logger = lagertest.NewTestLogger("docker-mounter-test")
-		fakeVoldriver = &voldriverfakes.FakeDriver{}
-		dockerPlugin = voldocker.NewDockerPluginWithDriver(fakeVoldriver, volman.PluginSpec{})
+		fakeDockerDriver = &dockerdriverfakes.FakeDriver{}
+		dockerPlugin = voldocker.NewDockerPluginWithDriver(fakeDockerDriver, volman.PluginSpec{})
 	})
 
 	Describe("Mount", func() {
@@ -37,8 +37,8 @@ var _ = Describe("DockerDriverMounter", func() {
 			Context("mount", func() {
 
 				BeforeEach(func() {
-					mountResponse := voldriver.MountResponse{Mountpoint: "/var/vcap/data/mounts/" + volumeId}
-					fakeVoldriver.MountReturns(mountResponse)
+					mountResponse := dockerdriver.MountResponse{Mountpoint: "/var/vcap/data/mounts/" + volumeId}
+					fakeDockerDriver.MountReturns(mountResponse)
 				})
 
 				It("should be able to mount without warning", func() {
@@ -49,8 +49,8 @@ var _ = Describe("DockerDriverMounter", func() {
 				})
 
 				It("should not be able to mount if mount fails", func() {
-					mountResponse := voldriver.MountResponse{Err: "an error"}
-					fakeVoldriver.MountReturns(mountResponse)
+					mountResponse := dockerdriver.MountResponse{Err: "an error"}
+					fakeDockerDriver.MountReturns(mountResponse)
 					_, err := dockerPlugin.Mount(logger, volumeId, map[string]interface{}{"volume_id": volumeId})
 					Expect(err).To(HaveOccurred())
 				})
@@ -58,8 +58,8 @@ var _ = Describe("DockerDriverMounter", func() {
 				Context("with bad mount path", func() {
 					var err error
 					BeforeEach(func() {
-						mountResponse := voldriver.MountResponse{Mountpoint: "/var/tmp"}
-						fakeVoldriver.MountReturns(mountResponse)
+						mountResponse := dockerdriver.MountResponse{Mountpoint: "/var/tmp"}
+						fakeDockerDriver.MountReturns(mountResponse)
 					})
 
 					JustBeforeEach(func() {
@@ -75,21 +75,21 @@ var _ = Describe("DockerDriverMounter", func() {
 				Context("with safe error", func() {
 					var (
 						err         error
-						safeError   voldriver.SafeError
+						safeError   dockerdriver.SafeError
 						unsafeError error
 						errString   string
 					)
 
 					JustBeforeEach(func() {
 
-						mountResponse := voldriver.MountResponse{Err: errString}
-						fakeVoldriver.MountReturns(mountResponse)
+						mountResponse := dockerdriver.MountResponse{Err: errString}
+						fakeDockerDriver.MountReturns(mountResponse)
 						_, err = dockerPlugin.Mount(logger, volumeId, map[string]interface{}{"volume_id": volumeId})
 					})
 
 					Context("with safe error msg", func() {
 						BeforeEach(func() {
-							safeError = voldriver.SafeError{SafeDescription: "safe-badness"}
+							safeError = dockerdriver.SafeError{SafeDescription: "safe-badness"}
 							errBytes, err := json.Marshal(safeError)
 							Expect(err).NotTo(HaveOccurred())
 							errString = string(errBytes[:])
@@ -97,7 +97,7 @@ var _ = Describe("DockerDriverMounter", func() {
 
 						It("should return a safe error", func() {
 							Expect(err).To(HaveOccurred())
-							_, ok := err.(voldriver.SafeError)
+							_, ok := err.(dockerdriver.SafeError)
 							Expect(ok).To(Equal(true))
 							Expect(err.Error()).To(Equal("safe-badness"))
 						})
@@ -111,7 +111,7 @@ var _ = Describe("DockerDriverMounter", func() {
 
 						It("should return regular error", func() {
 							Expect(err).To(HaveOccurred())
-							_, ok := err.(voldriver.SafeError)
+							_, ok := err.(dockerdriver.SafeError)
 							Expect(ok).To(Equal(false))
 							Expect(err.Error()).To(Equal("unsafe-badness"))
 						})
@@ -125,7 +125,7 @@ var _ = Describe("DockerDriverMounter", func() {
 
 						It("should return regular error", func() {
 							Expect(err).To(HaveOccurred())
-							_, ok := err.(voldriver.SafeError)
+							_, ok := err.(dockerdriver.SafeError)
 							Expect(ok).To(Equal(false))
 							Expect(err.Error()).To(Equal("{ badness"))
 						})
@@ -140,12 +140,12 @@ var _ = Describe("DockerDriverMounter", func() {
 		It("should be able to unmount", func() {
 			err := dockerPlugin.Unmount(logger, volumeId)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fakeVoldriver.UnmountCallCount()).To(Equal(1))
-			Expect(fakeVoldriver.RemoveCallCount()).To(Equal(0))
+			Expect(fakeDockerDriver.UnmountCallCount()).To(Equal(1))
+			Expect(fakeDockerDriver.RemoveCallCount()).To(Equal(0))
 		})
 
 		It("should not be able to unmount when driver unmount fails", func() {
-			fakeVoldriver.UnmountReturns(voldriver.ErrorResponse{Err: "unmount failure"})
+			fakeDockerDriver.UnmountReturns(dockerdriver.ErrorResponse{Err: "unmount failure"})
 			err := dockerPlugin.Unmount(logger, volumeId)
 			Expect(err).To(HaveOccurred())
 		})
@@ -153,19 +153,19 @@ var _ = Describe("DockerDriverMounter", func() {
 		Context("with safe error", func() {
 			var (
 				err         error
-				safeError   voldriver.SafeError
+				safeError   dockerdriver.SafeError
 				unsafeError error
 				errString   string
 			)
 
 			JustBeforeEach(func() {
-				fakeVoldriver.UnmountReturns(voldriver.ErrorResponse{Err: errString})
+				fakeDockerDriver.UnmountReturns(dockerdriver.ErrorResponse{Err: errString})
 				err = dockerPlugin.Unmount(logger, volumeId)
 			})
 
 			Context("with safe error msg", func() {
 				BeforeEach(func() {
-					safeError = voldriver.SafeError{SafeDescription: "safe-badness"}
+					safeError = dockerdriver.SafeError{SafeDescription: "safe-badness"}
 					errBytes, err := json.Marshal(safeError)
 					Expect(err).NotTo(HaveOccurred())
 					errString = string(errBytes[:])
@@ -173,7 +173,7 @@ var _ = Describe("DockerDriverMounter", func() {
 
 				It("should return a safe error", func() {
 					Expect(err).To(HaveOccurred())
-					_, ok := err.(voldriver.SafeError)
+					_, ok := err.(dockerdriver.SafeError)
 					Expect(ok).To(Equal(true))
 					Expect(err.Error()).To(Equal("safe-badness"))
 				})
@@ -187,7 +187,7 @@ var _ = Describe("DockerDriverMounter", func() {
 
 				It("should return regular error", func() {
 					Expect(err).To(HaveOccurred())
-					_, ok := err.(voldriver.SafeError)
+					_, ok := err.(dockerdriver.SafeError)
 					Expect(ok).To(Equal(false))
 					Expect(err.Error()).To(Equal("unsafe-badness"))
 				})
@@ -201,7 +201,7 @@ var _ = Describe("DockerDriverMounter", func() {
 
 				It("should return regular error", func() {
 					Expect(err).To(HaveOccurred())
-					_, ok := err.(voldriver.SafeError)
+					_, ok := err.(dockerdriver.SafeError)
 					Expect(ok).To(Equal(false))
 					Expect(err.Error()).To(Equal("{ badness"))
 				})
@@ -216,11 +216,11 @@ var _ = Describe("DockerDriverMounter", func() {
 			err     error
 		)
 		BeforeEach(func() {
-			listResponse := voldriver.ListResponse{Volumes: []voldriver.VolumeInfo{
+			listResponse := dockerdriver.ListResponse{Volumes: []dockerdriver.VolumeInfo{
 				{Name: "fake_volume_1"},
 				{Name: "fake_volume_2"},
 			}}
-			fakeVoldriver.ListReturns(listResponse)
+			fakeDockerDriver.ListReturns(listResponse)
 		})
 
 		JustBeforeEach(func() {
@@ -235,11 +235,11 @@ var _ = Describe("DockerDriverMounter", func() {
 
 		Context("when the driver returns an err response", func() {
 			BeforeEach(func() {
-				listResponse := voldriver.ListResponse{Volumes: []voldriver.VolumeInfo{
+				listResponse := dockerdriver.ListResponse{Volumes: []dockerdriver.VolumeInfo{
 					{Name: "fake_volume_1"},
 					{Name: "fake_volume_2"},
 				}, Err: "badness"}
-				fakeVoldriver.ListReturns(listResponse)
+				fakeDockerDriver.ListReturns(listResponse)
 			})
 			It("should return an error", func() {
 				Expect(err).To(HaveOccurred())
