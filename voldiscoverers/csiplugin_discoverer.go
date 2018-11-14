@@ -11,10 +11,10 @@ import (
 	"code.cloudfoundry.org/goshims/osshim"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/volman"
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"errors"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"errors"
 )
 
 type csiPluginDiscoverer struct {
@@ -110,7 +110,7 @@ func (p *csiPluginDiscoverer) Discover(logger lager.Logger) (map[string]volman.P
 			for _, capability := range pluginCapabilities.GetCapabilities() {
 				service := capability.GetService()
 
-				if service.GetType() == csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS {
+				if service.GetType() == csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS {
 					pluginHasAccessibilityConstraints = true
 				}
 			}

@@ -18,7 +18,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/vollocal"
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
@@ -140,7 +140,7 @@ var _ = Describe("CSIPluginDiscoverer", func() {
 								Capabilities: []*csi.PluginCapability{{
 									Type: &csi.PluginCapability_Service_{
 										Service: &csi.PluginCapability_Service{
-											Type: csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS,
+											Type: csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS,
 										},
 									},
 								}},
