@@ -7,15 +7,3 @@ Currently, we have platform support for **Shared Volumes**. Shared Volumes are d
 This feature adds two new concepts to CF: **Volume Mounts** on Service Brokers and **Volume Drivers** on Diego Cells, which are described below.
 
 For more information on CF Volume Services, please refer to [this introductory document](https://docs.google.com/document/d/1YtPMY9EjxlgJPa4SVVwIinfid_fshCF48xRhzyoZhrQ/edit?usp=sharing).
-
-# Developer Notes
-
-## Setting up Intellij
-
-Configure your project to run `gofmt` and go imports using the following regex:-
-
-```
-file[diego-release]:src/github.com/cloudfoundry-incubator/inigo/*.go||file[diego-bosh-release]:src/github.com/cloudfoundry-incubator/inigo/**/*||file[diego-release]:src/github.com/cloudfoundry-incubator/volman/*.go||file[diego-release]:src/github.com/cloudfoundry-incubator/volman/**/*
-```
-
-This is so that Intellij does not `go fmt` dependent packages which may result in source changes.
