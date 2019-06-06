@@ -1,19 +1,17 @@
 package voldiscoverers
 
 import (
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/driverhttp"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/volman"
+	"code.cloudfoundry.org/volman/voldocker"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
-
-	"code.cloudfoundry.org/dockerdriver"
-	"code.cloudfoundry.org/dockerdriver/driverhttp"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/volman"
-	"code.cloudfoundry.org/volman/voldocker"
 )
 
 type dockerDriverDiscoverer struct {
@@ -94,14 +92,9 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 
 	var plugin volman.Plugin
 	var ok bool
-	var re *regexp.Regexp
+	var re = regexp.MustCompile(`([^/]*/)?([^/]*)\.(sock|spec|json)$`)
 
 	for _, spec := range specs {
-		if runtime.GOOS == "windows" {
-			re = regexp.MustCompile(`([^\\]*\\)?([^\\]*)\.(sock|spec|json)$`)
-		} else {
-			re = regexp.MustCompile(`([^/]*/)?([^/]*)\.(sock|spec|json)$`)
-		}
 
 		segs2 := re.FindAllStringSubmatch(spec, 1)
 		if len(segs2) <= 0 {
