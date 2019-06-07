@@ -110,19 +110,7 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 				logger.Error("error-reading-driver-spec", err)
 				continue
 			}
-			pluginSpec := volman.PluginSpec{
-				Name:            driverSpec.Name,
-				Address:         driverSpec.Address,
-				UniqueVolumeIds: driverSpec.UniqueVolumeIds,
-			}
-			if driverSpec.TLSConfig != nil {
-				pluginSpec.TLSConfig = &volman.TLSConfig{
-					InsecureSkipVerify: driverSpec.TLSConfig.InsecureSkipVerify,
-					CAFile:             driverSpec.TLSConfig.CAFile,
-					CertFile:           driverSpec.TLSConfig.CertFile,
-					KeyFile:            driverSpec.TLSConfig.KeyFile,
-				}
-			}
+			pluginSpec := mapDriverSpecToPluginSpec(driverSpec)
 
 			plugin, ok = existing[specName]
 			if ok == true {
@@ -143,31 +131,9 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 			}
 
 			if plugin == nil {
-				logger.Info("creating-driver", lager.Data{"specName": specName, "driver-path": driverPath, "specFile": specFile})
-				driver, err := r.driverFactory.DockerDriver(logger, specName, driverPath, specFile)
+				plugin, err = createPlugin(logger, specName, driverPath, specFile, r, pluginSpec)
 				if err != nil {
-					logger.Error("error-creating-driver", err)
 					continue
-				}
-
-				plugin = voldocker.NewDockerPluginWithDriver(driver, pluginSpec)
-
-				env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-				resp := driver.Activate(env)
-				if resp.Err != "" {
-					logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
-					continue
-				} else {
-					driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
-					if len(resp.Implements) == 0 {
-						logger.Error("driver-incorrect", driverImplementsErr)
-						continue
-					}
-
-					if !driverImplements("VolumeDriver", resp.Implements) {
-						logger.Error("driver-incorrect", driverImplementsErr)
-						continue
-					}
 				}
 			}
 			logger.Info("new-driver", lager.Data{"name": specName})
@@ -175,4 +141,52 @@ func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, e
 		}
 	}
 	return endpoints
+}
+
+
+
+func mapDriverSpecToPluginSpec(driverSpec *dockerdriver.DriverSpec) volman.PluginSpec {
+	pluginSpec := volman.PluginSpec{
+		Name:            driverSpec.Name,
+		Address:         driverSpec.Address,
+		UniqueVolumeIds: driverSpec.UniqueVolumeIds,
+	}
+	if driverSpec.TLSConfig != nil {
+		pluginSpec.TLSConfig = &volman.TLSConfig{
+			InsecureSkipVerify: driverSpec.TLSConfig.InsecureSkipVerify,
+			CAFile:             driverSpec.TLSConfig.CAFile,
+			CertFile:           driverSpec.TLSConfig.CertFile,
+			KeyFile:            driverSpec.TLSConfig.KeyFile,
+		}
+	}
+	return pluginSpec
+}
+
+func createPlugin(logger lager.Logger, specName string, driverPath string, specFile string, r *dockerDriverDiscoverer, pluginSpec volman.PluginSpec) (volman.Plugin, error) {
+	logger.Info("creating-driver", lager.Data{"specName": specName, "driver-path": driverPath, "specFile": specFile})
+	driver, err := r.driverFactory.DockerDriver(logger, specName, driverPath, specFile)
+	if err != nil {
+		logger.Error("error-creating-driver", err)
+		return nil, err
+	}
+	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+	resp := driver.Activate(env)
+	if resp.Err != "" {
+		logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
+		return nil, errors.New(resp.Err)
+	} else {
+		driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
+		if len(resp.Implements) == 0 {
+			logger.Error("driver-incorrect", driverImplementsErr)
+			return nil, driverImplementsErr
+
+		}
+
+		if !driverImplements("VolumeDriver", resp.Implements) {
+			logger.Error("driver-incorrect", driverImplementsErr)
+			return nil, driverImplementsErr
+
+		}
+	}
+	return voldocker.NewVolmanPluginWithDockerDriver(driver, pluginSpec), nil
 }

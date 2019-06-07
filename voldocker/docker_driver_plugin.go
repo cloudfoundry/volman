@@ -18,7 +18,7 @@ type DockerDriverPlugin struct {
 	PluginSpec   volman.PluginSpec
 }
 
-func NewDockerPluginWithDriver(driver dockerdriver.Driver, pluginSpec volman.PluginSpec) volman.Plugin {
+func NewVolmanPluginWithDockerDriver(driver dockerdriver.Driver, pluginSpec volman.PluginSpec) volman.Plugin {
 	return &DockerDriverPlugin{
 		DockerDriver: driver,
 		PluginSpec:   pluginSpec,

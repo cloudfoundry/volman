@@ -20,12 +20,12 @@ var _ = Describe("PluginRegistry", func() {
 		emptyRegistry = NewPluginRegistry()
 
 		oneRegistry = NewPluginRegistryWith(map[string]volman.Plugin{
-			"one": voldocker.NewDockerPluginWithDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
+			"one": voldocker.NewVolmanPluginWithDockerDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
 		})
 
 		manyRegistry = NewPluginRegistryWith(map[string]volman.Plugin{
-			"one": voldocker.NewDockerPluginWithDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
-			"two": voldocker.NewDockerPluginWithDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
+			"one": voldocker.NewVolmanPluginWithDockerDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
+			"two": voldocker.NewVolmanPluginWithDockerDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
 		})
 	})
 
@@ -58,7 +58,7 @@ var _ = Describe("PluginRegistry", func() {
 	Describe("#Set", func() {
 		It("replaces plugin if it already exists", func() {
 			newPlugin := map[string]volman.Plugin{
-				"one": voldocker.NewDockerPluginWithDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
+				"one": voldocker.NewVolmanPluginWithDockerDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
 			}
 			oneRegistry.Set(newPlugin)
 			onePlugin, exists := oneRegistry.Plugin("one")
@@ -68,9 +68,9 @@ var _ = Describe("PluginRegistry", func() {
 
 		It("adds plugin that does not exists", func() {
 			newPlugin := map[string]volman.Plugin{
-				"one":   voldocker.NewDockerPluginWithDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
-				"two":   voldocker.NewDockerPluginWithDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
-				"three": voldocker.NewDockerPluginWithDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
+				"one":   voldocker.NewVolmanPluginWithDockerDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
+				"two":   voldocker.NewVolmanPluginWithDockerDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
+				"three": voldocker.NewVolmanPluginWithDockerDriver(new(dockerdriverfakes.FakeDriver), volman.PluginSpec{}),
 			}
 			manyRegistry.Set(newPlugin)
 			threePlugin, exists := manyRegistry.Plugin("three")
