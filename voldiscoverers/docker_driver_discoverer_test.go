@@ -2,6 +2,7 @@ package voldiscoverers_test
 
 import (
 	"fmt"
+	"github.com/onsi/ginkgo/extensions/table"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/config"
@@ -106,7 +107,6 @@ var _ = Describe("Docker Driver Discoverer", func() {
 					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 
 					drivers, err = discoverer.Discover(logger)
-					registry.Set(drivers)
 				})
 
 				It("should not replace the driver in the registry", func() {
@@ -166,40 +166,39 @@ var _ = Describe("Docker Driver Discoverer", func() {
 			})
 		})
 
-		Context("when given a simple driverspath", func() {
-			Context("with hetergeneous json+spec driver specifications", func() {
-				BeforeEach(func() {
-					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "json", []byte("{\"Addr\":\"http://0.0.0.0:8080\"}"))
-					Expect(err).NotTo(HaveOccurred())
-					err = dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
-					Expect(err).NotTo(HaveOccurred())
-				})
+		Context("with multiple driver specs", func() {
+			var (
+				drivers map[string]volman.Plugin
+				err     error
+			)
 
-				It("should preferentially select json over spec specification", func() {
-					drivers, err := discoverer.Discover(logger)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(len(drivers)).To(Equal(1))
-					_, _, _, specFileName := fakeDriverFactory.DockerDriverArgsForCall(0)
-					Expect(specFileName).To(Equal(driverName + ".json"))
-				})
-			})
-
-			Context("with hetergeneous spec+sock driver specifications", func() {
-				BeforeEach(func() {
-					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "sock", []byte("unix:///some.sock"))
+			table.DescribeTable("should discover drivers in the order: json -> spec -> sock", func(expectedNumberOfDrivers int, specTuple ...specTuple) {
+				for _, value := range specTuple {
+					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, value.DriverName, value.Spec, []byte(value.SpecFileContents))
 					Expect(err).NotTo(HaveOccurred())
-					err = dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("http://0.0.0.0:9090"))
-					Expect(err).NotTo(HaveOccurred())
-				})
+				}
 
-				It("should preferentially select spec over sock specification", func() {
-					drivers, err := discoverer.Discover(logger)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(len(drivers)).To(Equal(1))
-					_, _, _, specFileName := fakeDriverFactory.DockerDriverArgsForCall(0)
-					Expect(specFileName).To(Equal(driverName + ".spec"))
-				})
-			})
+				drivers, err = discoverer.Discover(logger)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(drivers)).To(Equal(expectedNumberOfDrivers))
+				Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(expectedNumberOfDrivers))
+
+			}, table.Entry("when there are two unique drivers with different driver formats", 2,
+				jsonSpec(),
+				specSpec(),
+			), table.Entry("when there are three unique drivers with different driver formats", 3,
+				jsonSpec(),
+				specSpec(),
+				sockSpec(),
+			), table.Entry("when there is 1 unique driver, represented by 2 different driver formats (json and spec)", 1,
+				specTuple{DriverName: "driver1", Spec: "json", SpecFileContents: `{}`},
+				specTuple{DriverName: "driver1", Spec: "spec", SpecFileContents: ``},
+			), table.Entry("when there is 1 unique driver, represented by 2 different driver formats (spec and sock)", 1,
+				specTuple{DriverName: "driver2", Spec: "spec", SpecFileContents: ``},
+				specTuple{DriverName: "driver2", Spec: "sock", SpecFileContents: ``},
+			),
+			)
 		})
 
 		Context("when given a compound driverspath", func() {
@@ -343,3 +342,22 @@ var _ = Describe("Docker Driver Discoverer", func() {
 		})
 	})
 })
+
+func sockSpec() specTuple {
+	return specTuple{DriverName: "driver3", Spec: "sock", SpecFileContents: ``}
+}
+
+func specSpec() specTuple {
+	return specTuple{DriverName: "driver2", Spec: "spec", SpecFileContents: `http://0.0.0.0:8080`}
+}
+
+func jsonSpec() specTuple {
+	return specTuple{DriverName: "driver1", Spec: "json", SpecFileContents: `{}`}
+}
+
+type specTuple struct {
+	Spec                    string
+	SpecFileContents        string
+	DriverName              string
+	ExpectedNumberOfDrivers int
+}
