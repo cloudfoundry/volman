@@ -52,8 +52,8 @@ func (r *dockerDriverDiscoverer) Discover(logger lager.Logger) (map[string]volma
 
 	for _, driverPath := range r.driverPaths {
 		specTypes := [3]string{"json", "spec", "sock"}
-		for _, spec_type := range specTypes {
-			matchingDriverSpecs, err := r.getMatchingDriverSpecs(logger, driverPath, spec_type)
+		for _, specType := range specTypes {
+			matchingDriverSpecs, err := r.getMatchingDriverSpecs(logger, driverPath, specType)
 
 			if err != nil {
 				// untestable on linux, does glob work differently on windows???
@@ -67,11 +67,94 @@ func (r *dockerDriverDiscoverer) Discover(logger lager.Logger) (map[string]volma
 					logger.Debug("existing-drivers", lager.Data{"len": len(existing)})
 				}
 
-				endpoints = r.insertIfAliveAndNotFound(logger, endpoints, driverPath, matchingDriverSpecs, existing)
+				endpoints = r.findAllPlugins(logger, endpoints, driverPath, matchingDriverSpecs, existing)
+				endpoints = r.activatePlugins(logger, endpoints, driverPath, matchingDriverSpecs)
 			}
 		}
 	}
 	return endpoints, nil
+}
+
+func (r *dockerDriverDiscoverer) findAllPlugins(logger lager.Logger, newPlugins map[string]volman.Plugin, driverPath string, specs []string, existingPlugins map[string]volman.Plugin) map[string]volman.Plugin {
+	logger = logger.Session("insert-if-not-found")
+	logger.Debug("start")
+	defer logger.Debug("end")
+	var plugin volman.Plugin
+
+	for _, spec := range specs {
+		validSpecName, specName, specFile := specName(logger, spec)
+		if !validSpecName {
+			continue
+		}
+
+		_, newPluginFound := newPlugins[specName]
+		if !newPluginFound {
+			pluginSpec, err := r.getPluginSpec(logger, specName, driverPath, specFile)
+			if err != nil {
+				continue
+			}
+
+			var existingPluginFound bool
+			plugin, existingPluginFound = existingPlugins[specName]
+			if !existingPluginFound || r.pluginDoesNotMatch(logger, plugin, pluginSpec) {
+				plugin, err = r.createPlugin(logger, specName, driverPath, specFile, pluginSpec)
+				if err != nil {
+					continue
+				}
+			}
+
+			logger.Info("new-plugin", lager.Data{"name": specName})
+			newPlugins[specName] = plugin
+		}
+	}
+	return newPlugins
+}
+
+func (r *dockerDriverDiscoverer) activatePlugins(logger lager.Logger, plugins map[string]volman.Plugin, driverPath string, specs []string) map[string]volman.Plugin {
+
+	activatedPlugins := map[string]volman.Plugin{}
+
+	for k, plugin := range plugins {
+		dockerPlugin := plugin.(*voldocker.DockerDriverPlugin)
+		dockerDriver := dockerPlugin.DockerDriver.(dockerdriver.Driver)
+		env := driverhttp.NewHttpDriverEnv(logger, context.Background())
+		resp := dockerDriver.Activate(env)
+		if resp.Err == "" {
+			if implementVolumeDriver(resp) {
+				activatedPlugins[k] = dockerPlugin
+			} else {
+				logger.Error("driver-invalid", fmt.Errorf("driver-implements: %#v, expecting: VolumeDriver", resp.Implements))
+			}
+		} else {
+			logger.Error("existing-driver-unreachable", errors.New(resp.Err), lager.Data{"spec-name": dockerPlugin.GetPluginSpec().Name, "address": dockerPlugin.GetPluginSpec().Address, "tls": dockerPlugin.GetPluginSpec().TLSConfig})
+
+			foundSpecFile, specFile := r.findDockerSpecFileByName(logger, dockerPlugin.GetPluginSpec().Name, driverPath, specs)
+			if !foundSpecFile {
+				logger.Info("error-spec-file-not-found", lager.Data{"spec-name": dockerPlugin.GetPluginSpec().Name})
+				continue
+			}
+
+			logger.Info("updating-driver", lager.Data{"spec-name": plugin.GetPluginSpec().Name, "driver-path": driverPath})
+			driver, err := r.driverFactory.DockerDriver(logger, plugin.GetPluginSpec().Name, driverPath, specFile)
+			if err != nil {
+				logger.Error("error-creating-driver", err)
+			}
+			env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
+			resp := driver.Activate(env)
+			if resp.Err == "" {
+				if implementVolumeDriver(resp) {
+					activatedPlugins[k] = dockerPlugin
+				} else {
+					logger.Error("driver-invalid", fmt.Errorf("driver-implements: %#v, expecting: VolumeDriver", resp.Implements))
+				}
+			} else {
+				logger.Info("updated-driver-unreachable", lager.Data{"spec-name": dockerPlugin.GetPluginSpec().Name, "address": dockerPlugin.GetPluginSpec().Address, "tls": dockerPlugin.GetPluginSpec().TLSConfig})
+			}
+		}
+
+	}
+
+	return activatedPlugins
 }
 
 func (r *dockerDriverDiscoverer) getMatchingDriverSpecs(logger lager.Logger, path string, pattern string) ([]string, error) {
@@ -84,66 +167,66 @@ func (r *dockerDriverDiscoverer) getMatchingDriverSpecs(logger lager.Logger, pat
 
 }
 
-func (r *dockerDriverDiscoverer) insertIfAliveAndNotFound(logger lager.Logger, endpoints map[string]volman.Plugin, driverPath string, specs []string, existing map[string]volman.Plugin) map[string]volman.Plugin {
-	logger = logger.Session("insert-if-not-found")
-	logger.Debug("start")
-	defer logger.Debug("end")
-
-	var plugin volman.Plugin
-	var ok bool
-	var re = regexp.MustCompile(`([^/]*/)?([^/]*)\.(sock|spec|json)$`)
-
-	for _, spec := range specs {
-
-		segs2 := re.FindAllStringSubmatch(spec, 1)
-		if len(segs2) <= 0 {
-			continue
-		}
-		specName := segs2[0][2]
-		specFile := segs2[0][2] + "." + segs2[0][3]
-		logger.Debug("insert-unique-spec", lager.Data{"specname": specName})
-
-		_, ok = endpoints[specName]
-		if !ok {
-			driverSpec, err := dockerdriver.ReadDriverSpec(logger, specName, driverPath, specFile)
-			if err != nil {
-				logger.Error("error-reading-driver-spec", err)
-				continue
-			}
-			pluginSpec := mapDriverSpecToPluginSpec(driverSpec)
-
-			plugin, ok = existing[specName]
-			if ok == true {
-				if !plugin.Matches(logger, pluginSpec) {
-					logger.Info("existing-driver-mismatch", lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
-					plugin = nil
-				}
-				if plugin != nil {
-					dockerPlugin := plugin.(*voldocker.DockerDriverPlugin)
-					dockerDriver := dockerPlugin.DockerDriver.(dockerdriver.Driver)
-					env := driverhttp.NewHttpDriverEnv(logger, context.Background())
-					resp := dockerDriver.Activate(env)
-					if resp.Err != "" {
-						logger.Error("existing-driver-unreachable", errors.New(resp.Err), lager.Data{"specName": specName, "address": driverSpec.Address, "tls": driverSpec.TLSConfig})
-						plugin = nil
-					}
-				}
-			}
-
-			if plugin == nil {
-				plugin, err = createPlugin(logger, specName, driverPath, specFile, r, pluginSpec)
-				if err != nil {
-					continue
-				}
-			}
-			logger.Info("new-driver", lager.Data{"name": specName})
-			endpoints[specName] = plugin
-		}
+func (r *dockerDriverDiscoverer) pluginDoesNotMatch(logger lager.Logger, plugin volman.Plugin, pluginSpec volman.PluginSpec) bool {
+	if plugin == nil {
+		return true
 	}
-	return endpoints
+	doesNotMatch := !plugin.Matches(logger, pluginSpec)
+	if doesNotMatch {
+		logger.Info("existing-plugin-mismatch", lager.Data{"specName": plugin.GetPluginSpec().Name, "existing-address": plugin.GetPluginSpec().Address, "new-adddress": pluginSpec.Address})
+	}
+	return doesNotMatch
 }
 
+func (r *dockerDriverDiscoverer) getPluginSpec(logger lager.Logger, specName string, driverPath string, specFile string) (volman.PluginSpec, error) {
+	driverSpec, err := dockerdriver.ReadDriverSpec(logger, specName, driverPath, specFile)
+	if err != nil {
+		logger.Error("error-reading-driver-spec", err)
+		return volman.PluginSpec{}, errors.New("error-reading-driver-spec")
+	}
 
+	pluginSpec := mapDriverSpecToPluginSpec(driverSpec)
+	return pluginSpec, err
+}
+
+func (r *dockerDriverDiscoverer) findDockerSpecFileByName(logger lager.Logger, nameToFind string, driverPath string, specs []string) (bool, string) {
+	for _, spec := range specs {
+		found, specName, specFile := specName(logger, spec)
+
+		if found && specName == nameToFind {
+			return true, specFile
+		}
+	}
+	return false, "'"
+}
+
+func (r *dockerDriverDiscoverer) createPlugin(logger lager.Logger, specName string, driverPath string, specFile string, pluginSpec volman.PluginSpec) (volman.Plugin, error) {
+	logger.Info("creating-driver", lager.Data{"specName": specName, "driver-path": driverPath, "specFile": specFile})
+	driver, err := r.driverFactory.DockerDriver(logger, specName, driverPath, specFile)
+	if err != nil {
+		logger.Error("error-creating-driver", err)
+		return nil, err
+	}
+
+	return voldocker.NewVolmanPluginWithDockerDriver(driver, pluginSpec), nil
+}
+
+func specName(logger lager.Logger, spec string) (bool, string, string) {
+	re := regexp.MustCompile(`([^/]*/)?([^/]*)\.(sock|spec|json)$`)
+
+	segs2 := re.FindAllStringSubmatch(spec, 1)
+	if len(segs2) <= 0 {
+		return false, "", ""
+	}
+	specName := segs2[0][2]
+	specFile := segs2[0][2] + "." + segs2[0][3]
+	logger.Debug("insert-unique-spec", lager.Data{"specname": specName})
+	return true, specName, specFile
+}
+
+func implementVolumeDriver(resp dockerdriver.ActivateResponse) bool {
+	return len(resp.Implements) > 0 && driverImplements("VolumeDriver", resp.Implements)
+}
 
 func mapDriverSpecToPluginSpec(driverSpec *dockerdriver.DriverSpec) volman.PluginSpec {
 	pluginSpec := volman.PluginSpec{
@@ -160,33 +243,4 @@ func mapDriverSpecToPluginSpec(driverSpec *dockerdriver.DriverSpec) volman.Plugi
 		}
 	}
 	return pluginSpec
-}
-
-func createPlugin(logger lager.Logger, specName string, driverPath string, specFile string, r *dockerDriverDiscoverer, pluginSpec volman.PluginSpec) (volman.Plugin, error) {
-	logger.Info("creating-driver", lager.Data{"specName": specName, "driver-path": driverPath, "specFile": specFile})
-	driver, err := r.driverFactory.DockerDriver(logger, specName, driverPath, specFile)
-	if err != nil {
-		logger.Error("error-creating-driver", err)
-		return nil, err
-	}
-	env := driverhttp.NewHttpDriverEnv(logger, context.TODO())
-	resp := driver.Activate(env)
-	if resp.Err != "" {
-		logger.Info("skipping-non-responsive-driver", lager.Data{"specname": specName})
-		return nil, errors.New(resp.Err)
-	} else {
-		driverImplementsErr := fmt.Errorf("driver-implements: %#v", resp.Implements)
-		if len(resp.Implements) == 0 {
-			logger.Error("driver-incorrect", driverImplementsErr)
-			return nil, driverImplementsErr
-
-		}
-
-		if !driverImplements("VolumeDriver", resp.Implements) {
-			logger.Error("driver-incorrect", driverImplementsErr)
-			return nil, driverImplementsErr
-
-		}
-	}
-	return voldocker.NewVolmanPluginWithDockerDriver(driver, pluginSpec), nil
 }

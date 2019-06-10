@@ -77,7 +77,6 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				drivers, err = discoverer.Discover(logger)
-				registry.Set(drivers)
 			})
 
 			Context("when activate returns an error", func() {
@@ -87,7 +86,18 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				It("should not find drivers that are unresponsive", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(drivers)).To(Equal(0))
-					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
+				})
+			})
+
+			Context("when activation with the old plugin spec returns an error", func() {
+				BeforeEach(func() {
+					fakeDriver.ActivateReturnsOnCall(0, dockerdriver.ActivateResponse{Err: "Error"})
+					fakeDriver.ActivateReturnsOnCall(1, dockerdriver.ActivateResponse{Implements: []string{"VolumeDriver"}, Err: ""})
+				})
+
+				It("should activate with the new plugin spec", func() {
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fakeDriver.ActivateCallCount()).To(BeNumerically(">", 1))
 				})
 			})
 
@@ -112,7 +122,6 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				It("should not replace the driver in the registry", func() {
 					// Expect SetDrivers not to be called
 					Expect(len(drivers)).To(Equal(1))
-					Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(1))
 					Expect(fakeDriver.ActivateCallCount()).To(Equal(2))
 				})
 				Context("when the existing driver connection is broken", func() {
@@ -121,7 +130,6 @@ var _ = Describe("Docker Driver Discoverer", func() {
 					})
 					It("should replace the driver in the registry", func() {
 						Expect(len(drivers)).To(Equal(1))
-						Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(2))
 						Expect(fakeDriver.ActivateCallCount()).To(Equal(3))
 					})
 				})
