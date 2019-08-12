@@ -34,7 +34,7 @@ var _ = Describe("Syncer", func() {
 		scanInterval = 10 * time.Second
 		fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
 
-		logger = lagertest.NewTestLogger("csi-plugin-syncer-test")
+		logger = lagertest.NewTestLogger("plugin-syncer-test")
 
 		registry = NewPluginRegistry()
 	})
