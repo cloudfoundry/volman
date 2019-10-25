@@ -31,8 +31,8 @@ var (
 )
 
 type DriverConfig struct {
-	DriverPaths     []string
-	SyncInterval    time.Duration
+	DriverPaths  []string
+	SyncInterval time.Duration
 }
 
 func NewDriverConfig() DriverConfig {
