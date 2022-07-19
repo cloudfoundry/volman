@@ -58,9 +58,9 @@ var _ = BeforeEach(func() {
 	secondPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest2")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	localDriverServerPort = 9750 + GinkgoParallelNode()
+	localDriverServerPort = 9750 + GinkgoParallelProcess()
 
-	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelNode())
+	debugServerAddress = fmt.Sprintf("0.0.0.0:%d", 9850+GinkgoParallelProcess())
 	localDriverRunner = ginkgomon.New(ginkgomon.Config{
 		Name: "localdriver",
 		Command: exec.Command(
