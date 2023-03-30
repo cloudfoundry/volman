@@ -4,7 +4,7 @@ package volmanfakes
 import (
 	sync "sync"
 
-	lager "code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 	volman "code.cloudfoundry.org/volman"
 )
 

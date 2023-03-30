@@ -7,7 +7,7 @@ import (
 
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	mfakes "code.cloudfoundry.org/diego-logging-client/testhelpers"
@@ -20,12 +20,12 @@ import (
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/dockerdriver/dockerdriverfakes"
 	dockerdriverutils "code.cloudfoundry.org/dockerdriver/utils"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"code.cloudfoundry.org/volman"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/tedsuo/ifrit"
-	"github.com/tedsuo/ifrit/ginkgomon"
+	ginkgomon "github.com/tedsuo/ifrit/ginkgomon_v2"
 )
 
 var fakeDriverId = 0

@@ -1,6 +1,6 @@
 package volman
 
-import "code.cloudfoundry.org/lager"
+import "code.cloudfoundry.org/lager/v3"
 
 //go:generate counterfeiter -o volmanfakes/fake_manager_client.go . Manager
 
