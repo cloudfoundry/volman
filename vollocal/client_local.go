@@ -12,7 +12,7 @@ import (
 	loggingclient "code.cloudfoundry.org/diego-logging-client"
 	"code.cloudfoundry.org/dockerdriver"
 	dockerdriverutils "code.cloudfoundry.org/dockerdriver/utils"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/volman"
 	"code.cloudfoundry.org/volman/voldiscoverers"
 	"github.com/tedsuo/ifrit/grouper"

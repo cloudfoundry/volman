@@ -5,7 +5,7 @@ import (
 	sync "sync"
 
 	dockerdriver "code.cloudfoundry.org/dockerdriver"
-	lager "code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 	voldiscoverers "code.cloudfoundry.org/volman/voldiscoverers"
 )
 

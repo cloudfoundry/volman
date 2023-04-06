@@ -2,13 +2,11 @@ package voldiscoverers_test
 
 import (
 	"fmt"
-	"github.com/onsi/ginkgo/extensions/table"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/config"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 
 	"code.cloudfoundry.org/dockerdriver"
 	"code.cloudfoundry.org/dockerdriver/dockerdriverfakes"
@@ -47,7 +45,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 
 		fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
-		driverName = fmt.Sprintf("fakedriver-%d", GinkgoConfig.ParallelNode)
+		driverName = fmt.Sprintf("fakedriver-%d", GinkgoParallelProcess())
 	})
 
 	Describe("#Discover", func() {
@@ -180,7 +178,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				err     error
 			)
 
-			table.DescribeTable("should discover drivers in the order: json -> spec -> sock", func(expectedNumberOfDrivers int, specTuple ...specTuple) {
+			DescribeTable("should discover drivers in the order: json -> spec -> sock", func(expectedNumberOfDrivers int, specTuple ...specTuple) {
 				for _, value := range specTuple {
 					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, value.DriverName, value.Spec, []byte(value.SpecFileContents))
 					Expect(err).NotTo(HaveOccurred())
@@ -192,17 +190,17 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				Expect(len(drivers)).To(Equal(expectedNumberOfDrivers))
 				Expect(fakeDriverFactory.DockerDriverCallCount()).To(Equal(expectedNumberOfDrivers))
 
-			}, table.Entry("when there are two unique drivers with different driver formats", 2,
+			}, Entry("when there are two unique drivers with different driver formats", 2,
 				jsonSpec(),
 				specSpec(),
-			), table.Entry("when there are three unique drivers with different driver formats", 3,
+			), Entry("when there are three unique drivers with different driver formats", 3,
 				jsonSpec(),
 				specSpec(),
 				sockSpec(),
-			), table.Entry("when there is 1 unique driver, represented by 2 different driver formats (json and spec)", 1,
+			), Entry("when there is 1 unique driver, represented by 2 different driver formats (json and spec)", 1,
 				specTuple{DriverName: "driver1", Spec: "json", SpecFileContents: `{}`},
 				specTuple{DriverName: "driver1", Spec: "spec", SpecFileContents: ``},
-			), table.Entry("when there is 1 unique driver, represented by 2 different driver formats (spec and sock)", 1,
+			), Entry("when there is 1 unique driver, represented by 2 different driver formats (spec and sock)", 1,
 				specTuple{DriverName: "driver2", Spec: "spec", SpecFileContents: ``},
 				specTuple{DriverName: "driver2", Spec: "sock", SpecFileContents: ``},
 			),
