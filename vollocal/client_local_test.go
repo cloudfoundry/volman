@@ -442,7 +442,7 @@ var _ = Describe("Volman", func() {
 				fakeDriverFactory = new(volmanfakes.FakeDockerDriverFactory)
 				fakeDriverFactory.DockerDriverReturns(fakeDriver, nil)
 
-				fakeDriver.CreateReturns(dockerdriver.ErrorResponse{"create fails"})
+				fakeDriver.CreateReturns(dockerdriver.ErrorResponse{Err: "create fails"})
 
 				driverRegistry := vollocal.NewPluginRegistry()
 				dockerDriverDiscoverer = voldiscoverers.NewDockerDriverDiscovererWithDriverFactory(logger, driverRegistry, []string{"/somePath"}, fakeDriverFactory)
