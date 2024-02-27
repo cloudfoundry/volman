@@ -77,7 +77,7 @@ func (client *localClient) ListDrivers(logger lager.Logger) (volman.ListDriversR
 	var infoResponses []volman.InfoResponse
 	plugins := client.pluginRegistry.Plugins()
 
-	for name, _ := range plugins {
+	for name := range plugins {
 		infoResponses = append(infoResponses, volman.InfoResponse{Name: name})
 	}
 
