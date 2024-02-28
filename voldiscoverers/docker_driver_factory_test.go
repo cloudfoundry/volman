@@ -105,8 +105,8 @@ var _ = Describe("DriverFactory", func() {
 			Context("when a sock driver spec is discovered", func() {
 				BeforeEach(func() {
 					f, err := os.Create(filepath.Join(defaultPluginsDirectory, driverName+".sock"))
-					defer f.Close()
 					Expect(err).ToNot(HaveOccurred())
+					defer f.Close()
 				})
 				It("should return the correct driver", func() {
 					driver, err := driverFactory.DockerDriver(testLogger, driverName, defaultPluginsDirectory, driverName+".sock")
