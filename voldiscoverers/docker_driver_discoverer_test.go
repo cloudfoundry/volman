@@ -75,6 +75,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				drivers, err = discoverer.Discover(logger)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			Context("when activate returns an error", func() {
@@ -308,6 +309,7 @@ var _ = Describe("Docker Driver Discoverer", func() {
 			Context("with an invalid url", func() {
 				BeforeEach(func() {
 					err := dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName+"2", "spec", []byte("127.0.0.1:8080"))
+					Expect(err).ToNot(HaveOccurred())
 					err = dockerdriver.WriteDriverSpec(logger, defaultPluginsDirectory, driverName, "spec", []byte("htt%p:\\\\"))
 					Expect(err).NotTo(HaveOccurred())
 				})
