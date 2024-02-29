@@ -1,17 +1,18 @@
 package voldiscoverers
 
 import (
-	"code.cloudfoundry.org/dockerdriver"
-	"code.cloudfoundry.org/dockerdriver/driverhttp"
-	"code.cloudfoundry.org/lager/v3"
-	"code.cloudfoundry.org/volman"
-	"code.cloudfoundry.org/volman/voldocker"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"code.cloudfoundry.org/dockerdriver"
+	"code.cloudfoundry.org/dockerdriver/driverhttp"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/volman"
+	"code.cloudfoundry.org/volman/voldocker"
 )
 
 type dockerDriverDiscoverer struct {

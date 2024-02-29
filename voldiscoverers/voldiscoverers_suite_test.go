@@ -1,7 +1,6 @@
 package voldiscoverers_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,10 +15,10 @@ var secondPluginsDirectory string
 var _ = BeforeEach(func() {
 	var err error
 
-	defaultPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest")
+	defaultPluginsDirectory, err = os.MkdirTemp(os.TempDir(), "clienttest")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	secondPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest2")
+	secondPluginsDirectory, err = os.MkdirTemp(os.TempDir(), "clienttest2")
 	Expect(err).ShouldNot(HaveOccurred())
 })
 
