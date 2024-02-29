@@ -2,7 +2,6 @@ package vollocal_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -48,13 +47,13 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 var _ = BeforeEach(func() {
 	var err error
-	tmpDriversPath, err = ioutil.TempDir("", "driversPath")
+	tmpDriversPath, err = os.MkdirTemp("", "driversPath")
 	Expect(err).NotTo(HaveOccurred())
 
-	defaultPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest")
+	defaultPluginsDirectory, err = os.MkdirTemp(os.TempDir(), "clienttest")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	secondPluginsDirectory, err = ioutil.TempDir(os.TempDir(), "clienttest2")
+	secondPluginsDirectory, err = os.MkdirTemp(os.TempDir(), "clienttest2")
 	Expect(err).ShouldNot(HaveOccurred())
 
 	localDriverServerPort = 9750 + GinkgoParallelProcess()
