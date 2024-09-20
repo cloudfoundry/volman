@@ -102,7 +102,11 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 	if !found {
 		err := errors.New("Plugin '" + pluginId + "' not found in list of known plugins")
 		logger.Error("mount-plugin-lookup-error", err)
-		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
+		metricErr := client.metronClient.IncrementCounter(volmanMountErrorsCounter)
+		if metricErr != nil {
+			logger.Debug("failed-emitting-mount-plugin-lookup-error-metric", lager.Data{"error": err})
+		}
+
 		return volman.MountResponse{}, err
 	}
 
@@ -115,7 +119,10 @@ func (client *localClient) Mount(logger lager.Logger, pluginId string, volumeId 
 	mountResponse, err := plugin.Mount(logger, volumeId, config)
 
 	if err != nil {
-		client.metronClient.IncrementCounter(volmanMountErrorsCounter)
+		metricErr := client.metronClient.IncrementCounter(volmanMountErrorsCounter)
+		if metricErr != nil {
+			logger.Debug("failed-emitting-mount-error-metric", lager.Data{"error": err})
+		}
 		if dockerdriverSafeErr, ok := err.(dockerdriver.SafeError); ok {
 			return volman.MountResponse{}, volman.SafeError{SafeDescription: dockerdriverSafeErr.SafeDescription}
 		}
@@ -175,7 +182,10 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 	if !found {
 		err := errors.New("Plugin '" + pluginId + "' not found in list of known plugins")
 		logger.Error("mount-plugin-lookup-error", err)
-		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
+		metricErr := client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
+		if metricErr != nil {
+			logger.Debug("failed-emitting-mount-plugin-lookup-error-metric", lager.Data{"error": err})
+		}
 		return err
 	}
 
@@ -187,7 +197,10 @@ func (client *localClient) Unmount(logger lager.Logger, pluginId string, volumeI
 
 	err := plugin.Unmount(logger, volumeId)
 	if err != nil {
-		client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
+		metricErr := client.metronClient.IncrementCounter(volmanUnmountErrorsCounter)
+		if metricErr != nil {
+			logger.Debug("failed-emitting-unmount-error-metric", lager.Data{"error": err})
+		}
 		logger.Error("unmount-failed", err)
 
 		if dockerdriverSafeErr, ok := err.(dockerdriver.SafeError); ok {
