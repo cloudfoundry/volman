@@ -1,5 +1,10 @@
 # Volman
 
+[![Go Report
+Card](https://goreportcard.com/badge/code.cloudfoundry.org/volman)](https://goreportcard.com/report/code.cloudfoundry.org/volman)
+[![Go
+Reference](https://pkg.go.dev/badge/code.cloudfoundry.org/volman.svg)](https://pkg.go.dev/code.cloudfoundry.org/volman)
+
 On Cloud Foundry, applications connect to services via a service
 marketplace. Each service has a Service Broker, with encapsulates the
 logic for creating, managing, and binding services to applications.
